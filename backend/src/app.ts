@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { requestIdMiddleware } from './middlewares/request-id.middleware.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
@@ -16,7 +17,28 @@ export const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const frontendPath = process.env.FRONTEND_PATH || path.resolve(__dirname, '../../frontend');
+
+// Localiza o diretório do frontend com fallback resiliente
+function resolveFrontendPath(): string {
+  const possiblePaths = [
+    process.env.FRONTEND_PATH,
+    '/frontend',
+    '/app/frontend',
+    path.resolve(process.cwd(), 'frontend'),
+    path.resolve(__dirname, '../../frontend'),
+    path.resolve(__dirname, '../frontend'),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const candidate of possiblePaths) {
+    if (fs.existsSync(path.join(candidate, 'index.html'))) {
+      return candidate;
+    }
+  }
+
+  return possiblePaths[0] || '/frontend';
+}
+
+const frontendPath = resolveFrontendPath();
 
 // Middlewares Globais
 app.use(cors());
@@ -31,6 +53,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     app: 'Enxovais Gabriel - Gestão Comercial e Crediário API',
+    frontend_path: frontendPath,
     time: new Date().toISOString(),
     request_id: req.requestId,
   });
@@ -45,12 +68,27 @@ app.use('/api/v1/configuracoes', configuracaoRouter);
 app.use('/api/v1/whatsapp', whatsappRouter);
 app.use('/api/v1/webhook', webhookRouter);
 
-// Fallback SPA para o Frontend
+// Rota Principal e Fallback SPA para o Frontend
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
     return next();
   }
-  res.sendFile(path.join(frontendPath, 'index.html'));
+
+  const indexPath = path.join(frontendPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+
+  return res.status(200).send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Enxovais Gabriel</title><meta charset="utf-8"></head>
+      <body style="font-family: sans-serif; text-align: center; padding: 40px;">
+        <h2>Enxovais Gabriel - API Online ✅</h2>
+        <p>Acesse o Healthcheck em <a href="/health">/health</a> ou as rotas em /api/v1</p>
+      </body>
+    </html>
+  `);
 });
 
 // Middleware de Erros Centralizado (sempre o último)
