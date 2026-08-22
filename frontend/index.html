@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Enxovais Gabriel - Gestão & Crediário</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#8C3A4B">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- Header Superior -->
+  <header class="app-header">
+    <div class="app-title">
+      <h1>Enxovais Gabriel 🏠</h1>
+      <p>Utilidades Domésticas & Crediário</p>
+    </div>
+    <div class="badge-vps">
+      <span class="status-dot active"></span>
+      <span>VPS Online</span>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="container">
+
+    <!-- ========================================================================= -->
+    <!-- ABA 1: COBRANÇAS DO DIA (VALE / PAGAMENTO) -->
+    <!-- ========================================================================= -->
+    <section id="tab-cobrancas" class="tab-content active">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <span>A Receber Hoje</span>
+          <h3 id="metric-receber-hoje">R$ 0,00</h3>
+        </div>
+        <div class="metric-card">
+          <span>Total no Dividendo</span>
+          <h3 id="metric-total-dividendo">R$ 0,00</h3>
+        </div>
+      </div>
+
+      <div class="filter-pills">
+        <button class="filter-pill active" onclick="filtrarCobrancas('todos', this)">Todos</button>
+        <button class="filter-pill" onclick="filtrarCobrancas(5, this)">Dia 05 (Pagamento)</button>
+        <button class="filter-pill" onclick="filtrarCobrancas(20, this)">Dia 20 (Vale)</button>
+        <button class="filter-pill" onclick="filtrarCobrancas(10, this)">Dia 10</button>
+      </div>
+
+      <div id="lista-cobrancas">
+        <!-- Cards gerados dinamicamente via JS -->
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ABA 2: FICHAS DE CREDIÁRIO -->
+    <!-- ========================================================================= -->
+    <section id="tab-fichas" class="tab-content">
+      <div class="form-group">
+        <input type="text" id="busca-ficha" class="form-control" placeholder="🔍 Buscar cliente por nome ou WhatsApp..." oninput="buscarFichas(this.value)">
+      </div>
+
+      <div id="lista-fichas">
+        <!-- Fichas carregadas via JS -->
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ABA 3: NOVA VENDA EXPRESS -->
+    <!-- ========================================================================= -->
+    <section id="tab-vendas" class="tab-content">
+      <div class="card-item" style="padding: 20px;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 16px; color: var(--primary);">🛒 Registrar Nova Venda</h2>
+        
+        <form id="form-venda" onsubmit="salvarVenda(event)">
+          <div class="form-group">
+            <label>Cliente</label>
+            <select id="venda-cliente-id" class="form-control" required>
+              <option value="">Selecione a cliente...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Descrição dos Itens / Produtos</label>
+            <textarea id="venda-descricao-itens" class="form-control" rows="2" placeholder="Ex: 1x Edredom Casal + 2x Jogo de Lençol 4 Peças" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Origem do Item</label>
+            <select id="venda-tipo-item" class="form-control">
+              <option value="ESTOQUE_LOCAL">📦 Pronta Entrega (Estoque Local)</option>
+              <option value="ENCOMENDA">🚚 Sob Encomenda (Pedir ao Distribuidor)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <select id="venda-forma-pagamento" class="form-control" onchange="toggleCrediarioFields(this.value)" required>
+              <option value="CREDIARIO">📑 Crediário Próprio (Lançar na Ficha)</option>
+              <option value="PIX">⚡ Pix à Vista</option>
+              <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+              <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+              <option value="DINHEIRO">💵 Dinheiro</option>
+              <option value="MISTO">🔀 Misto (Entrada Pix/Dinheiro + Ficha)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+              <label>Valor Total (R$)</label>
+              <input type="number" step="0.01" id="venda-valor-total" class="form-control" placeholder="0.00" required>
+            </div>
+            <div class="form-group" id="group-entrada" style="flex: 1; display: none;">
+              <label>Valor Entrada (R$)</label>
+              <input type="number" step="0.01" id="venda-valor-entrada" class="form-control" placeholder="0.00">
+            </div>
+          </div>
+
+          <div class="form-group" id="group-renegociar-parcela">
+            <label>Parcela Negociada (Opcional)</label>
+            <input type="number" step="0.01" id="venda-parcela-negociada" class="form-control" placeholder="Deixe em branco p/ manter a parcela atual">
+            <small style="color: var(--text-muted); font-size: 0.75rem;">Se não informado, o valor da parcela mensal atual será mantido, apenas estendendo o prazo.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+            ✅ Concluir Venda
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ABA 4: ESTOQUE & ENCOMENDAS -->
+    <!-- ========================================================================= -->
+    <section id="tab-estoque" class="tab-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 1.1rem; font-weight: 700;">Catálogo de Utilidades</h2>
+        <button class="btn btn-primary" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" onclick="abrirModalProduto()">+ Novo Item</button>
+      </div>
+
+      <div id="lista-produtos">
+        <!-- Produtos e estoque carregados via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REGISTRAR PAGAMENTO / AMORTIZAÇÃO DE FICHA -->
+  <!-- ========================================================================= -->
+  <div id="modal-pagamento" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="modal-pagamento-titulo">💵 Baixa de Pagamento</h3>
+        <button class="close-btn" onclick="fecharModalPagamento()">&times;</button>
+      </div>
+
+      <form id="form-pagamento" onsubmit="confirmarPagamento(event)">
+        <input type="hidden" id="pagamento-ficha-id">
+        
+        <div class="card-finance-info" style="margin-bottom: 16px;">
+          <div class="finance-col">
+            <span>Saldo Devedor Atual</span>
+            <strong id="pagamento-saldo-atual" class="highlight">R$ 0,00</strong>
+          </div>
+          <div class="finance-col">
+            <span>Parcela Acordada</span>
+            <strong id="pagamento-parcela-valor">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Valor Recebido (R$)</label>
+          <input type="number" step="0.01" id="pagamento-valor-pago" class="form-control" style="font-size: 1.3rem; font-weight: 700; color: var(--success);" required>
+        </div>
+
+        <div class="form-group">
+          <label>Observação / Descrição</label>
+          <input type="text" id="pagamento-descricao" class="form-control" placeholder="Ex: Pagamento no dinheiro / Pix do vale">
+        </div>
+
+        <div class="btn-group" style="margin-top: 16px;">
+          <button type="button" class="btn btn-outline" onclick="fecharModalPagamento()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Confirmar & Emitir Recibo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: NOVO PRODUTO -->
+  <!-- ========================================================================= -->
+  <div id="modal-produto" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3>📦 Cadastrar Produto</h3>
+        <button class="close-btn" onclick="fecharModalProduto()">&times;</button>
+      </div>
+
+      <form id="form-produto" onsubmit="salvarProduto(event)">
+        <div class="form-group">
+          <label>Nome do Produto</label>
+          <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Jogo de Cama King 400 Fios" required>
+        </div>
+
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="prod-categoria" class="form-control">
+            <option value="CAMA_MESA_BANHO">🛏️ Cama, Mesa e Banho</option>
+            <option value="COZINHA">🍳 Cozinha & Utensílios</option>
+            <option value="DECORACAO">🖼️ Decoração</option>
+            <option value="ORGANIZACAO">🧺 Organização</option>
+            <option value="OUTROS">✨ Outros</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Preço à Vista (R$)</label>
+            <input type="number" step="0.01" id="prod-preco-vista" class="form-control" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Preço Crediário (R$)</label>
+            <input type="number" step="0.01" id="prod-preco-crediario" class="form-control" required>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Estoque Atual</label>
+            <input type="number" id="prod-estoque" class="form-control" value="5" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Estoque Mínimo</label>
+            <input type="number" id="prod-estoque-min" class="form-control" value="2">
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top: 16px;">
+          <button type="button" class="btn btn-outline" onclick="fecharModalProduto()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Produto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Barra de Navegação Inferior -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="trocarAba('cobrancas', this)">
+      <span class="nav-icon">📅</span>
+      <span>Cobranças</span>
+    </button>
+    <button class="nav-item" onclick="trocarAba('fichas', this)">
+      <span class="nav-icon">📑</span>
+      <span>Fichas</span>
+    </button>
+    <button class="nav-item" onclick="trocarAba('vendas', this)">
+      <span class="nav-icon">🛒</span>
+      <span>Vender</span>
+    </button>
+    <button class="nav-item" onclick="trocarAba('estoque', this)">
+      <span class="nav-icon">📦</span>
+      <span>Estoque</span>
+    </button>
+  </nav>
+
+  <script src="/app.js"></script>
+</body>
+</html>

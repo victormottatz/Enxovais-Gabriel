@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "locked": true,
+  "lockedAt": "2026-05-21T02:24:01.041Z",
+  "files": {
+    "html": "artifact.html",
+    "contract": "design-contract.json",
+    "brief": "design-brief.md",
+    "report": "design-lock-report.md"
+  },
+  "hashes": {
+    "htmlSha256": "c21833890625964b42bf66e3d5682a74f07afdabe872d4eb8857d5ac17ceb217",
+    "contractSha256": "8f49b4cb1f7c9e1442c2fd62d396464b771fcd2bc624f6f97c8dfbdb1217bdea"
+  }
+}

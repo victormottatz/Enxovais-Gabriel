@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Banco de Dados Relacional (PostgreSQL 16) - Isolado na Rede Interna
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: enxoval_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-enxoval_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-enxoval_super_senha_segura_123}
+      POSTGRES_DB: ${POSTGRES_DB:-enxoval_db}
+    volumes:
+      - enxoval_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - enxoval_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-enxoval_user} -d ${POSTGRES_DB:-enxoval_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. Filas de Mensagens e Cache (Redis 7) - Isolado na Rede Interna
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: enxoval_redis
+    restart: always
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis_senha_segura_456}"]
+    volumes:
+      - enxoval_redis_data:/data
+    networks:
+      - enxoval_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_senha_segura_456}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 3. Gateway de WhatsApp (Evolution API v2)
+  # ----------------------------------------------------------------------------
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: enxoval_evolution_api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${EVOLUTION_API_PORT:-8081}:8080"
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:-http://179.198.121.203:8081}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-B6D711FCDE4D4FD5936544120E713976}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER:-enxoval_user}:${POSTGRES_PASSWORD:-enxoval_super_senha_segura_123}@postgres:5432/${POSTGRES_DB:-enxoval_db}
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      REDIS_ENABLED: "true"
+      REDIS_URI: redis://:${REDIS_PASSWORD:-redis_senha_segura_456}@redis:6379/0
+      LOG_LEVEL: ERROR,WARN,INFO
+      LOG_COLOR: "true"
+      CORS_ORIGIN: "*"
+    volumes:
+      - enxoval_evolution_instances:/evolution/instances
+    networks:
+      - enxoval_network
+
+  # ----------------------------------------------------------------------------
+  # 4. Backend REST API + Frontend PWA
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: enxoval_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-enxoval_user}:${POSTGRES_PASSWORD:-enxoval_super_senha_segura_123}@postgres:5432/${POSTGRES_DB:-enxoval_db}
+      EVOLUTION_SERVER_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-B6D711FCDE4D4FD5936544120E713976}
+      EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-enxovais_gabriel}
+    networks:
+      - enxoval_network
+
+networks:
+  enxoval_network:
+    driver: bridge
+
+volumes:
+  enxoval_postgres_data:
+    driver: local
+  enxoval_redis_data:
+    driver: local
+  enxoval_evolution_instances:
+    driver: local

@@ -1,0 +1,2578 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LionIDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --surface:#141414;
+    --surface-2:#1a1a1a;
+    --surface-3:#202020;
+    --border:#262626;
+    --border-strong:#333;
+    --fg:#e8e8e8;
+    --fg-2:#c9c9c9;
+    --muted:#7a7a7a;
+    --muted-2:#5a5a5a;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-strong:#ea580c;
+    --success:#22c55e;
+    --warning:#eab308;
+    --danger:#ef4444;
+    --info:#3b82f6;
+    --font-body:'Inter','SF Pro Text',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+    --r-sm:4px; --r-md:6px; --r-lg:10px; --r-xl:14px;
+    --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px;
+    --shadow-pop:0 10px 30px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.4);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  body{overflow:hidden}
+  button{font-family:inherit;color:inherit}
+  input,textarea,select{font-family:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;font-size:13px;outline:none;width:100%}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(249,115,22,.12)}
+  textarea{resize:vertical;min-height:80px;font-family:inherit}
+  label{display:block;font-size:12px;color:var(--fg-2);margin-bottom:6px;font-weight:500}
+  .field{margin-bottom:var(--s-4)}
+  .field-help{font-size:11px;color:var(--muted);margin-top:4px}
+  .screen{position:fixed;inset:0;background:var(--bg);overflow:hidden}
+  .screen[hidden]{display:none!important}
+
+  /* ============= App chrome (shared) ============= */
+  .titlebar{
+    height:32px;display:flex;align-items:center;
+    background:#0d0d0d;border-bottom:1px solid var(--border);
+    padding:0 8px;font-size:12px;color:var(--fg-2);
+    user-select:none;-webkit-app-region:drag;position:relative;z-index:5;
+  }
+  .traffic{display:flex;gap:8px;align-items:center;margin-right:14px}
+  .traffic span{width:12px;height:12px;border-radius:50%;display:block}
+  .traffic .r{background:#ff5f57}
+  .traffic .y{background:#febc2e}
+  .traffic .g{background:#28c840}
+  .menu{display:flex;gap:2px;-webkit-app-region:no-drag}
+  .menu button{background:transparent;border:0;padding:4px 9px;font-size:12px;color:var(--fg-2);border-radius:4px;cursor:pointer}
+  .menu button:hover{background:var(--surface-2);color:var(--fg)}
+  .title-center{position:absolute;left:50%;transform:translateX(-50%);font-weight:500;color:var(--fg)}
+  .title-actions{margin-left:auto;display:flex;align-items:center;gap:8px;-webkit-app-region:no-drag}
+  .update-pill{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(249,115,22,.3);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;cursor:pointer}
+  .update-pill:hover{background:rgba(249,115,22,.2)}
+  .am-btn{background:var(--accent);color:#0a0a0a;border:0;padding:5px 12px;border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .am-btn:hover{background:var(--accent-strong)}
+  .am-btn.ghost{background:transparent;color:var(--fg-2);border:1px solid var(--border-strong)}
+  .am-btn.ghost:hover{background:var(--surface-2);color:var(--fg);border-color:var(--accent)}
+
+  /* ============= Activity bar ============= */
+  .shell{display:grid;grid-template-columns:48px 1fr;height:calc(100vh - 32px - 24px);min-height:0}
+  .activity{background:#0d0d0d;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+  .activity-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--muted);border-left:2px solid transparent;border-radius:0;cursor:pointer;background:transparent;border-top:0;border-right:0;border-bottom:0;padding:0;position:relative}
+  .activity-icon:hover{color:var(--fg)}
+  .activity-icon.active{color:var(--fg);border-left-color:var(--accent)}
+  .activity-icon.bottom{margin-top:auto}
+  .activity-icon svg{width:20px;height:20px}
+  .activity-icon .lion-mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-weight:800;font-size:11px}
+  .activity-icon[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:46px;top:50%;transform:translateY(-50%);background:#000;border:1px solid var(--border-strong);color:var(--fg);font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:50}
+
+  /* ============= Status bar ============= */
+  .statusbar{height:24px;background:#0d0d0d;border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:11px;color:var(--muted);gap:16px}
+  .statusbar .item{display:flex;align-items:center;gap:5px}
+  .statusbar .item.accent{color:var(--accent)}
+  .statusbar .dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+  .statusbar .spacer{flex:1}
+
+  /* ============= Buttons ============= */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:var(--r-md);padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;line-height:1;transition:background .15s,border-color .15s,color .15s;text-decoration:none}
+  .btn-primary{background:var(--accent);color:#0a0a0a;font-weight:600}
+  .btn-primary:hover{background:var(--accent-strong)}
+  .btn-secondary{background:var(--surface-2);color:var(--fg);border:1px solid var(--border-strong)}
+  .btn-secondary:hover{background:var(--surface-3);border-color:var(--accent)}
+  .btn-ghost{background:transparent;color:var(--fg-2);border:1px solid transparent}
+  .btn-ghost:hover{background:var(--surface-2);color:var(--fg)}
+  .btn-sm{padding:6px 10px;font-size:12px}
+  .btn-icon{padding:7px;width:32px;height:32px}
+  .btn-danger{background:#3a1414;color:#fca5a5;border:1px solid #5a1a1a}
+  .btn-danger:hover{background:#4a1a1a}
+
+  /* ============= Pills / chips ============= */
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 8px;border-radius:999px;font-weight:500}
+  .pill .dot{width:6px;height:6px;border-radius:50%;display:block}
+  .pill.success{background:rgba(34,197,94,.12);color:var(--success)}
+  .pill.success .dot{background:var(--success)}
+  .pill.warning{background:rgba(234,179,8,.14);color:var(--warning)}
+  .pill.warning .dot{background:var(--warning)}
+  .pill.info{background:rgba(59,130,246,.12);color:var(--info)}
+  .pill.info .dot{background:var(--info)}
+  .pill.muted{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+  .pill.muted .dot{background:var(--muted)}
+
+  /* ============= Cards ============= */
+  .card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s-4)}
+  .card-hoverable{cursor:pointer;transition:border-color .15s,background .15s}
+  .card-hoverable:hover{border-color:var(--accent);background:var(--surface-3)}
+
+  /* === Lion logo === */
+  .lion-logo{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(249,115,22,.25)}
+  .lion-logo svg{width:48px;height:48px;color:#0a0a0a}
+
+  /* ============= WELCOME SCREEN ============= */
+  #welcome .body{display:grid;grid-template-columns:48px 280px 1fr 360px;height:100%}
+  .welcome-explorer{background:var(--surface);border-right:1px solid var(--border);padding:16px 14px;overflow:auto}
+  .panel-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}
+  .empty-folder{color:var(--fg-2);font-size:12px;margin:12px 0 14px;line-height:1.5}
+  .stack{display:flex;flex-direction:column;gap:6px}
+  .welcome-center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;overflow:auto;background:radial-gradient(circle at 50% 30%,rgba(249,115,22,.04),transparent 60%)}
+  .welcome-card{width:100%;max-width:520px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+  .welcome-card h1{font-size:32px;font-weight:700;margin:18px 0 0;letter-spacing:-0.02em}
+  .welcome-card .sub{color:var(--muted);font-size:13px;margin:0 0 24px;max-width:380px}
+  .welcome-actions{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;margin-bottom:20px}
+  .recent-block{width:100%;max-width:520px;margin-top:18px}
+  .recent-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .recent-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--fg-2);font-size:12px}
+  .recent-row:hover{background:var(--surface-2);color:var(--fg)}
+  .recent-row .name{font-weight:500;color:var(--fg);font-size:13px}
+  .recent-row .path{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:auto}
+  .recent-row svg{width:14px;height:14px;color:var(--accent);flex-shrink:0}
+
+  /* Agent panel (right) ============= */
+  .agent-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+  .agent-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .agent-label{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.06em}
+  .agent-name{font-size:12px;font-weight:600;color:var(--fg);display:flex;align-items:center;gap:6px}
+  .agent-name .lion-mark{width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-weight:800;font-size:9px}
+  .agent-actions{margin-left:auto;display:flex;gap:4px}
+  .agent-icon-btn{background:transparent;border:0;padding:5px;border-radius:4px;cursor:pointer;color:var(--muted);width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+  .agent-icon-btn:hover{background:var(--surface-2);color:var(--fg)}
+  .agent-icon-btn svg{width:14px;height:14px}
+  .agent-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+  .agent-empty .lion-mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-weight:800;font-size:18px;margin-bottom:14px}
+  .agent-empty p{font-size:12px;margin:0;line-height:1.5;max-width:240px}
+  .auth-banner{margin:10px 12px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+  .auth-banner.success{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.25)}
+  .auth-banner svg{flex-shrink:0;width:14px;height:14px;margin-top:1px}
+  .auth-banner.success svg{color:var(--success)}
+  .auth-banner:not(.success) svg{color:var(--warning)}
+  .auth-banner .at-title{font-size:12px;font-weight:600;color:var(--fg);margin-bottom:2px}
+  .auth-banner.success .at-title{color:var(--fg)}
+  .auth-banner:not(.success) .at-title{color:var(--warning)}
+  .auth-banner .at-desc{font-size:11px;color:var(--muted);line-height:1.5}
+  .auth-banner .at-link{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer;background:none;border:0;padding:0;font-size:11px;margin-top:6px;display:inline-block}
+  .agent-chat-input{padding:10px;border-top:1px solid var(--border)}
+  .agent-input-box{background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+  .agent-input-box:focus-within{border-color:var(--accent)}
+  .agent-input-box textarea{background:transparent;border:0;padding:0;font-size:13px;color:var(--fg);min-height:36px;resize:none;outline:none;width:100%}
+  .agent-input-box textarea::placeholder{color:var(--muted)}
+  .agent-input-bottom{display:flex;align-items:center;gap:6px}
+  .model-select{background:var(--surface-3);border:1px solid var(--border);color:var(--fg-2);font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .model-select:hover{border-color:var(--accent)}
+  .plan-toggle{background:transparent;border:1px solid var(--border);color:var(--fg-2);font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px}
+  .plan-toggle.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .mic-btn,.send-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .send-btn{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+  .send-btn:hover{background:var(--accent-strong)}
+  .mic-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .mic-btn.recording{background:var(--danger);color:#fff;border-color:var(--danger);animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+
+  /* ============= WORKSPACE ============= */
+  #workspace .body{display:grid;grid-template-columns:48px 260px 1fr 380px;grid-template-rows:1fr;height:100%}
+  .explorer{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+  .explorer-head{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+  .explorer-head .title{font-size:11px;font-weight:600;color:var(--fg-2);text-transform:uppercase;letter-spacing:.06em}
+  .explorer-head .actions{display:flex;gap:2px}
+  .explorer-head button{background:transparent;border:0;padding:4px;border-radius:4px;cursor:pointer;color:var(--muted);width:22px;height:22px}
+  .explorer-head button:hover{background:var(--surface-2);color:var(--fg)}
+  .explorer-head svg{width:14px;height:14px}
+  .file-tree{flex:1;overflow:auto;padding:6px 0;font-size:12px}
+  .tree-section{padding:4px 12px;font-size:11px;font-weight:600;color:var(--fg-2);text-transform:uppercase;letter-spacing:.06em;background:var(--surface);position:sticky;top:0}
+  .tree-row{display:flex;align-items:center;gap:6px;padding:3px 12px 3px 12px;color:var(--fg-2);cursor:pointer;font-size:12px;line-height:1.7;user-select:none}
+  .tree-row:hover{background:var(--surface-2);color:var(--fg)}
+  .tree-row.active{background:rgba(249,115,22,.08);color:var(--fg);border-left:2px solid var(--accent);padding-left:10px}
+  .tree-row .chev{width:10px;color:var(--muted);font-size:9px;display:inline-block;text-align:center}
+  .tree-row .ico{width:14px;height:14px;flex-shrink:0}
+  .tree-row .ico.folder{color:#e0a85e}
+  .tree-row .ico.ts{color:#3178c6}
+  .tree-row .ico.tsx{color:#3178c6}
+  .tree-row .ico.json{color:#facc15}
+  .tree-row .ico.md{color:#888}
+  .tree-row .ico.css{color:#1572b6}
+  .tree-row .ico.git{color:#f97316}
+  .tree-row .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tree-row .badge{font-size:9px;color:var(--success);font-weight:600;margin-right:4px}
+  .tree-row.indent-1{padding-left:24px}
+  .tree-row.indent-1.active{padding-left:22px}
+  .tree-row.indent-2{padding-left:38px}
+
+  /* Editor area */
+  .editor-area{display:grid;grid-template-rows:36px 1fr 240px;min-width:0;min-height:0}
+  .tab-bar{background:#0d0d0d;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding-right:8px;min-height:36px}
+  .tab{display:flex;align-items:center;gap:8px;padding:8px 14px;border-right:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;height:36px;border-bottom:1px solid transparent}
+  .tab.active{background:var(--bg);color:var(--fg);border-bottom-color:var(--bg)}
+  .tab .dot-modified{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:2px}
+  .tab .close{color:var(--muted);width:14px;height:14px;display:flex;align-items:center;justify-content:center;border-radius:3px}
+  .tab .close:hover{background:var(--surface-3);color:var(--fg)}
+  .tab svg.fileico{width:14px;height:14px}
+  .editor{background:var(--bg);overflow:auto;padding:14px 0;font-family:var(--font-mono);font-size:13px;line-height:1.65;min-height:0}
+  .code-line{display:flex;padding:0 18px 0 0}
+  .code-line .ln{color:var(--muted-2);width:48px;text-align:right;padding-right:14px;flex-shrink:0;user-select:none}
+  .code-line .cn{white-space:pre;color:var(--fg-2)}
+  .code-line.active{background:rgba(249,115,22,.05)}
+  .code-line.active .ln{color:var(--accent)}
+  .kw{color:#c586c0}
+  .fn{color:#dcdcaa}
+  .st{color:#ce9178}
+  .nm{color:#b5cea8}
+  .ty{color:#4ec9b0}
+  .cm{color:#6a9955;font-style:italic}
+  .pn{color:#9cdcfe}
+  .br{color:#d4d4d4}
+  .op{color:#d4d4d4}
+
+  /* Terminal */
+  .terminal{background:#0a0a0a;border-top:1px solid var(--border);display:grid;grid-template-rows:32px 1fr;min-height:0}
+  .term-tabs{background:#0d0d0d;border-bottom:1px solid var(--border);display:flex;align-items:center;padding-left:8px;gap:2px}
+  .term-tab{padding:6px 12px;font-size:11px;color:var(--muted);background:transparent;border:0;cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px}
+  .term-tab.active{color:var(--fg);border-bottom-color:var(--accent)}
+  .term-tab:hover{color:var(--fg)}
+  .term-tab svg{width:12px;height:12px}
+  .term-spacer{flex:1}
+  .term-body{padding:10px 14px;overflow:auto;font-family:var(--font-mono);font-size:12px;line-height:1.55;color:var(--fg-2)}
+  .term-line{white-space:pre-wrap;word-break:break-all}
+  .term-prompt{color:var(--accent);font-weight:600}
+  .term-cmd{color:var(--fg)}
+  .term-ok{color:var(--success)}
+  .term-warn{color:var(--warning)}
+  .term-err{color:var(--danger)}
+  .term-dim{color:var(--muted)}
+  .term-cursor{display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:middle;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* Chat & task tree */
+  .chat-body{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:14px;min-height:0}
+  .msg{display:flex;gap:10px;font-size:12.5px;line-height:1.55}
+  .msg.user{justify-content:flex-end}
+  .msg-bubble{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;max-width:88%}
+  .msg.user .msg-bubble{background:var(--accent-soft);border-color:rgba(249,115,22,.3);color:var(--fg)}
+  .msg.agent .msg-bubble{max-width:100%;width:100%}
+  .msg-author{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .msg-author .lion-mark{width:14px;height:14px;border-radius:4px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-weight:800;font-size:8px}
+  .msg-author .subagent-dot{width:8px;height:8px;border-radius:50%;background:var(--info)}
+  .task-tree{margin-top:8px;font-size:11.5px}
+  .task-node{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+  .task-node .tn-ico{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .task-node .tn-ico svg{width:12px;height:12px}
+  .task-node.done .tn-ico{color:var(--success)}
+  .task-node.running .tn-ico{color:var(--accent)}
+  .task-node.pending .tn-ico{color:var(--muted)}
+  .task-node .tn-title{font-weight:500;color:var(--fg)}
+  .task-node .tn-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .task-children{padding-left:18px;border-left:1px dashed var(--border-strong);margin-left:6px}
+  .task-children .task-node{padding:3px 0 3px 8px}
+  .spinner{display:inline-block;width:12px;height:12px;border:1.5px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .tool-row{display:flex;gap:8px;align-items:center;background:var(--surface-3);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:11px;color:var(--fg-2);font-family:var(--font-mono);margin-top:8px}
+  .tool-row .tool-name{color:var(--accent);font-weight:500}
+  .tool-row .tool-path{color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tool-row .tool-status{margin-left:auto;font-size:10px;color:var(--success)}
+
+  /* ============= AGENT MANAGER ============= */
+  #agent-manager .body{display:grid;grid-template-rows:auto auto 1fr;height:100%}
+  .am-topbar{display:flex;align-items:center;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface);gap:16px}
+  .am-topbar h1{font-size:18px;font-weight:600;margin:0;display:flex;align-items:center;gap:10px}
+  .am-topbar h1 .lion-mark{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-weight:800;font-size:12px}
+  .am-topbar .crumbs{color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center}
+  .am-topbar .crumbs .sep{color:var(--muted-2)}
+  .am-topbar .crumbs button{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:0;font-size:12px}
+  .am-topbar .crumbs button:hover{color:var(--accent)}
+  .am-topbar .right{margin-left:auto;display:flex;gap:8px}
+  .am-tabs{display:flex;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);gap:4px}
+  .am-tab{background:transparent;border:0;padding:12px 18px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px;font-weight:500}
+  .am-tab svg{width:14px;height:14px}
+  .am-tab.active{color:var(--fg);border-bottom-color:var(--accent)}
+  .am-tab:hover{color:var(--fg)}
+  .am-tab .count{background:var(--surface-3);color:var(--muted);font-size:10px;padding:1px 7px;border-radius:999px;font-weight:600;font-family:var(--font-mono)}
+  .am-tab.active .count{background:var(--accent-soft);color:var(--accent)}
+  .am-content{overflow:auto;padding:24px}
+  .am-pane{display:none}
+  .am-pane.active{display:block}
+  .am-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .am-toolbar .search{flex:1;max-width:360px;position:relative}
+  .am-toolbar .search input{padding-left:34px;background:var(--surface-2)}
+  .am-toolbar .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted)}
+  .am-toolbar .scope-toggle{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:2px}
+  .am-toolbar .scope-toggle button{background:transparent;border:0;padding:5px 12px;font-size:12px;color:var(--muted);border-radius:4px;cursor:pointer}
+  .am-toolbar .scope-toggle button.active{background:var(--accent);color:#0a0a0a;font-weight:600}
+
+  /* Agents grid */
+  .agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .agent-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color .15s,transform .15s}
+  .agent-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .agent-card.new{border:1.5px dashed var(--border-strong);background:transparent;align-items:center;justify-content:center;text-align:center;min-height:170px;color:var(--muted)}
+  .agent-card.new:hover{border-color:var(--accent);color:var(--accent);background:rgba(249,115,22,.04)}
+  .agent-card.new .plus-circle{width:40px;height:40px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border-strong);display:flex;align-items:center;justify-content:center;color:inherit;margin-bottom:8px}
+  .agent-card.new:hover .plus-circle{border-color:var(--accent);background:var(--accent-soft)}
+  .agent-card-head{display:flex;align-items:center;gap:10px}
+  .agent-icon{width:36px;height:36px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--surface-3);border:1px solid var(--border)}
+  .agent-icon.coder{background:rgba(249,115,22,.12);color:var(--accent);border-color:rgba(249,115,22,.3)}
+  .agent-icon.reviewer{background:rgba(59,130,246,.12);color:var(--info);border-color:rgba(59,130,246,.3)}
+  .agent-icon.docs{background:rgba(34,197,94,.12);color:var(--success);border-color:rgba(34,197,94,.3)}
+  .agent-icon.tester{background:rgba(168,85,247,.12);color:#a855f7;border-color:rgba(168,85,247,.3)}
+  .agent-icon.refactor{background:rgba(236,72,153,.12);color:#ec4899;border-color:rgba(236,72,153,.3)}
+  .agent-card-title{font-size:14px;font-weight:600;color:var(--fg)}
+  .agent-card-model{font-size:11px;color:var(--muted);font-family:var(--font-mono)}
+  .agent-card-desc{font-size:12px;color:var(--fg-2);line-height:1.5;flex:1}
+  .agent-card-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border)}
+  .tool-chip{background:var(--surface-3);border:1px solid var(--border);color:var(--fg-2);font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--font-mono)}
+
+  /* Skills grid */
+  .skill-category{margin-bottom:28px}
+  .skill-category h3{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .skill-category h3 .count{background:var(--surface-3);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:999px;font-family:var(--font-mono)}
+  .skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+  .skill-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .skill-card.active{border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.04)}
+  .skill-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .skill-card-title{font-size:13px;font-weight:600;color:var(--fg);margin:0}
+  .skill-card-desc{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0}
+  .skill-card-foot{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);font-family:var(--font-mono)}
+
+  /* Toggle */
+  .toggle{position:relative;display:inline-block;width:32px;height:18px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle .slider{position:absolute;cursor:pointer;inset:0;background:var(--surface-3);border:1px solid var(--border-strong);border-radius:999px;transition:.2s}
+  .toggle .slider::before{position:absolute;content:"";height:12px;width:12px;left:2px;top:50%;transform:translateY(-50%);background:var(--muted);border-radius:50%;transition:.2s}
+  .toggle input:checked + .slider{background:var(--accent);border-color:var(--accent)}
+  .toggle input:checked + .slider::before{transform:translate(14px,-50%);background:#0a0a0a}
+
+  /* MCP table */
+  .mcp-table{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+  .mcp-row{display:grid;grid-template-columns:32px 1.6fr 110px 110px 80px 80px 80px 56px;align-items:center;padding:14px 16px;gap:14px;border-bottom:1px solid var(--border);font-size:12.5px}
+  .mcp-row:last-child{border-bottom:0}
+  .mcp-row.header{background:#0d0d0d;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:600;letter-spacing:.06em;padding:10px 16px}
+  .mcp-row.header > div{font-weight:600}
+  .mcp-icon{width:32px;height:32px;border-radius:var(--r-md);background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--fg);font-size:13px;flex-shrink:0}
+  .mcp-name{font-weight:500;color:var(--fg)}
+  .mcp-name .desc{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+  .mcp-origin{color:var(--muted);font-family:var(--font-mono);font-size:11px}
+  .mcp-version{color:var(--muted);font-family:var(--font-mono);font-size:11px}
+  .mcp-tools{color:var(--fg-2);font-family:var(--font-mono);font-size:12px;text-align:center}
+  .mcp-action button{background:var(--surface-3);border:1px solid var(--border-strong);color:var(--fg-2);padding:5px 10px;font-size:11px;border-radius:5px;cursor:pointer;white-space:nowrap}
+  .mcp-action button:hover{border-color:var(--accent);color:var(--accent)}
+  .mcp-action button.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);font-weight:600}
+  .mcp-action button.primary:hover{background:var(--accent-strong)}
+  .mcp-action.busy button{background:var(--surface-3);color:var(--accent);border-color:var(--accent);pointer-events:none}
+
+  /* ============= FORMS (new agent / new skill / new mcp) ============= */
+  .form-screen{display:grid;grid-template-rows:auto 1fr;height:100%}
+  .form-top{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--surface)}
+  .form-top h1{font-size:17px;margin:0;font-weight:600}
+  .form-top .crumbs{color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center}
+  .form-top .crumbs button{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:0;font-size:12px}
+  .form-top .crumbs button:hover{color:var(--accent)}
+  .form-top .right{margin-left:auto;display:flex;gap:8px}
+  .form-content{overflow:auto;padding:32px 24px}
+  .form-wrap{max-width:780px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:32px}
+  .form-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px}
+  .form-section h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 16px;font-weight:600}
+  .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .icon-picker{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .icon-opt{aspect-ratio:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+  .icon-opt:hover{border-color:var(--accent)}
+  .icon-opt.selected{background:rgba(249,115,22,.12);border-color:var(--accent);color:var(--accent)}
+  .radio-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .radio-card{background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--r-md);padding:12px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:4px;transition:border-color .15s}
+  .radio-card:hover{border-color:var(--border-strong)}
+  .radio-card input{display:none}
+  .radio-card .label{font-size:13px;font-weight:600}
+  .radio-card .hint{font-size:11px;color:var(--muted)}
+  .radio-card.selected{border-color:var(--accent);background:rgba(249,115,22,.04)}
+  .radio-card.selected .label{color:var(--accent)}
+  .tools-checklist{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .check-row{display:flex;align-items:flex-start;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;cursor:pointer}
+  .check-row:hover{border-color:var(--border-strong)}
+  .check-row.checked{border-color:var(--accent);background:rgba(249,115,22,.04)}
+  .check-row input{display:none}
+  .check-box{width:16px;height:16px;border:1.5px solid var(--border-strong);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center}
+  .check-row.checked .check-box{background:var(--accent);border-color:var(--accent)}
+  .check-row.checked .check-box::after{content:"";width:10px;height:6px;border-left:2px solid #0a0a0a;border-bottom:2px solid #0a0a0a;transform:rotate(-45deg) translate(1px,-1px)}
+  .check-info{flex:1}
+  .check-info .ci-name{font-size:13px;font-weight:500;color:var(--fg);font-family:var(--font-mono)}
+  .check-info .ci-desc{font-size:11px;color:var(--muted);margin-top:2px}
+  .model-url{margin-top:8px}
+
+  /* Modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal-backdrop[hidden]{display:none}
+  .modal{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-xl);width:100%;max-width:540px;box-shadow:var(--shadow-pop);overflow:hidden}
+  .modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .modal-head h2{font-size:15px;margin:0;font-weight:600}
+  .modal-head .pill{margin-left:auto}
+  .modal-body{padding:22px;max-height:60vh;overflow:auto}
+  .modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:#0d0d0d}
+  .diff-block{background:#0a0a0a;border:1px solid var(--border);border-radius:var(--r-md);padding:0;font-family:var(--font-mono);font-size:11.5px;overflow:auto;margin-bottom:16px;max-height:240px}
+  .diff-line{padding:1px 12px;white-space:pre;color:var(--fg-2);line-height:1.6}
+  .diff-line.add{background:rgba(34,197,94,.08);color:#86efac}
+  .diff-line.del{background:rgba(239,68,68,.08);color:#fca5a5}
+  .diff-file{background:#0d0d0d;padding:6px 12px;color:var(--fg);font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .diff-file svg{width:12px;height:12px;color:var(--muted)}
+  .diff-file .stats{margin-left:auto;font-size:10px}
+  .diff-file .stats .plus{color:var(--success)}
+  .diff-file .stats .minus{color:var(--danger);margin-left:6px}
+  .commit-msg{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;font-family:var(--font-mono);font-size:12.5px}
+  .commit-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);margin-top:8px}
+
+  /* Login form (welcome) */
+  .login-form{display:flex;flex-direction:column;gap:8px;width:100%}
+  .or-divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin:8px 0}
+  .or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border)}
+
+  /* ============= Toast ============= */
+  .toast{position:fixed;bottom:36px;right:20px;background:var(--surface-2);border:1px solid var(--border-strong);border-left:3px solid var(--accent);padding:12px 16px;border-radius:var(--r-md);font-size:12px;box-shadow:var(--shadow-pop);z-index:200;display:flex;gap:10px;align-items:center;max-width:320px}
+  .toast[hidden]{display:none}
+  .toast svg{width:16px;height:16px;color:var(--accent);flex-shrink:0}
+
+  /* utility */
+  .row{display:flex;align-items:center;gap:8px}
+  .gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+  .mt-1{margin-top:6px}.mt-2{margin-top:12px}.mt-3{margin-top:16px}.mt-4{margin-top:24px}
+  .text-muted{color:var(--muted)}
+  .text-sm{font-size:12px}
+  .text-xs{font-size:11px}
+  .strong{font-weight:600}
+  .hidden{display:none!important}
+  .fs-mono{font-family:var(--font-mono)}
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#3a3a3a;border:2px solid transparent;background-clip:content-box}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SCREEN: LOGIN ANTHROPIC (auth gate, US-16)
+     ============================================================ -->
+<section id="login" class="screen" aria-label="Login Anthropic">
+  <div style="display:flex;height:100%;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,rgba(249,115,22,.06),transparent 60%)">
+    <form id="login-form" class="card" style="width:100%;max-width:420px;padding:36px 32px;text-align:center">
+      <div class="lion-logo" style="margin:0 auto 20px;width:60px;height:60px;border-radius:14px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      </div>
+      <h1 style="font-size:22px;margin:0 0 4px;font-weight:700;letter-spacing:-0.01em">Conectar ao LionIDE</h1>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 24px;line-height:1.5">Autentique com sua conta Anthropic.<br>Chamadas vao direto da sua maquina para a Anthropic.</p>
+
+      <div class="login-form" style="text-align:left">
+        <div class="field" style="margin-bottom:10px">
+          <label for="login-email">E-mail Anthropic</label>
+          <input type="email" id="login-email" name="email" required autocomplete="username" placeholder="voce@exemplo.com">
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label for="login-password">Chave de API ou senha</label>
+          <input type="password" id="login-password" name="password" required autocomplete="current-password" placeholder="sk-ant-... ou senha da conta">
+          <div class="field-help">Sua chave fica salva apenas no SQLite local.</div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Conectar
+        </button>
+      </div>
+
+      <div class="or-divider">ou</div>
+
+      <button type="button" id="login-byok" class="btn btn-secondary" style="width:100%">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Usar chave de API ja configurada no Claude Code
+      </button>
+
+      <div style="margin-top:20px;font-size:11px;color:var(--muted);line-height:1.5">
+        Sem servidor intermediario do LionIDE.<br>
+        <a href="https://docs.anthropic.com" target="_blank" style="color:var(--accent);text-decoration:none">Como obter uma chave</a>
+      </div>
+
+      <div id="login-error" hidden style="margin-top:14px;padding:8px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#fca5a5;font-size:12px">
+        Credenciais nao reconhecidas. Tente novamente.
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN: WELCOME (autenticado, sem pasta aberta - US-01)
+     ============================================================ -->
+<section id="welcome" class="screen" hidden aria-label="Tela de boas vindas">
+  <!-- titlebar -->
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <nav class="menu">
+      <button>Arquivo</button><button>Editar</button><button>Selecao</button><button>Visualizar</button><button>Ir</button><button>Executar</button><button>Terminal</button><button>Ajuda</button>
+    </nav>
+    <div class="title-center">LionIDE</div>
+    <div class="title-actions">
+      <button class="update-pill" type="button" title="Atualizacao disponivel">Atualizacao disponivel</button>
+      <button class="am-btn" data-nav="agent-manager" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.66.4 1.51 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Agent Manager
+      </button>
+    </div>
+  </div>
+
+  <!-- shell -->
+  <div class="body">
+    <!-- activity bar -->
+    <aside class="activity">
+      <button class="activity-icon" data-tip="LionIDE" type="button"><span class="lion-mark">L</span></button>
+      <button class="activity-icon active" data-tip="Explorador" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6l2 2h12v14H2z"/></svg></button>
+      <button class="activity-icon" data-tip="Busca" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></button>
+      <button class="activity-icon" data-tip="Git" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg></button>
+      <button class="activity-icon" data-tip="Executar e depurar" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+      <button class="activity-icon" data-tip="Extensoes" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><path d="M7 7h.01"/></svg></button>
+      <button class="activity-icon bottom" data-tip="Conta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+      <button class="activity-icon" data-tip="Configuracoes" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    </aside>
+
+    <!-- explorer empty -->
+    <aside class="welcome-explorer">
+      <h2 class="panel-title">Explorador</h2>
+      <p class="empty-folder">Nenhuma pasta aberta. Abra uma pasta para o agente principal carregar o contexto do projeto automaticamente.</p>
+      <div class="stack">
+        <button class="btn btn-primary btn-sm" data-action="open-folder" type="button">Abrir pasta</button>
+        <button class="btn btn-secondary btn-sm" data-action="clone-repo" type="button">Clonar repositorio</button>
+      </div>
+      <h2 class="panel-title" style="margin-top:24px">Esboco</h2>
+      <p class="empty-folder">Sem arquivo aberto.</p>
+      <h2 class="panel-title" style="margin-top:24px">Linha do tempo</h2>
+      <p class="empty-folder">—</p>
+    </aside>
+
+    <!-- center -->
+    <main class="welcome-center">
+      <div class="welcome-card">
+        <div class="lion-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C9 2 6.5 4.5 6.5 7.5c0 1.2.3 2.3.9 3.3-1.4 1-2.4 2.7-2.4 4.5 0 3 2.5 5.5 5.5 5.5h3c3 0 5.5-2.5 5.5-5.5 0-1.8-1-3.5-2.4-4.5.6-1 .9-2.1.9-3.3C17.5 4.5 15 2 12 2z"/><circle cx="9.5" cy="11.5" r=".8" fill="currentColor"/><circle cx="14.5" cy="11.5" r=".8" fill="currentColor"/><path d="M9 16.5c1 .8 2 1 3 1s2-.2 3-1"/></svg>
+        </div>
+        <h1>LionIDE</h1>
+        <p class="sub">Desenvolvimento com agentes IA. Workspace de codigo + Claude Code com painel visual de subagentes, skills e MCPs.</p>
+
+        <div class="welcome-actions">
+          <button class="btn btn-primary" data-action="open-folder" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            Abrir pasta
+          </button>
+          <button class="btn btn-secondary" data-nav="agent-manager" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="11" r="3"/><path d="M22 21v-1.5a2.5 2.5 0 00-2.5-2.5H18"/></svg>
+            Abrir Agent Manager
+          </button>
+          <button class="btn btn-secondary" data-action="clone-repo" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 012 2v7M6 9v12"/></svg>
+            Clonar repositorio
+          </button>
+        </div>
+
+        <div class="recent-block">
+          <div class="recent-title">Workspaces recentes <button class="btn btn-ghost btn-sm" type="button">Mais</button></div>
+          <div class="stack">
+            <button class="recent-row" data-action="open-folder" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg><span class="name">portal-clientes</span><span class="path">~/Desktop/portal-clientes</span></button>
+            <button class="recent-row" data-action="open-folder" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg><span class="name">cresce-school</span><span class="path">~/Desktop/cresce-school</span></button>
+            <button class="recent-row" data-action="open-folder" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg><span class="name">lionclaw-deploy</span><span class="path">~/Desktop/lionclaw-deploy</span></button>
+            <button class="recent-row" data-action="open-folder" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg><span class="name">api-faturamento</span><span class="path">~/Code/api-faturamento</span></button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- agent panel (empty state) -->
+    <aside class="agent-panel">
+      <header class="agent-header">
+        <span class="agent-label">Agente</span>
+        <span class="agent-name"><span class="lion-mark">L</span>LionIDE</span>
+        <div class="agent-actions">
+          <button class="agent-icon-btn" title="Nova conversa" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="agent-icon-btn" title="Historico" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg></button>
+        </div>
+      </header>
+
+      <div class="auth-banner success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div>
+          <div class="at-title">Anthropic conectado</div>
+          <div class="at-desc">Chave herdada do Claude Code. Chamadas saem direto da sua maquina.</div>
+        </div>
+      </div>
+
+      <div class="agent-empty">
+        <span class="lion-mark">L</span>
+        <p>Abra uma pasta para iniciar uma conversa. O agente vai detectar o framework do projeto automaticamente.</p>
+      </div>
+
+      <div class="agent-chat-input">
+        <div class="agent-input-box">
+          <textarea placeholder="Abra uma pasta para conversar... use @ para mencionar arquivo, / para acoes" disabled rows="2"></textarea>
+          <div class="agent-input-bottom">
+            <button class="model-select" type="button" disabled>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+              Sonnet 4.6
+            </button>
+            <button class="plan-toggle" type="button" disabled>Plan</button>
+            <button class="mic-btn" title="Falar" type="button" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- statusbar -->
+  <div class="statusbar">
+    <span class="item"><span class="dot"></span> Anthropic: Sonnet 4.6</span>
+    <span class="item">Sem pasta aberta</span>
+    <span class="spacer"></span>
+    <span class="item">UTF-8</span>
+    <span class="item">LF</span>
+    <span class="item accent">LionIDE 0.4.2</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN: WORKSPACE (pasta aberta - US-01..06, US-16)
+     ============================================================ -->
+<section id="workspace" class="screen" hidden aria-label="Workspace de desenvolvimento">
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <nav class="menu">
+      <button>Arquivo</button><button>Editar</button><button>Selecao</button><button>Visualizar</button><button>Ir</button><button>Executar</button><button>Terminal</button><button>Ajuda</button>
+    </nav>
+    <div class="title-center"><span id="ws-project-title">portal-clientes</span> &mdash; LionIDE</div>
+    <div class="title-actions">
+      <button class="am-btn ghost" data-nav="welcome" type="button" title="Fechar pasta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="am-btn" data-nav="agent-manager" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="11" r="3"/><path d="M22 21v-1.5a2.5 2.5 0 00-2.5-2.5H18"/></svg>
+        Agent Manager
+      </button>
+    </div>
+  </div>
+
+  <div class="body">
+    <aside class="activity">
+      <button class="activity-icon" data-tip="LionIDE" type="button"><span class="lion-mark">L</span></button>
+      <button class="activity-icon active" data-tip="Explorador" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></button>
+      <button class="activity-icon" data-tip="Busca" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></button>
+      <button class="activity-icon" data-tip="Git" type="button" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg><span style="position:absolute;top:4px;right:5px;background:var(--accent);color:#0a0a0a;font-size:9px;border-radius:8px;padding:0 4px;font-weight:700">4</span></button>
+      <button class="activity-icon" data-tip="Executar e depurar" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+      <button class="activity-icon" data-tip="Extensoes" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+      <button class="activity-icon bottom" data-tip="Conta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+      <button class="activity-icon" data-tip="Configuracoes do projeto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    </aside>
+
+    <aside class="explorer">
+      <div class="explorer-head">
+        <span class="title">portal-clientes</span>
+        <div class="actions">
+          <button title="Novo arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></button>
+          <button title="Nova pasta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button>
+          <button title="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+        </div>
+      </div>
+      <div class="file-tree">
+        <div class="tree-section">portal-clientes</div>
+        <div class="tree-row indent-1"><span class="chev">▾</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">.lion</span></div>
+        <div class="tree-row indent-2"><span class="chev"></span><svg class="ico json" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">config.json</span><span class="badge">M</span></div>
+        <div class="tree-row indent-1"><span class="chev">▾</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">app</span></div>
+        <div class="tree-row indent-2"><span class="chev">▸</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">api</span></div>
+        <div class="tree-row indent-2"><span class="chev">▸</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">dashboard</span></div>
+        <div class="tree-row indent-2 active"><span class="chev"></span><svg class="ico tsx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">layout.tsx</span></div>
+        <div class="tree-row indent-2"><span class="chev"></span><svg class="ico tsx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">page.tsx</span></div>
+        <div class="tree-row indent-1"><span class="chev">▾</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">components</span></div>
+        <div class="tree-row indent-2"><span class="chev"></span><svg class="ico tsx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">login-form.tsx</span><span class="badge" style="color:var(--accent)">U</span></div>
+        <div class="tree-row indent-2"><span class="chev"></span><svg class="ico tsx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">button.tsx</span></div>
+        <div class="tree-row indent-1"><span class="chev">▸</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">lib</span></div>
+        <div class="tree-row indent-2"><span class="chev"></span><svg class="ico ts" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">auth.ts</span><span class="badge">M</span></div>
+        <div class="tree-row indent-1"><span class="chev">▸</span><svg class="ico folder" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg><span class="name">tests</span></div>
+        <div class="tree-row indent-1"><span class="chev"></span><svg class="ico git" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">.gitignore</span></div>
+        <div class="tree-row indent-1"><span class="chev"></span><svg class="ico json" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">package.json</span></div>
+        <div class="tree-row indent-1"><span class="chev"></span><svg class="ico md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">README.md</span></div>
+        <div class="tree-row indent-1"><span class="chev"></span><svg class="ico json" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="name">tsconfig.json</span></div>
+      </div>
+    </aside>
+
+    <main class="editor-area">
+      <div class="tab-bar">
+        <div class="tab active">
+          <svg class="fileico ico tsx" viewBox="0 0 24 24" fill="none" stroke="#3178c6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>layout.tsx</span><span class="dot-modified"></span>
+          <span class="close"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        </div>
+        <div class="tab">
+          <svg class="fileico" viewBox="0 0 24 24" fill="none" stroke="#3178c6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>auth.ts</span>
+          <span class="close"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        </div>
+        <div class="tab">
+          <svg class="fileico" viewBox="0 0 24 24" fill="none" stroke="#3178c6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>login-form.tsx</span>
+          <span class="close"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+        </div>
+      </div>
+
+      <div class="editor" id="editor-code">
+        <div class="code-line"><span class="ln">1</span><span class="cn"><span class="kw">import</span> <span class="br">{</span> <span class="pn">Suspense</span> <span class="br">}</span> <span class="kw">from</span> <span class="st">'react'</span><span class="op">;</span></span></div>
+        <div class="code-line"><span class="ln">2</span><span class="cn"><span class="kw">import</span> <span class="br">{</span> <span class="pn">SidebarProvider</span> <span class="br">}</span> <span class="kw">from</span> <span class="st">'@/components/sidebar'</span><span class="op">;</span></span></div>
+        <div class="code-line"><span class="ln">3</span><span class="cn"><span class="kw">import</span> <span class="br">{</span> <span class="pn">requireSession</span> <span class="br">}</span> <span class="kw">from</span> <span class="st">'@/lib/auth'</span><span class="op">;</span></span></div>
+        <div class="code-line"><span class="ln">4</span><span class="cn"></span></div>
+        <div class="code-line"><span class="ln">5</span><span class="cn"><span class="kw">export default async function</span> <span class="fn">DashboardLayout</span><span class="br">(</span><span class="br">{</span> <span class="pn">children</span> <span class="br">}</span><span class="op">:</span> <span class="br">{</span> <span class="pn">children</span><span class="op">:</span> <span class="ty">React.ReactNode</span> <span class="br">}</span><span class="br">)</span> <span class="br">{</span></span></div>
+        <div class="code-line"><span class="ln">6</span><span class="cn">  <span class="kw">const</span> <span class="pn">session</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">requireSession</span><span class="br">()</span><span class="op">;</span></span></div>
+        <div class="code-line"><span class="ln">7</span><span class="cn"></span></div>
+        <div class="code-line active"><span class="ln">8</span><span class="cn">  <span class="kw">return</span> <span class="br">(</span></span></div>
+        <div class="code-line"><span class="ln">9</span><span class="cn">    <span class="op">&lt;</span><span class="ty">SidebarProvider</span> <span class="pn">user</span><span class="op">=</span><span class="br">{</span><span class="pn">session.user</span><span class="br">}</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">10</span><span class="cn">      <span class="op">&lt;</span><span class="ty">main</span> <span class="pn">className</span><span class="op">=</span><span class="st">"flex h-screen flex-col"</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">11</span><span class="cn">        <span class="op">&lt;</span><span class="ty">Suspense</span> <span class="pn">fallback</span><span class="op">=</span><span class="br">{</span><span class="op">&lt;</span><span class="ty">DashboardSkeleton</span> <span class="op">/&gt;</span><span class="br">}</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">12</span><span class="cn">          <span class="br">{</span><span class="pn">children</span><span class="br">}</span></span></div>
+        <div class="code-line"><span class="ln">13</span><span class="cn">        <span class="op">&lt;/</span><span class="ty">Suspense</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">14</span><span class="cn">      <span class="op">&lt;/</span><span class="ty">main</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">15</span><span class="cn">    <span class="op">&lt;/</span><span class="ty">SidebarProvider</span><span class="op">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">16</span><span class="cn">  <span class="br">)</span><span class="op">;</span></span></div>
+        <div class="code-line"><span class="ln">17</span><span class="cn"><span class="br">}</span></span></div>
+        <div class="code-line"><span class="ln">18</span><span class="cn"></span></div>
+        <div class="code-line"><span class="ln">19</span><span class="cn"><span class="cm">// Editado pelo agente Coder ha 2 minutos</span></span></div>
+      </div>
+
+      <div class="terminal">
+        <div class="term-tabs">
+          <button class="term-tab active" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Terminal</button>
+          <button class="term-tab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Saida</button>
+          <button class="term-tab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Problemas <span style="background:var(--danger);color:#fff;font-size:9px;padding:0 5px;border-radius:8px;margin-left:4px;font-weight:600">2</span></button>
+          <button class="term-tab" type="button">Depuracao</button>
+          <div class="term-spacer"></div>
+          <button class="term-tab" type="button" style="border-bottom:0" title="Novo terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+        <div class="term-body">
+          <div class="term-line"><span class="term-prompt">~/Desktop/portal-clientes</span> <span class="term-dim">$</span> <span class="term-cmd">npm test -- --filter=auth</span></div>
+          <div class="term-line term-dim">&gt; portal-clientes@0.4.1 test</div>
+          <div class="term-line term-dim">&gt; vitest run --filter=auth</div>
+          <div class="term-line">&nbsp;</div>
+          <div class="term-line"> <span class="term-ok">RUN</span>  v1.6.0 /Users/breno/Desktop/portal-clientes</div>
+          <div class="term-line">&nbsp;</div>
+          <div class="term-line"> <span class="term-ok">✓</span> tests/auth/login.test.ts (6) <span class="term-dim">124ms</span></div>
+          <div class="term-line"> <span class="term-ok">✓</span> tests/auth/session.test.ts (4) <span class="term-dim">88ms</span></div>
+          <div class="term-line"> <span class="term-ok">✓</span> tests/auth/middleware.test.ts (3) <span class="term-dim">52ms</span></div>
+          <div class="term-line">&nbsp;</div>
+          <div class="term-line"> <span class="term-ok">Test Files</span>  3 passed (3)</div>
+          <div class="term-line"> <span class="term-ok">Tests</span>       13 passed (13)</div>
+          <div class="term-line"> <span class="term-dim">Duration</span>    284ms</div>
+          <div class="term-line">&nbsp;</div>
+          <div class="term-line"><span class="term-prompt">~/Desktop/portal-clientes</span> <span class="term-dim">$</span> <span class="term-cursor"></span></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="agent-panel">
+      <header class="agent-header">
+        <span class="agent-label">Agente</span>
+        <span class="agent-name"><span class="lion-mark">L</span>LionIDE</span>
+        <div class="agent-actions">
+          <button class="agent-icon-btn" title="Nova conversa" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button class="agent-icon-btn" title="Historico" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+          <button class="agent-icon-btn" data-nav="agent-manager" title="Agent Manager" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="11" r="3"/></svg></button>
+        </div>
+      </header>
+
+      <div class="chat-body" id="chat-body">
+        <div class="msg user">
+          <div class="msg-bubble">
+            Implementa o endpoint <span class="fs-mono" style="color:var(--accent)">POST /api/auth/login</span> seguindo o padrao dos outros endpoints e roda os testes.
+          </div>
+        </div>
+
+        <div class="msg agent">
+          <div class="msg-bubble">
+            <div class="msg-author"><span class="lion-mark">L</span> AGENTE PRINCIPAL</div>
+            Vou ler o codigo existente, identificar o padrao, implementar o endpoint e rodar a suite de auth. Invocando subagentes especializados.
+            <div class="task-tree">
+              <div class="task-node done">
+                <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <div><div class="tn-title">Ler estrutura de auth</div><div class="tn-sub">3 arquivos lidos em app/api/auth/</div></div>
+              </div>
+              <div class="task-node done">
+                <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <div><div class="tn-title">Detectar framework <span class="pill info" style="margin-left:6px"><span class="dot"></span>Next.js 14 App Router</span></div></div>
+              </div>
+              <div class="task-node running">
+                <span class="tn-ico"><span class="spinner"></span></span>
+                <div>
+                  <div class="tn-title">Coder <span class="pill muted" style="margin-left:6px"><span class="dot"></span>subagente</span></div>
+                  <div class="tn-sub">Implementando POST /api/auth/login em app/api/auth/login/route.ts</div>
+                </div>
+                <div class="task-children" style="margin-top:6px;width:100%">
+                  <div class="task-node done"><span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><div><div class="tn-title">Criar arquivo route.ts</div></div></div>
+                  <div class="task-node done"><span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><div><div class="tn-title">Adicionar validacao zod</div></div></div>
+                  <div class="task-node running"><span class="tn-ico"><span class="spinner"></span></span><div><div class="tn-title">Editar lib/auth.ts</div><div class="tn-sub">Adicionar funcao verifyCredentials()</div></div></div>
+                </div>
+              </div>
+              <div class="task-node pending">
+                <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                <div><div class="tn-title">Reviewer</div><div class="tn-sub">Aguardando: validar tipos e padroes do projeto</div></div>
+              </div>
+              <div class="task-node pending">
+                <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span>
+                <div><div class="tn-title">Tester</div><div class="tn-sub">Aguardando: rodar npm test --filter=auth</div></div>
+              </div>
+            </div>
+            <div class="tool-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span class="tool-name">edit_file</span>
+              <span class="tool-path">app/api/auth/login/route.ts</span>
+              <span class="tool-status">+42 −0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg user">
+          <div class="msg-bubble">Quando terminar e os testes passarem, commita.</div>
+        </div>
+
+        <div class="msg agent">
+          <div class="msg-bubble">
+            <div class="msg-author"><span class="lion-mark">L</span> AGENTE PRINCIPAL</div>
+            Combinado. Vou pedir confirmacao do commit assim que a Tester reportar verde.
+            <button class="btn btn-primary btn-sm mt-2" data-action="open-commit" type="button" style="background:var(--surface-3);color:var(--fg);border:1px solid var(--border-strong)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="3"/><path d="M5 13h2M17 13h2M12 8V6"/></svg>
+              Revisar commit pendente
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="agent-chat-input">
+        <div class="agent-input-box">
+          <textarea id="chat-input" placeholder="Pergunte qualquer coisa, @ para mencionar arquivo, / para acoes..." rows="2"></textarea>
+          <div class="agent-input-bottom">
+            <button class="model-select" type="button" id="model-select-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+              <span id="model-label">Sonnet 4.6</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button class="plan-toggle" type="button" id="plan-toggle">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              Plan
+            </button>
+            <button class="mic-btn" id="mic-btn" title="Falar" type="button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg></button>
+            <button class="send-btn" id="send-btn" title="Enviar" type="button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="statusbar">
+    <span class="item"><span class="dot"></span> Coder + Reviewer ativos</span>
+    <span class="item">main</span>
+    <span class="item">4 alteracoes</span>
+    <span class="item">Anthropic: Sonnet 4.6</span>
+    <span class="spacer"></span>
+    <span class="item">TypeScript 5.3</span>
+    <span class="item">UTF-8</span>
+    <span class="item">Ln 8, Col 5</span>
+    <span class="item accent">LionIDE 0.4.2</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     MODAL: Confirmar commit (US-05) — overlay do workspace
+     ============================================================ -->
+<div class="modal-backdrop" id="commit-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="commit-modal-title">
+    <div class="modal-head">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="13" r="3"/><path d="M5 13h2M17 13h2M12 8V6"/></svg>
+      <h2 id="commit-modal-title">Confirmar commit</h2>
+      <span class="pill warning"><span class="dot"></span>Aguardando voce</span>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted" style="margin:0 0 12px">O agente preparou um commit no workspace <span class="strong fs-mono" style="color:var(--fg)">portal-clientes</span>. Revise o escopo e a mensagem.</p>
+
+      <div class="diff-block">
+        <div class="diff-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> app/api/auth/login/route.ts <span class="stats"><span class="plus">+42</span><span class="minus">−0</span></span></div>
+        <div class="diff-line add">+ export async function POST(req: Request) {</div>
+        <div class="diff-line add">+   const body = loginSchema.parse(await req.json());</div>
+        <div class="diff-line add">+   const session = await verifyCredentials(body);</div>
+        <div class="diff-line add">+   return Response.json({ token: session.token });</div>
+        <div class="diff-line add">+ }</div>
+        <div class="diff-file" style="border-top:1px solid var(--border)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> lib/auth.ts <span class="stats"><span class="plus">+18</span><span class="minus">−2</span></span></div>
+        <div class="diff-line del">- export function verify() { /* TODO */ }</div>
+        <div class="diff-line add">+ export async function verifyCredentials(input: LoginInput) {</div>
+        <div class="diff-line add">+   const user = await db.user.findByEmail(input.email);</div>
+        <div class="diff-line add">+   if (!user || !await bcrypt.compare(input.password, user.hash)) {</div>
+        <div class="diff-line add">+     throw new AuthError('credenciais invalidas');</div>
+        <div class="diff-line add">+   }</div>
+        <div class="diff-line add">+   return createSession(user);</div>
+        <div class="diff-line add">+ }</div>
+      </div>
+
+      <label for="commit-msg" style="margin-top:8px">Mensagem de commit (proposta pelo agente)</label>
+      <textarea id="commit-msg" class="commit-msg" rows="3">feat(auth): adicionar endpoint POST /api/auth/login
+
+Implementa fluxo de login com validacao zod e verificacao via bcrypt.
+Testes: 13 passing.</textarea>
+
+      <div class="commit-meta">
+        <span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg> main</span>
+        <span>2 arquivos &middot; +60 −2</span>
+        <span class="pill success"><span class="dot"></span>Testes: 13/13</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" type="button" data-action="close-commit">Cancelar</button>
+      <button class="btn btn-secondary" type="button" data-action="close-commit">Editar manualmente</button>
+      <button class="btn btn-primary" type="button" data-action="confirm-commit">Confirmar e fazer commit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: AGENT MANAGER (US-07, US-10, US-11, US-12, US-13, US-15)
+     ============================================================ -->
+<section id="agent-manager" class="screen" hidden aria-label="Agent Manager">
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <nav class="menu">
+      <button>Arquivo</button><button>Editar</button><button>Visualizar</button><button>Ajuda</button>
+    </nav>
+    <div class="title-center">Agent Manager &mdash; LionIDE</div>
+    <div class="title-actions">
+      <button class="am-btn ghost" data-nav="workspace" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Voltar ao workspace
+      </button>
+    </div>
+  </div>
+
+  <div class="body">
+    <header class="am-topbar">
+      <h1><span class="lion-mark">L</span> Agent Manager</h1>
+      <div class="crumbs">
+        <button data-nav="workspace" type="button">portal-clientes</button>
+        <span class="sep">/</span>
+        <span style="color:var(--fg)">Agent Manager</span>
+      </div>
+      <div class="right">
+        <div class="pill success"><span class="dot"></span>Anthropic conectado</div>
+      </div>
+    </header>
+
+    <nav class="am-tabs" role="tablist">
+      <button class="am-tab active" data-tab="agents" role="tab" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>
+        Agentes <span class="count">5</span>
+      </button>
+      <button class="am-tab" data-tab="skills" role="tab" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Skills <span class="count">12</span>
+      </button>
+      <button class="am-tab" data-tab="mcp" role="tab" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        MCP Servers <span class="count">8</span>
+      </button>
+    </nav>
+
+    <div class="am-content">
+      <!-- ========== AGENTES PANE ========== -->
+      <div class="am-pane active" data-pane="agents">
+        <div class="am-toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar agentes...">
+          </div>
+          <div class="scope-toggle">
+            <button class="active" type="button">Este projeto</button>
+            <button type="button">Global</button>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" data-nav="new-agent" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Agente
+          </button>
+        </div>
+
+        <div class="agents-grid">
+          <div class="agent-card">
+            <div class="agent-card-head">
+              <div class="agent-icon coder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+              <div>
+                <div class="agent-card-title">Coder</div>
+                <div class="agent-card-model">claude-sonnet-4-6 &middot; esforco alto</div>
+              </div>
+            </div>
+            <p class="agent-card-desc">Implementa features seguindo o padrao do codebase. Le antes de escrever, edita em pequenos passos e roda os testes ao final.</p>
+            <div class="agent-card-foot">
+              <span class="tool-chip">read_file</span><span class="tool-chip">edit_file</span><span class="tool-chip">bash</span><span class="tool-chip">grep</span>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-head">
+              <div class="agent-icon reviewer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg></div>
+              <div>
+                <div class="agent-card-title">Reviewer</div>
+                <div class="agent-card-model">claude-opus-4-7 &middot; raciocinio adaptativo</div>
+              </div>
+            </div>
+            <p class="agent-card-desc">Valida tipos, padroes do projeto e seguranca. Bloqueia commits que quebrem convencoes ja estabelecidas.</p>
+            <div class="agent-card-foot">
+              <span class="tool-chip">read_file</span><span class="tool-chip">grep</span><span class="tool-chip">bash (somente leitura)</span>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-head">
+              <div class="agent-icon tester"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+              <div>
+                <div class="agent-card-title">Tester</div>
+                <div class="agent-card-model">claude-haiku-4-5 &middot; esforco baixo</div>
+              </div>
+            </div>
+            <p class="agent-card-desc">Roda suites de teste, interpreta falhas e sugere correcoes pontuais sem reescrever logica.</p>
+            <div class="agent-card-foot">
+              <span class="tool-chip">read_file</span><span class="tool-chip">bash</span>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-head">
+              <div class="agent-icon docs"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
+              <div>
+                <div class="agent-card-title">Docs</div>
+                <div class="agent-card-model">claude-sonnet-4-6 &middot; esforco medio</div>
+              </div>
+            </div>
+            <p class="agent-card-desc">Mantem README, CHANGELOG e docstrings em portugues. Atualiza apos features merged.</p>
+            <div class="agent-card-foot">
+              <span class="tool-chip">read_file</span><span class="tool-chip">write_file</span><span class="tool-chip">edit_file</span>
+            </div>
+          </div>
+
+          <div class="agent-card">
+            <div class="agent-card-head">
+              <div class="agent-icon refactor"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg></div>
+              <div>
+                <div class="agent-card-title">Refactor</div>
+                <div class="agent-card-model">claude-opus-4-7 &middot; raciocinio ligado</div>
+              </div>
+            </div>
+            <p class="agent-card-desc">Refatora codigo legado em pequenos passos seguros, mantendo testes verdes a cada etapa.</p>
+            <div class="agent-card-foot">
+              <span class="tool-chip">read_file</span><span class="tool-chip">edit_file</span><span class="tool-chip">bash</span><span class="tool-chip">grep</span>
+            </div>
+          </div>
+
+          <button class="agent-card new" data-nav="new-agent" type="button">
+            <div class="plus-circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            <div class="strong">Novo Agente</div>
+            <div class="text-xs text-muted mt-1">Crie um subagente especializado por formulario visual</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ========== SKILLS PANE ========== -->
+      <div class="am-pane" data-pane="skills">
+        <div class="am-toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar skills...">
+          </div>
+          <div class="scope-toggle">
+            <button class="active" type="button">Este projeto</button>
+            <button type="button">Global</button>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" data-nav="new-skill" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Skill
+          </button>
+        </div>
+
+        <div class="skill-category">
+          <h3>Design <span class="count">3</span></h3>
+          <div class="skills-grid">
+            <div class="skill-card active">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Componentes React no padrao do projeto</h4>
+                <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Gera componentes React Tailwind seguindo o padrao do design system Lionclaw (radii, espacamentos, tokens).</p>
+              <div class="skill-card-foot"><span>read_file, write_file</span><span class="pill success" style="font-size:9px;padding:1px 6px"><span class="dot"></span>Ativa</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Auditoria visual</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Roda checklist de acessibilidade e consistencia visual antes do PR.</p>
+              <div class="skill-card-foot"><span>bash, read_file</span><span>Global</span></div>
+            </div>
+            <div class="skill-card active">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Tema dark token-aware</h4>
+                <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Adapta paleta dark coerente com OKLch, sem inventar hex.</p>
+              <div class="skill-card-foot"><span>read_file</span><span class="pill success" style="font-size:9px;padding:1px 6px"><span class="dot"></span>Ativa</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="skill-category">
+          <h3>Documentos <span class="count">4</span></h3>
+          <div class="skills-grid">
+            <div class="skill-card active">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Gerar PDF com Reportlab</h4>
+                <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Cria PDFs estruturados com cabecalho, paginacao e logo do projeto.</p>
+              <div class="skill-card-foot"><span>bash, write_file</span><span class="pill success" style="font-size:9px;padding:1px 6px"><span class="dot"></span>Ativa</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Slides PowerPoint</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Gera .pptx 16:9 com tema corporativo e quebras de secao.</p>
+              <div class="skill-card-foot"><span>bash, write_file</span><span>Global</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Excel a partir de schema</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Cria planilhas com validacao e formulas a partir de descricao em texto.</p>
+              <div class="skill-card-foot"><span>bash</span><span>Global</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Resumo executivo de PR</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Gera resumo de PR em pt-BR para Notion/Slack.</p>
+              <div class="skill-card-foot"><span>read_file, web_search</span><span>Global</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="skill-category">
+          <h3>Ferramentas <span class="count">5</span></h3>
+          <div class="skills-grid">
+            <div class="skill-card active">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Setup Next.js 14</h4>
+                <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Bootstrap de projeto Next.js com auth, db e Tailwind ja configurados.</p>
+              <div class="skill-card-foot"><span>bash, write_file</span><span class="pill success" style="font-size:9px;padding:1px 6px"><span class="dot"></span>Ativa</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Migracao Supabase</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Gera migration SQL a partir de descricao da mudanca de schema.</p>
+              <div class="skill-card-foot"><span>bash, write_file</span><span>Global</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Lint e format antes do commit</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Roda eslint --fix e prettier --write em arquivos alterados.</p>
+              <div class="skill-card-foot"><span>bash</span><span>Global</span></div>
+            </div>
+            <div class="skill-card active">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Snapshot do schema Prisma</h4>
+                <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Captura schema atual para incluir como contexto da tarefa.</p>
+              <div class="skill-card-foot"><span>read_file</span><span class="pill success" style="font-size:9px;padding:1px 6px"><span class="dot"></span>Ativa</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-card-head">
+                <h4 class="skill-card-title">Buscar tipos em node_modules</h4>
+                <label class="toggle"><input type="checkbox"><span class="slider"></span></label>
+              </div>
+              <p class="skill-card-desc">Grep em .d.ts para encontrar assinaturas exatas de bibliotecas.</p>
+              <div class="skill-card-foot"><span>grep, read_file</span><span>Global</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== MCP PANE ========== -->
+      <div class="am-pane" data-pane="mcp">
+        <div class="am-toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="Buscar MCP servers...">
+          </div>
+          <div class="scope-toggle">
+            <button class="active" type="button">Este projeto</button>
+            <button type="button">Global</button>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-secondary" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><polyline points="12 6 12 12 16 14"/></svg>
+            Sincronizar com Claude Code
+          </button>
+          <button class="btn btn-primary" data-nav="new-mcp" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Server
+          </button>
+        </div>
+
+        <div class="mcp-table">
+          <div class="mcp-row header">
+            <div></div>
+            <div>Server</div>
+            <div>Status</div>
+            <div>Origem</div>
+            <div>Versao</div>
+            <div>Tools</div>
+            <div>Acao</div>
+            <div>Projeto</div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#ea4335">G</div>
+            <div class="mcp-name">Gmail<div class="desc">Ler e enviar e-mails via API Google</div></div>
+            <div><span class="pill success"><span class="dot"></span>Conectado</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">1.2.0</div>
+            <div class="mcp-tools">14</div>
+            <div class="mcp-action"><button type="button">Detalhes</button></div>
+            <div><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#3186e0">D</div>
+            <div class="mcp-name">Google Drive<div class="desc">Listar, criar e baixar arquivos</div></div>
+            <div><span class="pill warning"><span class="dot"></span>Precisa autenticar</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">1.1.0</div>
+            <div class="mcp-tools">9</div>
+            <div class="mcp-action"><button class="primary" data-action="mcp-auth" data-server="Google Drive" type="button">Autenticar</button></div>
+            <div><label class="toggle"><input type="checkbox"><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#000">N</div>
+            <div class="mcp-name">Notion<div class="desc">Criar e ler paginas e databases</div></div>
+            <div><span class="pill success"><span class="dot"></span>Conectado</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">2.0.1</div>
+            <div class="mcp-tools">18</div>
+            <div class="mcp-action"><button type="button">Detalhes</button></div>
+            <div><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#3ecf8e;color:#0a0a0a">S</div>
+            <div class="mcp-name">Supabase<div class="desc">Migrations, SQL, edge functions</div></div>
+            <div><span class="pill success"><span class="dot"></span>Conectado</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">0.9.3</div>
+            <div class="mcp-tools">32</div>
+            <div class="mcp-action"><button type="button">Detalhes</button></div>
+            <div><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#635bff">S</div>
+            <div class="mcp-name">Stripe<div class="desc">Faturas, clientes e produtos</div></div>
+            <div><span class="pill warning"><span class="dot"></span>Precisa autenticar</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">1.4.2</div>
+            <div class="mcp-tools">21</div>
+            <div class="mcp-action"><button class="primary" data-action="mcp-auth" data-server="Stripe" type="button">Autenticar</button></div>
+            <div><label class="toggle"><input type="checkbox"><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#1a73e8">C</div>
+            <div class="mcp-name">Google Calendar<div class="desc">Eventos e agendas</div></div>
+            <div><span class="pill warning"><span class="dot"></span>Precisa autenticar</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">1.0.5</div>
+            <div class="mcp-tools">11</div>
+            <div class="mcp-action"><button class="primary" data-action="mcp-auth" data-server="Google Calendar" type="button">Autenticar</button></div>
+            <div><label class="toggle"><input type="checkbox"><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:#000">V</div>
+            <div class="mcp-name">Vercel<div class="desc">Deploys, dominios, env vars</div></div>
+            <div><span class="pill success"><span class="dot"></span>Conectado</span></div>
+            <div class="mcp-origin">claude.ai</div>
+            <div class="mcp-version">1.1.7</div>
+            <div class="mcp-tools">12</div>
+            <div class="mcp-action"><button type="button">Detalhes</button></div>
+            <div><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+          </div>
+
+          <div class="mcp-row">
+            <div class="mcp-icon" style="background:linear-gradient(135deg,#f97316,#ea580c);color:#0a0a0a">L</div>
+            <div class="mcp-name">Lionclaw Deploy<div class="desc">Pipeline interno (customizado)</div></div>
+            <div><span class="pill info"><span class="dot"></span>Local custom</span></div>
+            <div class="mcp-origin">~/.lion/mcp</div>
+            <div class="mcp-version">0.3.1</div>
+            <div class="mcp-tools">6</div>
+            <div class="mcp-action"><button type="button">Configurar</button></div>
+            <div><label class="toggle"><input type="checkbox" checked><span class="slider"></span></label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span class="item"><span class="dot"></span> 5 agentes &middot; 12 skills &middot; 8 MCPs</span>
+    <span class="item">portal-clientes</span>
+    <span class="spacer"></span>
+    <span class="item accent">LionIDE 0.4.2</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     SCREEN: NEW AGENT (US-07, US-08)
+     ============================================================ -->
+<section id="new-agent" class="screen" hidden aria-label="Novo Agente">
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="title-center">Novo Agente &mdash; LionIDE</div>
+  </div>
+
+  <form id="new-agent-form" class="form-screen">
+    <header class="form-top">
+      <h1>Novo Agente</h1>
+      <div class="crumbs">
+        <button type="button" data-nav="agent-manager">Agent Manager</button>
+        <span class="sep">/</span>
+        <span style="color:var(--fg)">Novo Agente</span>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" data-nav="agent-manager">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar agente</button>
+      </div>
+    </header>
+
+    <div class="form-content">
+      <div class="form-wrap">
+        <section class="form-section">
+          <h2>Identidade</h2>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="agent-name">Nome do agente</label>
+              <input type="text" id="agent-name" required placeholder="ex: Migrador de Schemas">
+              <div class="field-help">Aparece na arvore de tarefas e em @mentions no chat.</div>
+            </div>
+            <div class="field">
+              <label>Identificador visual</label>
+              <div class="icon-picker">
+                <label class="icon-opt selected"><input type="radio" name="icon" value="r" checked hidden>R</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="c" hidden>C</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="d" hidden>D</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="v" hidden>V</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="f" hidden>F</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="t" hidden>T</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="b" hidden>B</label>
+                <label class="icon-opt"><input type="radio" name="icon" value="l" hidden>L</label>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="agent-description">Descricao curta</label>
+            <input type="text" id="agent-description" placeholder="ex: Especialista em criar migrations Prisma seguindo o padrao do projeto">
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Modelo de IA</h2>
+          <div class="radio-row" style="grid-template-columns:repeat(4,1fr)">
+            <label class="radio-card"><input type="radio" name="model" value="haiku-4-5"><div class="label">Haiku 4.5</div><div class="hint">Rapido, barato</div></label>
+            <label class="radio-card selected"><input type="radio" name="model" value="sonnet-4-6" checked><div class="label">Sonnet 4.6</div><div class="hint">Padrao recomendado</div></label>
+            <label class="radio-card"><input type="radio" name="model" value="opus-4-7"><div class="label">Opus 4.7</div><div class="hint">Tarefas complexas</div></label>
+            <label class="radio-card"><input type="radio" name="model" value="local"><div class="label">Modelo local</div><div class="hint">URL customizada</div></label>
+          </div>
+          <div class="field model-url" id="agent-local-url-wrap" hidden>
+            <label for="agent-local-url">URL do modelo local</label>
+            <input type="url" id="agent-local-url" placeholder="http://localhost:11434/v1">
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Comportamento</h2>
+          <div class="form-grid-2">
+            <div class="field">
+              <label>Nivel de esforco</label>
+              <div class="radio-row">
+                <label class="radio-card"><input type="radio" name="effort" value="low"><div class="label">Baixo</div><div class="hint">Tarefas curtas</div></label>
+                <label class="radio-card selected"><input type="radio" name="effort" value="medium" checked><div class="label">Medio</div><div class="hint">Padrao</div></label>
+                <label class="radio-card"><input type="radio" name="effort" value="high"><div class="label">Alto</div><div class="hint">Maior gasto</div></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Modo de raciocinio</label>
+              <div class="radio-row">
+                <label class="radio-card"><input type="radio" name="reasoning" value="off"><div class="label">Desligado</div><div class="hint">Respostas diretas</div></label>
+                <label class="radio-card selected"><input type="radio" name="reasoning" value="adaptive" checked><div class="label">Adaptativo</div><div class="hint">Decide na hora</div></label>
+                <label class="radio-card"><input type="radio" name="reasoning" value="on"><div class="label">Ligado</div><div class="hint">Sempre pensa</div></label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Prompt do sistema</h2>
+          <div class="field">
+            <label for="agent-prompt">Papel do agente</label>
+            <textarea id="agent-prompt" rows="8" placeholder="Voce e um especialista em ... Sua tarefa e ... Voce sempre ... Voce nunca ..."></textarea>
+            <div class="field-help">Markdown suportado. Este texto vira o system prompt enviado ao Claude Code.</div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Tools permitidas</h2>
+          <p class="text-sm text-muted" style="margin:-8px 0 16px">Marque apenas o que este agente precisa acessar. Quanto menos, mais seguro.</p>
+          <div class="tools-checklist">
+            <label class="check-row checked"><input type="checkbox" name="tools" value="read_file" checked><span class="check-box"></span><div class="check-info"><div class="ci-name">Ler Arquivo</div><div class="ci-desc">read_file &mdash; leitura do workspace</div></div></label>
+            <label class="check-row"><input type="checkbox" name="tools" value="write_file"><span class="check-box"></span><div class="check-info"><div class="ci-name">Escrever Arquivo</div><div class="ci-desc">write_file &mdash; cria arquivos novos</div></div></label>
+            <label class="check-row checked"><input type="checkbox" name="tools" value="edit_file" checked><span class="check-box"></span><div class="check-info"><div class="ci-name">Editar Arquivo</div><div class="ci-desc">edit_file &mdash; patch em arquivos existentes</div></div></label>
+            <label class="check-row"><input type="checkbox" name="tools" value="bash"><span class="check-box"></span><div class="check-info"><div class="ci-name">Executar Bash</div><div class="ci-desc">bash &mdash; comandos no terminal integrado</div></div></label>
+            <label class="check-row checked"><input type="checkbox" name="tools" value="grep" checked><span class="check-box"></span><div class="check-info"><div class="ci-name">Buscar Padrao</div><div class="ci-desc">grep &mdash; busca por regex no workspace</div></div></label>
+            <label class="check-row"><input type="checkbox" name="tools" value="web_search"><span class="check-box"></span><div class="check-info"><div class="ci-name">Buscar Web</div><div class="ci-desc">web_search &mdash; pesquisa na internet</div></div></label>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Escopo</h2>
+          <div class="radio-row" style="grid-template-columns:1fr 1fr">
+            <label class="radio-card selected"><input type="radio" name="scope" value="project" checked><div class="label">So neste projeto</div><div class="hint">Salvo em .lion/config.json</div></label>
+            <label class="radio-card"><input type="radio" name="scope" value="global"><div class="label">Global</div><div class="hint">Disponivel em todo workspace</div></label>
+          </div>
+        </section>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ============================================================
+     SCREEN: NEW SKILL (US-10)
+     ============================================================ -->
+<section id="new-skill" class="screen" hidden aria-label="Nova Skill">
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="title-center">Nova Skill &mdash; LionIDE</div>
+  </div>
+
+  <form id="new-skill-form" class="form-screen">
+    <header class="form-top">
+      <h1>Nova Skill</h1>
+      <div class="crumbs">
+        <button type="button" data-nav="agent-manager">Agent Manager</button>
+        <span class="sep">/</span>
+        <button type="button" data-nav="agent-manager">Skills</button>
+        <span class="sep">/</span>
+        <span style="color:var(--fg)">Nova</span>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" data-nav="agent-manager">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar skill</button>
+      </div>
+    </header>
+
+    <div class="form-content">
+      <div class="form-wrap">
+        <section class="form-section">
+          <h2>Identidade</h2>
+          <div class="field">
+            <label for="skill-name">Nome da skill</label>
+            <input type="text" id="skill-name" required placeholder="ex: Gerar componentes React no padrao Lionclaw">
+          </div>
+          <div class="field">
+            <label for="skill-desc">Descricao</label>
+            <input type="text" id="skill-desc" placeholder="O que essa skill faz, em uma linha">
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <div class="radio-row" style="grid-template-columns:repeat(4,1fr)">
+              <label class="radio-card selected"><input type="radio" name="category" value="design" checked><div class="label">Design</div></label>
+              <label class="radio-card"><input type="radio" name="category" value="documents"><div class="label">Documentos</div></label>
+              <label class="radio-card"><input type="radio" name="category" value="tools"><div class="label">Ferramentas</div></label>
+              <label class="radio-card"><input type="radio" name="category" value="custom"><div class="label">Outra</div></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Prompt da habilidade</h2>
+          <div class="field">
+            <label for="skill-prompt">Como o agente deve aplicar essa skill</label>
+            <textarea id="skill-prompt" rows="9" placeholder="Quando o usuario pedir X, voce deve... Sempre use Y. Nunca Z."></textarea>
+            <div class="field-help">Esse texto e injetado quando a skill estiver ativa no contexto.</div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Tools necessarias</h2>
+          <p class="text-sm text-muted" style="margin:-8px 0 16px">A skill so funciona se o agente que a usa tiver acesso a essas tools.</p>
+          <div class="tools-checklist">
+            <label class="check-row checked"><input type="checkbox" checked><span class="check-box"></span><div class="check-info"><div class="ci-name">Ler Arquivo</div></div></label>
+            <label class="check-row checked"><input type="checkbox" checked><span class="check-box"></span><div class="check-info"><div class="ci-name">Escrever Arquivo</div></div></label>
+            <label class="check-row"><input type="checkbox"><span class="check-box"></span><div class="check-info"><div class="ci-name">Editar Arquivo</div></div></label>
+            <label class="check-row"><input type="checkbox"><span class="check-box"></span><div class="check-info"><div class="ci-name">Executar Bash</div></div></label>
+            <label class="check-row"><input type="checkbox"><span class="check-box"></span><div class="check-info"><div class="ci-name">Buscar Padrao</div></div></label>
+            <label class="check-row"><input type="checkbox"><span class="check-box"></span><div class="check-info"><div class="ci-name">Buscar Web</div></div></label>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Escopo</h2>
+          <div class="radio-row" style="grid-template-columns:1fr 1fr">
+            <label class="radio-card selected"><input type="radio" name="skill-scope" value="project" checked><div class="label">So neste projeto</div><div class="hint">Salva em .lion/config.json</div></label>
+            <label class="radio-card"><input type="radio" name="skill-scope" value="global"><div class="label">Global</div><div class="hint">Disponivel em todo workspace</div></label>
+          </div>
+        </section>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ============================================================
+     SCREEN: NEW MCP SERVER (US-14)
+     ============================================================ -->
+<section id="new-mcp" class="screen" hidden aria-label="Novo MCP Server">
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="title-center">Novo MCP Server &mdash; LionIDE</div>
+  </div>
+
+  <form id="new-mcp-form" class="form-screen">
+    <header class="form-top">
+      <h1>Novo MCP Server</h1>
+      <div class="crumbs">
+        <button type="button" data-nav="agent-manager">Agent Manager</button>
+        <span class="sep">/</span>
+        <button type="button" data-nav="agent-manager">MCP Servers</button>
+        <span class="sep">/</span>
+        <span style="color:var(--fg)">Novo</span>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" data-nav="agent-manager">Cancelar</button>
+        <button type="button" class="btn btn-secondary" id="mcp-test-btn">Testar conexao</button>
+        <button type="submit" class="btn btn-primary">Salvar server</button>
+      </div>
+    </header>
+
+    <div class="form-content">
+      <div class="form-wrap">
+        <section class="form-section">
+          <h2>Identidade</h2>
+          <div class="field">
+            <label for="mcp-name">Nome do server</label>
+            <input type="text" id="mcp-name" required placeholder="ex: Lionclaw Deploy">
+          </div>
+          <div class="field">
+            <label for="mcp-origin">Origem</label>
+            <input type="text" id="mcp-origin" placeholder="ex: ~/.lion/mcp ou npm:@empresa/mcp-foo">
+            <div class="field-help">Caminho local ou pacote npm que expoe o server.</div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2>Conexao</h2>
+          <div class="field">
+            <label>Tipo de transporte</label>
+            <div class="radio-row" style="grid-template-columns:repeat(3,1fr)">
+              <label class="radio-card selected"><input type="radio" name="transport" value="stdio" checked><div class="label">stdio</div><div class="hint">Processo local</div></label>
+              <label class="radio-card"><input type="radio" name="transport" value="http"><div class="label">HTTP</div><div class="hint">URL remota</div></label>
+              <label class="radio-card"><input type="radio" name="transport" value="sse"><div class="label">SSE</div><div class="hint">Stream</div></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="mcp-command">Comando ou URL</label>
+            <input type="text" id="mcp-command" placeholder="ex: node /usr/local/lib/mcp-lion/server.js" required>
+          </div>
+          <div class="field">
+            <label for="mcp-args">Argumentos (opcional)</label>
+            <textarea id="mcp-args" rows="3" placeholder="--projectId=portal-clientes --verbose"></textarea>
+          </div>
+          <div class="field">
+            <label for="mcp-env">Variaveis de ambiente (KEY=VALUE, uma por linha)</label>
+            <textarea id="mcp-env" rows="3" placeholder="LION_API_KEY=xxx&#10;LION_ENV=production"></textarea>
+            <div class="field-help">Valores ficam criptografados no banco SQLite local.</div>
+          </div>
+        </section>
+
+        <section class="form-section" id="mcp-test-result-section" hidden>
+          <h2>Resultado do teste</h2>
+          <div class="card" id="mcp-test-result"></div>
+        </section>
+
+        <section class="form-section">
+          <h2>Escopo</h2>
+          <div class="radio-row" style="grid-template-columns:1fr 1fr">
+            <label class="radio-card selected"><input type="radio" name="mcp-scope" value="project" checked><div class="label">So neste projeto</div><div class="hint">Ativado em portal-clientes</div></label>
+            <label class="radio-card"><input type="radio" name="mcp-scope" value="global"><div class="label">Global</div><div class="hint">Disponivel em todo workspace</div></label>
+          </div>
+        </section>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-text">Acao concluida.</span>
+</div>
+
+<!-- ============================================================
+     ROUTER + INTERACTIONS
+     ============================================================ -->
+<script>
+(function(){
+  const SCREENS = ['login','welcome','workspace','agent-manager','new-agent','new-skill','new-mcp'];
+  const screensEl = SCREENS.reduce((acc,id)=>{acc[id]=document.getElementById(id);return acc;},{});
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toast-text');
+
+  function showScreen(id){
+    if(!SCREENS.includes(id)) id='login';
+    SCREENS.forEach(s=>{
+      const el=screensEl[s];
+      if(!el) return;
+      if(s===id){el.hidden=false}else{el.hidden=true}
+    });
+    if(location.hash !== '#'+id) history.replaceState(null,'','#'+id);
+    window.scrollTo(0,0);
+  }
+
+  function showToast(msg){
+    toastText.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{toast.hidden=true},3200);
+  }
+
+  // ===== Initial route =====
+  const initial = (location.hash || '').replace('#','');
+  showScreen(SCREENS.includes(initial) ? initial : 'login');
+
+  // ===== Hash listener =====
+  window.addEventListener('hashchange', ()=>{
+    const id=(location.hash||'').replace('#','');
+    if(SCREENS.includes(id)) showScreen(id);
+  });
+
+  // ===== Navigation (data-nav) =====
+  document.body.addEventListener('click',(e)=>{
+    const navBtn = e.target.closest('[data-nav]');
+    if(navBtn){
+      e.preventDefault();
+      showScreen(navBtn.dataset.nav);
+      return;
+    }
+    const actionBtn = e.target.closest('[data-action]');
+    if(actionBtn){
+      e.preventDefault();
+      handleAction(actionBtn.dataset.action, actionBtn);
+    }
+  });
+
+  function handleAction(action, el){
+    switch(action){
+      case 'open-folder':{
+        const name = el.querySelector('.name');
+        const projectName = name ? name.textContent.trim() : 'portal-clientes';
+        const titleEl = document.getElementById('ws-project-title');
+        if(titleEl) titleEl.textContent = projectName;
+        showScreen('workspace');
+        showToast('Workspace aberto: '+projectName);
+        break;
+      }
+      case 'clone-repo':
+        showToast('Clonar repositorio: prompt nativo abriria aqui.');
+        break;
+      case 'open-commit':
+        document.getElementById('commit-modal').hidden = false;
+        break;
+      case 'close-commit':
+        document.getElementById('commit-modal').hidden = true;
+        break;
+      case 'confirm-commit':{
+        document.getElementById('commit-modal').hidden = true;
+        showToast('Commit feito. main: feat(auth): adicionar endpoint POST /api/auth/login');
+        break;
+      }
+      case 'mcp-auth':{
+        const server = el.dataset.server || 'Server';
+        const row = el.closest('.mcp-row');
+        const pillCell = row.children[2];
+        const actionCell = row.querySelector('.mcp-action');
+        actionCell.classList.add('busy');
+        pillCell.innerHTML = '<span class="pill info"><span class="dot"></span>Autenticando</span>';
+        el.textContent = 'Aguardando navegador...';
+        showToast('Abrindo fluxo OAuth nativo para '+server+'...');
+        setTimeout(()=>{
+          actionCell.classList.remove('busy');
+          pillCell.innerHTML = '<span class="pill success"><span class="dot"></span>Conectado</span>';
+          actionCell.innerHTML = '<button type="button">Detalhes</button>';
+          const toggleInput = row.querySelector('.toggle input');
+          if(toggleInput) toggleInput.checked = true;
+          showToast(server+' autenticado com sucesso.');
+        }, 1800);
+        break;
+      }
+    }
+  }
+
+  // ===== Login form =====
+  const loginForm = document.getElementById('login-form');
+  if(loginForm){
+    loginForm.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const pwd = document.getElementById('login-password').value.trim();
+      if(!email || !pwd){
+        document.getElementById('login-error').hidden = false;
+        return;
+      }
+      document.getElementById('login-error').hidden = true;
+      showScreen('welcome');
+      showToast('Autenticado como '+email);
+    });
+    document.getElementById('login-byok').addEventListener('click',()=>{
+      showScreen('welcome');
+      showToast('Chave de API herdada do Claude Code.');
+    });
+  }
+
+  // ===== Agent Manager tabs =====
+  document.querySelectorAll('#agent-manager .am-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      const target = tab.dataset.tab;
+      document.querySelectorAll('#agent-manager .am-tab').forEach(t=>t.classList.toggle('active', t===tab));
+      document.querySelectorAll('#agent-manager .am-pane').forEach(p=>{
+        p.classList.toggle('active', p.dataset.pane===target);
+      });
+    });
+  });
+
+  // ===== Scope toggle (Project/Global) =====
+  document.querySelectorAll('.scope-toggle').forEach(group=>{
+    group.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        group.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
+      });
+    });
+  });
+
+  // ===== Radio cards =====
+  document.querySelectorAll('.radio-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      const input = card.querySelector('input[type=radio]');
+      if(!input) return;
+      input.checked = true;
+      const name = input.name;
+      document.querySelectorAll('.radio-card input[name="'+name+'"]').forEach(i=>{
+        i.closest('.radio-card').classList.toggle('selected', i.checked);
+      });
+      // Show local URL field when "local" model selected
+      if(name==='model'){
+        const wrap = document.getElementById('agent-local-url-wrap');
+        if(wrap) wrap.hidden = (input.value !== 'local');
+      }
+    });
+  });
+
+  // ===== Check rows =====
+  document.querySelectorAll('.check-row').forEach(row=>{
+    row.addEventListener('click',(e)=>{
+      if(e.target.tagName==='INPUT') return;
+      const cb = row.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      row.classList.toggle('checked', cb.checked);
+    });
+  });
+
+  // ===== Icon picker =====
+  document.querySelectorAll('.icon-picker .icon-opt').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      const group = opt.closest('.icon-picker');
+      group.querySelectorAll('.icon-opt').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+      const input = opt.querySelector('input');
+      if(input) input.checked = true;
+    });
+  });
+
+  // ===== Skill toggles =====
+  document.querySelectorAll('.skill-card .toggle input').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      const card = cb.closest('.skill-card');
+      card.classList.toggle('active', cb.checked);
+      const foot = card.querySelector('.skill-card-foot');
+      const lastSpan = foot.lastElementChild;
+      if(cb.checked && !lastSpan.classList.contains('pill')){
+        const original = lastSpan.textContent;
+        lastSpan.outerHTML = '<span class="pill success" style="font-size:9px;padding:1px 6px" data-original="'+original+'"><span class="dot"></span>Ativa</span>';
+      }else if(!cb.checked && lastSpan.classList.contains('pill')){
+        const original = lastSpan.dataset.original || 'Global';
+        lastSpan.outerHTML = '<span>'+original+'</span>';
+      }
+      showToast(card.querySelector('.skill-card-title').textContent + (cb.checked?' ativada':' desativada'));
+    });
+  });
+
+  // ===== MCP toggles =====
+  document.querySelectorAll('.mcp-row .toggle input').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      const row = cb.closest('.mcp-row');
+      const name = row.querySelector('.mcp-name').firstChild.textContent.trim();
+      showToast('MCP '+name+(cb.checked?' ativado neste projeto':' desativado neste projeto'));
+    });
+  });
+
+  // ===== New agent / skill / mcp form submit =====
+  ['new-agent-form','new-skill-form','new-mcp-form'].forEach(id=>{
+    const f = document.getElementById(id);
+    if(!f) return;
+    f.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const map = {'new-agent-form':'Agente','new-skill-form':'Skill','new-mcp-form':'MCP Server'};
+      showScreen('agent-manager');
+      showToast(map[id]+' salvo no SQLite local.');
+    });
+  });
+
+  // ===== MCP test connection =====
+  const mcpTestBtn = document.getElementById('mcp-test-btn');
+  if(mcpTestBtn){
+    mcpTestBtn.addEventListener('click',()=>{
+      const section = document.getElementById('mcp-test-result-section');
+      const result = document.getElementById('mcp-test-result');
+      section.hidden = false;
+      result.innerHTML = '<div class="row"><span class="spinner"></span><span>Testando conexao...</span></div>';
+      setTimeout(()=>{
+        const cmd = document.getElementById('mcp-command').value.trim();
+        if(!cmd){
+          result.innerHTML = '<div class="row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style="color:var(--danger)">Comando obrigatorio para testar.</span></div>';
+        }else{
+          result.innerHTML = '<div class="row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg><span style="color:var(--success)"><strong>Conexao OK</strong> &middot; 6 tools detectadas: deploy, rollback, logs, status, env, restart</span></div>';
+        }
+      }, 1200);
+    });
+  }
+
+  // ===== Chat send =====
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+  const chatBody = document.getElementById('chat-body');
+  function sendChat(){
+    const text = chatInput.value.trim();
+    if(!text) return;
+    const userMsg = document.createElement('div');
+    userMsg.className='msg user';
+    userMsg.innerHTML = '<div class="msg-bubble"></div>';
+    userMsg.querySelector('.msg-bubble').textContent = text;
+    chatBody.appendChild(userMsg);
+
+    const agentMsg = document.createElement('div');
+    agentMsg.className='msg agent';
+    agentMsg.innerHTML = '<div class="msg-bubble"><div class="msg-author"><span class="lion-mark">L</span> AGENTE PRINCIPAL</div><div class="row"><span class="spinner"></span><span>Processando seu pedido no workspace portal-clientes...</span></div></div>';
+    chatBody.appendChild(agentMsg);
+    chatInput.value='';
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+  if(sendBtn){
+    sendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        sendChat();
+      }
+    });
+  }
+
+  // ===== Mic toggle =====
+  const micBtn = document.getElementById('mic-btn');
+  if(micBtn){
+    micBtn.addEventListener('click',()=>{
+      micBtn.classList.toggle('recording');
+      showToast(micBtn.classList.contains('recording') ? 'Gravando...' : 'Gravacao parada.');
+    });
+  }
+
+  // ===== Plan toggle =====
+  const planBtn = document.getElementById('plan-toggle');
+  if(planBtn){
+    planBtn.addEventListener('click',()=>{
+      planBtn.classList.toggle('active');
+      showToast(planBtn.classList.contains('active') ? 'Modo Plan ligado: agente planeja antes de executar.' : 'Modo Plan desligado.');
+    });
+  }
+
+  // ===== Model select cycle =====
+  const modelBtn = document.getElementById('model-select-btn');
+  const modelLabel = document.getElementById('model-label');
+  const models = ['Sonnet 4.6','Opus 4.7','Haiku 4.5','Modelo local'];
+  let modelIdx = 0;
+  if(modelBtn){
+    modelBtn.addEventListener('click',()=>{
+      modelIdx = (modelIdx+1) % models.length;
+      modelLabel.textContent = models[modelIdx];
+      showToast('Modelo: '+models[modelIdx]);
+    });
+  }
+})();
+</script>
+
+<!-- ============================================================
+     LIONCLAW DESIGN CONTRACT (consumido pelo validator)
+     ============================================================ -->
+<script type="application/json" id="lionclaw-design-contract">
+{
+  "version": "1.0",
+  "visual": {
+    "direction": "dark tech-utility com identidade Lionclaw (laranja #f97316 sobre preto profundo), tipografia Inter, mono JetBrains Mono",
+    "density": "dense",
+    "tokens": {
+      "colors": {
+        "bg": "#0a0a0a",
+        "surface": "#141414",
+        "card": "#1a1a1a",
+        "surface3": "#202020",
+        "border": "#262626",
+        "borderStrong": "#333333",
+        "fg": "#e8e8e8",
+        "muted": "#7a7a7a",
+        "accent": "#f97316",
+        "accentStrong": "#ea580c",
+        "success": "#22c55e",
+        "warning": "#eab308",
+        "danger": "#ef4444",
+        "info": "#3b82f6"
+      },
+      "typography": {
+        "body": "Inter, SF Pro Text, system-ui, sans-serif",
+        "mono": "JetBrains Mono, ui-monospace, Menlo, monospace",
+        "display": "Inter (peso 600-700)"
+      },
+      "spacing": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "12px",
+        "lg": "16px",
+        "xl": "24px",
+        "2xl": "32px"
+      },
+      "radii": {
+        "sm": "4px",
+        "md": "6px",
+        "lg": "10px",
+        "xl": "14px"
+      }
+    }
+  },
+  "navigation": {
+    "primary": [
+      { "id": "nav-explorer", "label": "Explorador", "targetScreenId": "workspace", "userStoryIds": ["US-01","US-04"] },
+      { "id": "nav-agent-chat", "label": "Agente", "targetScreenId": "workspace", "userStoryIds": ["US-03","US-06"] },
+      { "id": "nav-agent-manager", "label": "Agent Manager", "targetScreenId": "agent-manager", "userStoryIds": ["US-07","US-10","US-12"] },
+      { "id": "nav-tab-agents", "label": "Agentes", "targetScreenId": "agent-manager", "userStoryIds": ["US-07","US-09"] },
+      { "id": "nav-tab-skills", "label": "Skills", "targetScreenId": "agent-manager", "userStoryIds": ["US-10","US-11"] },
+      { "id": "nav-tab-mcp", "label": "MCP Servers", "targetScreenId": "agent-manager", "userStoryIds": ["US-12","US-13","US-14","US-15"] }
+    ],
+    "secondary": [
+      { "id": "nav-back-workspace", "label": "Voltar ao workspace", "targetScreenId": "workspace", "userStoryIds": ["US-01"] },
+      { "id": "nav-new-agent", "label": "Novo Agente", "targetScreenId": "new-agent", "userStoryIds": ["US-07","US-08"] },
+      { "id": "nav-new-skill", "label": "Nova Skill", "targetScreenId": "new-skill", "userStoryIds": ["US-10"] },
+      { "id": "nav-new-mcp", "label": "Novo MCP", "targetScreenId": "new-mcp", "userStoryIds": ["US-14"] },
+      { "id": "nav-about-lionide", "label": "Sobre o LionIDE", "targetScreenId": "welcome", "userStoryIds": ["US-18"] }
+    ]
+  },
+  "screens": [
+    {
+      "id": "login",
+      "userStoryIds": ["US-16","US-17"],
+      "title": "Login Anthropic",
+      "route": "#login",
+      "purpose": "Autenticar usuario com chave Anthropic propria ou credencial herdada do Claude Code antes de iniciar qualquer fluxo do app",
+      "states": ["idle","error"],
+      "actions": [
+        { "id": "action-login-submit", "label": "Conectar", "type": "submit", "userStoryIds": ["US-16"], "apiExpectationIds": ["api-auth-validate"] },
+        { "id": "action-login-byok", "label": "Usar chave ja configurada no Claude Code", "type": "button", "userStoryIds": ["US-16"], "apiExpectationIds": ["api-claude-code-inherit"] }
+      ],
+      "dataRequirementIds": ["data-anthropic-credentials"]
+    },
+    {
+      "id": "welcome",
+      "userStoryIds": ["US-01","US-16","US-17"],
+      "title": "Welcome (sem pasta aberta)",
+      "route": "#welcome",
+      "purpose": "Permitir ao usuario abrir uma pasta, clonar repositorio ou acessar o Agent Manager quando nenhum workspace esta ativo. Mostra estado de autenticacao Anthropic",
+      "states": ["unauthenticated","authenticated","empty"],
+      "actions": [
+        { "id": "action-open-folder", "label": "Abrir pasta", "type": "button", "userStoryIds": ["US-01"], "apiExpectationIds": ["api-open-folder"] },
+        { "id": "action-clone-repo", "label": "Clonar repositorio", "type": "button", "userStoryIds": ["US-01"], "apiExpectationIds": ["api-clone-repo"] },
+        { "id": "action-open-agent-manager", "label": "Abrir Agent Manager", "type": "button", "userStoryIds": ["US-07","US-10","US-12"], "apiExpectationIds": [] },
+        { "id": "action-open-recent", "label": "Abrir workspace recente", "type": "button", "userStoryIds": ["US-01","US-02"], "apiExpectationIds": ["api-open-folder"] }
+      ],
+      "dataRequirementIds": ["data-recent-workspaces","data-anthropic-credentials"]
+    },
+    {
+      "id": "workspace",
+      "userStoryIds": ["US-01","US-02","US-03","US-04","US-05","US-06","US-16"],
+      "title": "Workspace IDE",
+      "route": "#workspace",
+      "purpose": "Ambiente principal de desenvolvimento: file tree, editor com tabs, terminal integrado, painel lateral do agente com chat e arvore de tarefas de subagentes",
+      "states": ["idle","agent-running","agent-idle","commit-pending","mic-recording","plan-on"],
+      "actions": [
+        { "id": "action-send-message", "label": "Enviar mensagem ao agente", "type": "submit", "userStoryIds": ["US-03","US-04"], "apiExpectationIds": ["api-agent-send"] },
+        { "id": "action-toggle-plan", "label": "Modo Plan", "type": "button", "userStoryIds": ["US-03"], "apiExpectationIds": ["api-agent-send"] },
+        { "id": "action-toggle-mic", "label": "Falar (mic)", "type": "button", "userStoryIds": ["US-03"], "apiExpectationIds": [] },
+        { "id": "action-select-model", "label": "Selecionar modelo", "type": "button", "userStoryIds": ["US-03","US-07"], "apiExpectationIds": [] },
+        { "id": "action-open-file", "label": "Abrir arquivo no editor", "type": "button", "userStoryIds": ["US-04"], "apiExpectationIds": ["api-read-file"] },
+        { "id": "action-open-commit", "label": "Revisar commit pendente", "type": "button", "userStoryIds": ["US-05"], "apiExpectationIds": [] },
+        { "id": "action-confirm-commit", "label": "Confirmar e fazer commit", "type": "submit", "userStoryIds": ["US-05"], "apiExpectationIds": ["api-git-commit"] },
+        { "id": "action-close-commit", "label": "Cancelar commit", "type": "button", "userStoryIds": ["US-05"], "apiExpectationIds": [] },
+        { "id": "action-open-agent-manager-from-ws", "label": "Abrir Agent Manager", "type": "button", "userStoryIds": ["US-07","US-10","US-12"], "apiExpectationIds": [] }
+      ],
+      "dataRequirementIds": ["data-message-input","data-workspace-context","data-task-tree","data-commit-payload","data-file-content"]
+    },
+    {
+      "id": "agent-manager",
+      "userStoryIds": ["US-07","US-10","US-11","US-12","US-13","US-15"],
+      "title": "Agent Manager",
+      "route": "#agent-manager",
+      "purpose": "Painel central para gerenciar subagentes, skills e MCP servers de forma visual. Tres abas integradas, com filtros de escopo (projeto vs global)",
+      "states": ["tab-agents","tab-skills","tab-mcp","scope-project","scope-global"],
+      "actions": [
+        { "id": "action-tab-agents", "label": "Aba Agentes", "type": "button", "userStoryIds": ["US-07","US-09"], "apiExpectationIds": ["api-list-agents"] },
+        { "id": "action-tab-skills", "label": "Aba Skills", "type": "button", "userStoryIds": ["US-10","US-11"], "apiExpectationIds": ["api-list-skills"] },
+        { "id": "action-tab-mcp", "label": "Aba MCP", "type": "button", "userStoryIds": ["US-12"], "apiExpectationIds": ["api-list-mcp"] },
+        { "id": "action-scope-project", "label": "Escopo: projeto", "type": "button", "userStoryIds": ["US-02","US-15"], "apiExpectationIds": [] },
+        { "id": "action-scope-global", "label": "Escopo: global", "type": "button", "userStoryIds": ["US-02"], "apiExpectationIds": [] },
+        { "id": "action-new-agent-cta", "label": "Novo Agente", "type": "button", "userStoryIds": ["US-07","US-08"], "apiExpectationIds": [] },
+        { "id": "action-new-skill-cta", "label": "Nova Skill", "type": "button", "userStoryIds": ["US-10"], "apiExpectationIds": [] },
+        { "id": "action-new-mcp-cta", "label": "Novo MCP", "type": "button", "userStoryIds": ["US-14"], "apiExpectationIds": [] },
+        { "id": "action-toggle-skill", "label": "Ativar/desativar skill", "type": "button", "userStoryIds": ["US-11"], "apiExpectationIds": ["api-toggle-skill"] },
+        { "id": "action-toggle-mcp", "label": "Ativar/desativar MCP no projeto", "type": "button", "userStoryIds": ["US-15"], "apiExpectationIds": ["api-toggle-mcp"] },
+        { "id": "action-mcp-authenticate", "label": "Autenticar MCP via OAuth", "type": "button", "userStoryIds": ["US-13"], "apiExpectationIds": ["api-mcp-oauth"] },
+        { "id": "action-sync-claude-code", "label": "Sincronizar com Claude Code", "type": "button", "userStoryIds": ["US-12"], "apiExpectationIds": ["api-list-mcp"] }
+      ],
+      "dataRequirementIds": ["data-agents-list","data-skills-list","data-mcp-list","data-project-config"]
+    },
+    {
+      "id": "new-agent",
+      "userStoryIds": ["US-07","US-08","US-09"],
+      "title": "Novo Agente",
+      "route": "#new-agent",
+      "purpose": "Formulario visual para criar subagentes especializados. Campos cobrem identidade, modelo, comportamento (esforco, raciocinio), prompt do sistema e checkboxes de tools permitidas",
+      "states": ["idle","invalid","saving","model-local-selected"],
+      "actions": [
+        { "id": "action-save-agent", "label": "Salvar agente", "type": "submit", "userStoryIds": ["US-07","US-08","US-09"], "apiExpectationIds": ["api-save-agent"] },
+        { "id": "action-cancel-agent", "label": "Cancelar", "type": "button", "userStoryIds": ["US-07"], "apiExpectationIds": [] }
+      ],
+      "dataRequirementIds": ["data-agent-form"]
+    },
+    {
+      "id": "new-skill",
+      "userStoryIds": ["US-10"],
+      "title": "Nova Skill",
+      "route": "#new-skill",
+      "purpose": "Formulario visual para criar skills reutilizaveis com nome, descricao, prompt da habilidade, tools necessarias e categoria",
+      "states": ["idle","invalid","saving"],
+      "actions": [
+        { "id": "action-save-skill", "label": "Salvar skill", "type": "submit", "userStoryIds": ["US-10"], "apiExpectationIds": ["api-save-skill"] },
+        { "id": "action-cancel-skill", "label": "Cancelar", "type": "button", "userStoryIds": ["US-10"], "apiExpectationIds": [] }
+      ],
+      "dataRequirementIds": ["data-skill-form"]
+    },
+    {
+      "id": "new-mcp",
+      "userStoryIds": ["US-14"],
+      "title": "Novo MCP Server",
+      "route": "#new-mcp",
+      "purpose": "Formulario para adicionar MCP server customizado com nome, origem, transporte (stdio/HTTP/SSE), comando, argumentos e env vars. Permite testar conexao antes de salvar",
+      "states": ["idle","testing","test-ok","test-fail","invalid","saving"],
+      "actions": [
+        { "id": "action-test-mcp", "label": "Testar conexao", "type": "button", "userStoryIds": ["US-14"], "apiExpectationIds": ["api-mcp-test"] },
+        { "id": "action-save-mcp", "label": "Salvar server", "type": "submit", "userStoryIds": ["US-14"], "apiExpectationIds": ["api-save-mcp"] },
+        { "id": "action-cancel-mcp", "label": "Cancelar", "type": "button", "userStoryIds": ["US-14"], "apiExpectationIds": [] }
+      ],
+      "dataRequirementIds": ["data-mcp-form"]
+    }
+  ],
+  "components": [
+    { "id": "comp-titlebar", "name": "Titlebar com menu nativo", "type": "chrome", "usedInScreenIds": ["welcome","workspace","agent-manager","new-agent","new-skill","new-mcp"], "props": {}, "states": [] },
+    { "id": "comp-activity-bar", "name": "Activity bar VS Code", "type": "nav", "usedInScreenIds": ["welcome","workspace"], "props": {}, "states": ["active","inactive","badge"] },
+    { "id": "comp-file-tree", "name": "Explorer file tree", "type": "list", "usedInScreenIds": ["workspace"], "props": {}, "states": ["expanded","collapsed","selected","modified-badge"] },
+    { "id": "comp-editor-tab", "name": "Tab do editor", "type": "tab", "usedInScreenIds": ["workspace"], "props": {}, "states": ["active","inactive","modified"] },
+    { "id": "comp-code-block", "name": "Bloco de codigo com syntax highlight", "type": "display", "usedInScreenIds": ["workspace"], "props": {}, "states": [] },
+    { "id": "comp-terminal", "name": "Terminal integrado", "type": "display", "usedInScreenIds": ["workspace"], "props": {}, "states": ["idle","running","ok","error"] },
+    { "id": "comp-chat-message", "name": "Mensagem de chat (user/agent)", "type": "display", "usedInScreenIds": ["workspace"], "props": {}, "states": [] },
+    { "id": "comp-task-tree", "name": "Arvore de tarefas/subagentes em tempo real", "type": "display", "usedInScreenIds": ["workspace"], "props": {}, "states": ["pending","running","done"] },
+    { "id": "comp-agent-input", "name": "Input do chat com modelo, plan e mic", "type": "form", "usedInScreenIds": ["welcome","workspace"], "props": {}, "states": ["disabled","idle","plan-on","mic-recording"] },
+    { "id": "comp-auth-banner", "name": "Banner de status Anthropic", "type": "display", "usedInScreenIds": ["welcome"], "props": {}, "states": ["success","warning","missing"] },
+    { "id": "comp-am-tabs", "name": "Abas do Agent Manager", "type": "nav", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["active","inactive"] },
+    { "id": "comp-scope-toggle", "name": "Toggle de escopo Projeto/Global", "type": "form", "usedInScreenIds": ["agent-manager"], "props": {}, "states": [] },
+    { "id": "comp-agent-card", "name": "Card de subagente", "type": "card", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["default","new-cta"] },
+    { "id": "comp-skill-card", "name": "Card de skill com toggle", "type": "card", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["active","inactive"] },
+    { "id": "comp-skill-category", "name": "Agrupamento de skills por categoria", "type": "list", "usedInScreenIds": ["agent-manager"], "props": {}, "states": [] },
+    { "id": "comp-mcp-row", "name": "Linha de MCP server na tabela", "type": "row", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["connected","needs-auth","authenticating","custom","disabled"] },
+    { "id": "comp-mcp-status-pill", "name": "Pill de status do MCP", "type": "display", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["connected","needs-auth","authenticating","custom"] },
+    { "id": "comp-toggle", "name": "Toggle switch", "type": "form", "usedInScreenIds": ["agent-manager"], "props": {}, "states": ["on","off"] },
+    { "id": "comp-radio-card", "name": "Cartao de radio para escolha de modelo/esforco/etc", "type": "form", "usedInScreenIds": ["new-agent","new-skill","new-mcp"], "props": {}, "states": ["selected","idle"] },
+    { "id": "comp-tool-checklist", "name": "Checklist de tools permitidas", "type": "form", "usedInScreenIds": ["new-agent","new-skill"], "props": {}, "states": ["checked","unchecked"] },
+    { "id": "comp-icon-picker", "name": "Picker de icone do agente", "type": "form", "usedInScreenIds": ["new-agent"], "props": {}, "states": ["selected","idle"] },
+    { "id": "comp-commit-modal", "name": "Modal de confirmacao de commit com diff", "type": "modal", "usedInScreenIds": ["workspace"], "props": {}, "states": ["open","closed"] },
+    { "id": "comp-login-form", "name": "Formulario de login Anthropic", "type": "form", "usedInScreenIds": ["login"], "props": {}, "states": ["idle","error"] },
+    { "id": "comp-toast", "name": "Toast de notificacao", "type": "display", "usedInScreenIds": ["login","welcome","workspace","agent-manager","new-agent","new-skill","new-mcp"], "props": {}, "states": ["visible","hidden"] },
+    { "id": "comp-statusbar", "name": "Status bar inferior", "type": "chrome", "usedInScreenIds": ["welcome","workspace","agent-manager"], "props": {}, "states": [] }
+  ],
+  "dataRequirements": [
+    {
+      "id": "data-anthropic-credentials",
+      "name": "Credenciais Anthropic do usuario",
+      "description": "Email + chave de API ou login Anthropic herdado do Claude Code. Nao armazenado em servidor externo.",
+      "fields": [
+        { "name": "email", "typeHint": "string", "required": true },
+        { "name": "apiKeyOrPassword", "typeHint": "string", "required": true },
+        { "name": "source", "typeHint": "enum: own | claude-code-inherited", "required": true }
+      ],
+      "sourceScreenIds": ["login"],
+      "userStoryIds": ["US-16"]
+    },
+    {
+      "id": "data-recent-workspaces",
+      "name": "Lista de workspaces recentes",
+      "description": "Pastas abertas anteriormente, com path absoluto e nome para reabrir rapidamente.",
+      "fields": [
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "path", "typeHint": "string (absoluto)", "required": true },
+        { "name": "lastOpenedAt", "typeHint": "ISO-8601 datetime", "required": true }
+      ],
+      "sourceScreenIds": ["welcome"],
+      "userStoryIds": ["US-01","US-02"]
+    },
+    {
+      "id": "data-workspace-context",
+      "name": "Contexto do workspace ativo",
+      "description": "Pasta aberta como workspace ativo + framework detectado + .lion/config.json carregado.",
+      "fields": [
+        { "name": "rootPath", "typeHint": "string (absoluto)", "required": true },
+        { "name": "projectName", "typeHint": "string", "required": true },
+        { "name": "framework", "typeHint": "string (ex: Next.js 14)", "required": false },
+        { "name": "lionConfig", "typeHint": "object | null (.lion/config.json)", "required": false }
+      ],
+      "sourceScreenIds": ["welcome","workspace"],
+      "userStoryIds": ["US-01","US-02"]
+    },
+    {
+      "id": "data-message-input",
+      "name": "Mensagem do usuario para o agente",
+      "description": "Texto digitado pelo usuario no chat, com selecao de modelo e modo Plan.",
+      "fields": [
+        { "name": "text", "typeHint": "string", "required": true },
+        { "name": "modelId", "typeHint": "enum: sonnet-4-6 | opus-4-7 | haiku-4-5 | local", "required": true },
+        { "name": "planMode", "typeHint": "boolean", "required": false },
+        { "name": "voiceInput", "typeHint": "boolean", "required": false }
+      ],
+      "sourceScreenIds": ["workspace"],
+      "userStoryIds": ["US-03"]
+    },
+    {
+      "id": "data-task-tree",
+      "name": "Arvore de tarefas e subagentes",
+      "description": "Estado em tempo real da hierarquia de tarefas: agente principal -> subagentes -> sub-passos.",
+      "fields": [
+        { "name": "nodeId", "typeHint": "string", "required": true },
+        { "name": "parentId", "typeHint": "string | null", "required": false },
+        { "name": "agentName", "typeHint": "string", "required": true },
+        { "name": "title", "typeHint": "string", "required": true },
+        { "name": "status", "typeHint": "enum: pending | running | done | error", "required": true },
+        { "name": "startedAt", "typeHint": "ISO-8601 datetime", "required": false }
+      ],
+      "sourceScreenIds": ["workspace"],
+      "userStoryIds": ["US-06"]
+    },
+    {
+      "id": "data-file-content",
+      "name": "Conteudo de arquivo do workspace",
+      "description": "Arquivo lido ou editado pelo agente, mostrado no editor.",
+      "fields": [
+        { "name": "relativePath", "typeHint": "string", "required": true },
+        { "name": "content", "typeHint": "string", "required": true },
+        { "name": "modified", "typeHint": "boolean", "required": true }
+      ],
+      "sourceScreenIds": ["workspace"],
+      "userStoryIds": ["US-04"]
+    },
+    {
+      "id": "data-commit-payload",
+      "name": "Payload de commit pendente",
+      "description": "Escopo de alteracoes + mensagem de commit (proposta pelo agente, editavel pelo usuario).",
+      "fields": [
+        { "name": "files", "typeHint": "array<{path,additions,deletions,diff}>", "required": true },
+        { "name": "branch", "typeHint": "string", "required": true },
+        { "name": "proposedMessage", "typeHint": "string", "required": true },
+        { "name": "finalMessage", "typeHint": "string", "required": true },
+        { "name": "testsStatus", "typeHint": "string (ex: 13/13 passing)", "required": false }
+      ],
+      "sourceScreenIds": ["workspace"],
+      "userStoryIds": ["US-05"]
+    },
+    {
+      "id": "data-agents-list",
+      "name": "Lista de subagentes do workspace",
+      "description": "Subagentes ativos no contexto, com modelo, tools, esforco e raciocinio.",
+      "fields": [
+        { "name": "id", "typeHint": "string", "required": true },
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "model", "typeHint": "string", "required": true },
+        { "name": "tools", "typeHint": "array<string>", "required": true },
+        { "name": "effort", "typeHint": "enum: low | medium | high", "required": true },
+        { "name": "reasoning", "typeHint": "enum: off | adaptive | on", "required": true },
+        { "name": "scope", "typeHint": "enum: project | global", "required": true }
+      ],
+      "sourceScreenIds": ["agent-manager"],
+      "userStoryIds": ["US-07","US-09"]
+    },
+    {
+      "id": "data-skills-list",
+      "name": "Lista de skills disponiveis",
+      "description": "Skills cadastradas, agrupadas por categoria, com toggle ativo/inativo no workspace.",
+      "fields": [
+        { "name": "id", "typeHint": "string", "required": true },
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "description", "typeHint": "string", "required": true },
+        { "name": "category", "typeHint": "enum: design | documents | tools | custom", "required": true },
+        { "name": "tools", "typeHint": "array<string>", "required": true },
+        { "name": "active", "typeHint": "boolean (por workspace)", "required": true },
+        { "name": "scope", "typeHint": "enum: project | global", "required": true }
+      ],
+      "sourceScreenIds": ["agent-manager"],
+      "userStoryIds": ["US-10","US-11"]
+    },
+    {
+      "id": "data-mcp-list",
+      "name": "Lista de MCP servers",
+      "description": "MCP servers herdados do Claude Code + customizados, com status, origem, versao, tools e toggle por projeto.",
+      "fields": [
+        { "name": "id", "typeHint": "string", "required": true },
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "origin", "typeHint": "string (ex: claude.ai, ~/.lion/mcp)", "required": true },
+        { "name": "version", "typeHint": "string", "required": true },
+        { "name": "toolsCount", "typeHint": "integer", "required": true },
+        { "name": "status", "typeHint": "enum: connected | needs-auth | authenticating | custom-local", "required": true },
+        { "name": "activeInProject", "typeHint": "boolean", "required": true }
+      ],
+      "sourceScreenIds": ["agent-manager"],
+      "userStoryIds": ["US-12","US-13","US-15"]
+    },
+    {
+      "id": "data-project-config",
+      "name": "Configuracoes do projeto (.lion/config.json)",
+      "description": "Conjunto de subagentes, skills e MCPs ativos para o workspace atual, com fallback para defaults globais em ~/.lion/.",
+      "fields": [
+        { "name": "activeAgentIds", "typeHint": "array<string>", "required": true },
+        { "name": "activeSkillIds", "typeHint": "array<string>", "required": true },
+        { "name": "activeMcpIds", "typeHint": "array<string>", "required": true },
+        { "name": "defaultModelId", "typeHint": "string", "required": false }
+      ],
+      "sourceScreenIds": ["workspace","agent-manager"],
+      "userStoryIds": ["US-02","US-11","US-15"]
+    },
+    {
+      "id": "data-agent-form",
+      "name": "Formulario de novo subagente",
+      "description": "Campos coletados ao criar um subagente novo via interface visual.",
+      "fields": [
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "icon", "typeHint": "string", "required": false },
+        { "name": "description", "typeHint": "string", "required": false },
+        { "name": "model", "typeHint": "enum: haiku-4-5 | sonnet-4-6 | opus-4-7 | local", "required": true },
+        { "name": "localUrl", "typeHint": "url (obrigatorio se model=local)", "required": false },
+        { "name": "effort", "typeHint": "enum: low | medium | high", "required": true },
+        { "name": "reasoning", "typeHint": "enum: off | adaptive | on", "required": true },
+        { "name": "systemPrompt", "typeHint": "string (markdown)", "required": true },
+        { "name": "tools", "typeHint": "array<enum: read_file | write_file | edit_file | bash | grep | web_search>", "required": true },
+        { "name": "scope", "typeHint": "enum: project | global", "required": true }
+      ],
+      "sourceScreenIds": ["new-agent"],
+      "userStoryIds": ["US-07","US-08","US-09"]
+    },
+    {
+      "id": "data-skill-form",
+      "name": "Formulario de nova skill",
+      "description": "Campos coletados ao criar uma skill nova.",
+      "fields": [
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "description", "typeHint": "string", "required": false },
+        { "name": "category", "typeHint": "enum: design | documents | tools | custom", "required": true },
+        { "name": "prompt", "typeHint": "string (markdown)", "required": true },
+        { "name": "tools", "typeHint": "array<string>", "required": true },
+        { "name": "scope", "typeHint": "enum: project | global", "required": true }
+      ],
+      "sourceScreenIds": ["new-skill"],
+      "userStoryIds": ["US-10"]
+    },
+    {
+      "id": "data-mcp-form",
+      "name": "Formulario de MCP server customizado",
+      "description": "Campos coletados ao adicionar um MCP server customizado.",
+      "fields": [
+        { "name": "name", "typeHint": "string", "required": true },
+        { "name": "origin", "typeHint": "string", "required": true },
+        { "name": "transport", "typeHint": "enum: stdio | http | sse", "required": true },
+        { "name": "command", "typeHint": "string (comando ou URL)", "required": true },
+        { "name": "args", "typeHint": "array<string>", "required": false },
+        { "name": "env", "typeHint": "object<string,string> (criptografado)", "required": false },
+        { "name": "scope", "typeHint": "enum: project | global", "required": true }
+      ],
+      "sourceScreenIds": ["new-mcp"],
+      "userStoryIds": ["US-14"]
+    }
+  ],
+  "apiExpectations": [
+    {
+      "id": "api-auth-validate",
+      "operation": "Validar credenciais Anthropic localmente",
+      "screenIds": ["login"],
+      "actionIds": ["action-login-submit"],
+      "methodHint": "POST (Anthropic API direta, sem servidor LionIDE)",
+      "requestShape": { "email": "string", "apiKeyOrPassword": "string" },
+      "responseShape": { "ok": "boolean", "sessionToken": "string", "source": "string" },
+      "userStoryIds": ["US-16"]
+    },
+    {
+      "id": "api-claude-code-inherit",
+      "operation": "Herdar credenciais ja configuradas no Claude Code",
+      "screenIds": ["login"],
+      "actionIds": ["action-login-byok"],
+      "methodHint": "IPC local (sem servidor LionIDE)",
+      "requestShape": {},
+      "responseShape": { "available": "boolean", "source": "claude-code" },
+      "userStoryIds": ["US-16"]
+    },
+    {
+      "id": "api-open-folder",
+      "operation": "Abrir pasta como workspace ativo",
+      "screenIds": ["welcome"],
+      "actionIds": ["action-open-folder","action-open-recent"],
+      "methodHint": "IPC Electron -> filesystem",
+      "requestShape": { "path": "string (absoluto)" },
+      "responseShape": { "workspacePath": "string", "projectName": "string", "framework": "string", "lionConfig": "object|null" },
+      "userStoryIds": ["US-01","US-02"]
+    },
+    {
+      "id": "api-clone-repo",
+      "operation": "Clonar repositorio git",
+      "screenIds": ["welcome"],
+      "actionIds": ["action-clone-repo"],
+      "methodHint": "spawn git clone",
+      "requestShape": { "url": "string", "targetPath": "string" },
+      "responseShape": { "workspacePath": "string", "ok": "boolean" },
+      "userStoryIds": ["US-01"]
+    },
+    {
+      "id": "api-agent-send",
+      "operation": "Enviar mensagem ao Claude Code via Agent SDK",
+      "screenIds": ["workspace"],
+      "actionIds": ["action-send-message","action-toggle-plan"],
+      "methodHint": "Streaming via Anthropic Agent SDK (Python)",
+      "requestShape": { "workspacePath": "string", "text": "string", "modelId": "string", "planMode": "boolean" },
+      "responseShape": { "stream": "events<message-delta | tool-use | subagent-event | task-tree-update | final>" },
+      "userStoryIds": ["US-03","US-04","US-06"]
+    },
+    {
+      "id": "api-read-file",
+      "operation": "Leitura de arquivo do workspace (pelo agente ou pelo usuario)",
+      "screenIds": ["workspace"],
+      "actionIds": ["action-open-file"],
+      "methodHint": "filesystem local",
+      "requestShape": { "relativePath": "string" },
+      "responseShape": { "content": "string", "size": "integer" },
+      "userStoryIds": ["US-04"]
+    },
+    {
+      "id": "api-git-commit",
+      "operation": "Executar git commit apos confirmacao do usuario",
+      "screenIds": ["workspace"],
+      "actionIds": ["action-confirm-commit"],
+      "methodHint": "spawn git commit no workspace ativo",
+      "requestShape": { "workspacePath": "string", "message": "string", "files": "array<string>" },
+      "responseShape": { "ok": "boolean", "commitHash": "string", "output": "string" },
+      "userStoryIds": ["US-05"]
+    },
+    {
+      "id": "api-list-agents",
+      "operation": "Listar subagentes do workspace (SQLite local)",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-tab-agents"],
+      "methodHint": "SQLite local (better-sqlite3)",
+      "requestShape": { "workspacePath": "string", "scope": "string" },
+      "responseShape": { "agents": "array<Agent>" },
+      "userStoryIds": ["US-07","US-09"]
+    },
+    {
+      "id": "api-save-agent",
+      "operation": "Persistir novo subagente no SQLite local",
+      "screenIds": ["new-agent"],
+      "actionIds": ["action-save-agent"],
+      "methodHint": "SQLite local",
+      "requestShape": { "agent": "AgentForm" },
+      "responseShape": { "id": "string", "ok": "boolean" },
+      "userStoryIds": ["US-07","US-08","US-09"]
+    },
+    {
+      "id": "api-list-skills",
+      "operation": "Listar skills cadastradas + estado ativo do workspace",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-tab-skills"],
+      "methodHint": "SQLite local + .lion/config.json",
+      "requestShape": { "workspacePath": "string" },
+      "responseShape": { "skills": "array<Skill>" },
+      "userStoryIds": ["US-10","US-11"]
+    },
+    {
+      "id": "api-save-skill",
+      "operation": "Persistir nova skill no SQLite local",
+      "screenIds": ["new-skill"],
+      "actionIds": ["action-save-skill"],
+      "methodHint": "SQLite local",
+      "requestShape": { "skill": "SkillForm" },
+      "responseShape": { "id": "string", "ok": "boolean" },
+      "userStoryIds": ["US-10"]
+    },
+    {
+      "id": "api-toggle-skill",
+      "operation": "Ativar/desativar skill no workspace ativo",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-toggle-skill"],
+      "methodHint": "Escrever em .lion/config.json",
+      "requestShape": { "skillId": "string", "active": "boolean" },
+      "responseShape": { "ok": "boolean" },
+      "userStoryIds": ["US-11"]
+    },
+    {
+      "id": "api-list-mcp",
+      "operation": "Listar MCP servers herdados + customizados, com status",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-tab-mcp","action-sync-claude-code"],
+      "methodHint": "Ler config Claude Code + SQLite local",
+      "requestShape": { "workspacePath": "string" },
+      "responseShape": { "servers": "array<McpServer>" },
+      "userStoryIds": ["US-12"]
+    },
+    {
+      "id": "api-mcp-oauth",
+      "operation": "Iniciar fluxo OAuth nativo do MCP server",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-mcp-authenticate"],
+      "methodHint": "Spawn browser via Electron shell.openExternal",
+      "requestShape": { "serverId": "string" },
+      "responseShape": { "status": "enum: connected | failed | cancelled" },
+      "userStoryIds": ["US-13"]
+    },
+    {
+      "id": "api-toggle-mcp",
+      "operation": "Ativar/desativar MCP server por projeto",
+      "screenIds": ["agent-manager"],
+      "actionIds": ["action-toggle-mcp"],
+      "methodHint": "Escrever em .lion/config.json",
+      "requestShape": { "serverId": "string", "active": "boolean" },
+      "responseShape": { "ok": "boolean" },
+      "userStoryIds": ["US-15"]
+    },
+    {
+      "id": "api-mcp-test",
+      "operation": "Testar conexao de MCP server customizado antes de salvar",
+      "screenIds": ["new-mcp"],
+      "actionIds": ["action-test-mcp"],
+      "methodHint": "spawn processo + handshake MCP",
+      "requestShape": { "transport": "string", "command": "string", "args": "array<string>", "env": "object" },
+      "responseShape": { "ok": "boolean", "toolsDetected": "integer", "tools": "array<string>", "error": "string|null" },
+      "userStoryIds": ["US-14"]
+    },
+    {
+      "id": "api-save-mcp",
+      "operation": "Persistir MCP customizado no SQLite local",
+      "screenIds": ["new-mcp"],
+      "actionIds": ["action-save-mcp"],
+      "methodHint": "SQLite local (env criptografada)",
+      "requestShape": { "server": "McpForm" },
+      "responseShape": { "id": "string", "ok": "boolean" },
+      "userStoryIds": ["US-14"]
+    }
+  ],
+  "deltas": [
+    {
+      "id": "delta-001",
+      "type": "ux-decision",
+      "description": "Tela de login Anthropic adicionada como primeira tela do SPA para validar o estado de autenticacao (US-16) antes de qualquer outro fluxo. No produto desktop final esse fluxo aconteceria nas configuracoes do Claude Code, mas como o briefing exigiu 'login com form real que muda de tela ao submit', expomos um gate explicito.",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-16"],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-002",
+      "type": "ux-decision",
+      "description": "Modal de confirmacao de commit (US-05) renderizado como overlay dentro do screen 'workspace' em vez de screen propria, porque o usuario nao sai do workspace para aprovar; e um estado modal.",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-05"],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-003",
+      "type": "ux-decision",
+      "description": "Cada workspace recente na tela Welcome reabre direto no workspace (UX-01) sem passo intermediario. O briefing nao detalhou esse fluxo; foi assumido pelo padrao de IDEs (VS Code/Cursor).",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-01","US-02"],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-004",
+      "type": "ux-decision",
+      "description": "Status 'Autenticando' do MCP (US-13) e implementado como estado transiente na coluna de acao, com toast de progresso. A UI volta automaticamente para 'Conectado' quando o fluxo OAuth termina.",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-13"],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-005",
+      "type": "scope-included",
+      "description": "Toggle global 'Sincronizar com Claude Code' na tela MCP forca releitura das integracoes herdadas (RF-35). Util quando o usuario instala um MCP via Claude Code em paralelo.",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-12"],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-006",
+      "type": "non-functional-visualized",
+      "description": "US-17 (branding) e US-18 (distribuicao desktop) sao requisitos transversais aplicados a TODA a UI (paleta, fonte Inter, mencao 'LionIDE' em titlebar/statusbar/About). Nao tem screen dedicada porque sao observaveis em qualquer screen.",
+      "impact": "low",
+      "relatedUserStoryIds": ["US-17","US-18"],
+      "requiresRequirementsChange": false
+    }
+  ]
+}
+</script>
+
+</body>
+</html>

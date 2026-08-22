@@ -1,0 +1,2035 @@
+{
+  "version": "1.0",
+  "visual": {
+    "direction": "dark tech-utility com identidade Lionclaw (laranja #f97316 sobre preto profundo), tipografia Inter, mono JetBrains Mono",
+    "density": "dense",
+    "tokens": {
+      "colors": {
+        "bg": "#0a0a0a",
+        "surface": "#141414",
+        "card": "#1a1a1a",
+        "surface3": "#202020",
+        "border": "#262626",
+        "borderStrong": "#333333",
+        "fg": "#e8e8e8",
+        "muted": "#7a7a7a",
+        "accent": "#f97316",
+        "accentStrong": "#ea580c",
+        "success": "#22c55e",
+        "warning": "#eab308",
+        "danger": "#ef4444",
+        "info": "#3b82f6"
+      },
+      "typography": {
+        "body": "Inter, SF Pro Text, system-ui, sans-serif",
+        "mono": "JetBrains Mono, ui-monospace, Menlo, monospace",
+        "display": "Inter (peso 600-700)"
+      },
+      "spacing": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "12px",
+        "lg": "16px",
+        "xl": "24px",
+        "2xl": "32px"
+      },
+      "radii": {
+        "sm": "4px",
+        "md": "6px",
+        "lg": "10px",
+        "xl": "14px"
+      }
+    }
+  },
+  "navigation": {
+    "primary": [
+      {
+        "id": "nav-explorer",
+        "label": "Explorador",
+        "targetScreenId": "workspace",
+        "userStoryIds": [
+          "US-01",
+          "US-04"
+        ]
+      },
+      {
+        "id": "nav-agent-chat",
+        "label": "Agente",
+        "targetScreenId": "workspace",
+        "userStoryIds": [
+          "US-03",
+          "US-06"
+        ]
+      },
+      {
+        "id": "nav-agent-manager",
+        "label": "Agent Manager",
+        "targetScreenId": "agent-manager",
+        "userStoryIds": [
+          "US-07",
+          "US-10",
+          "US-12"
+        ]
+      },
+      {
+        "id": "nav-tab-agents",
+        "label": "Agentes",
+        "targetScreenId": "agent-manager",
+        "userStoryIds": [
+          "US-07",
+          "US-09"
+        ]
+      },
+      {
+        "id": "nav-tab-skills",
+        "label": "Skills",
+        "targetScreenId": "agent-manager",
+        "userStoryIds": [
+          "US-10",
+          "US-11"
+        ]
+      },
+      {
+        "id": "nav-tab-mcp",
+        "label": "MCP Servers",
+        "targetScreenId": "agent-manager",
+        "userStoryIds": [
+          "US-12",
+          "US-13",
+          "US-14",
+          "US-15"
+        ]
+      }
+    ],
+    "secondary": [
+      {
+        "id": "nav-back-workspace",
+        "label": "Voltar ao workspace",
+        "targetScreenId": "workspace",
+        "userStoryIds": [
+          "US-01"
+        ]
+      },
+      {
+        "id": "nav-new-agent",
+        "label": "Novo Agente",
+        "targetScreenId": "new-agent",
+        "userStoryIds": [
+          "US-07",
+          "US-08"
+        ]
+      },
+      {
+        "id": "nav-new-skill",
+        "label": "Nova Skill",
+        "targetScreenId": "new-skill",
+        "userStoryIds": [
+          "US-10"
+        ]
+      },
+      {
+        "id": "nav-new-mcp",
+        "label": "Novo MCP",
+        "targetScreenId": "new-mcp",
+        "userStoryIds": [
+          "US-14"
+        ]
+      },
+      {
+        "id": "nav-about-lionide",
+        "label": "Sobre o LionIDE",
+        "targetScreenId": "welcome",
+        "userStoryIds": [
+          "US-18"
+        ]
+      }
+    ]
+  },
+  "screens": [
+    {
+      "id": "login",
+      "userStoryIds": [
+        "US-16",
+        "US-17"
+      ],
+      "title": "Login Anthropic",
+      "route": "#login",
+      "purpose": "Autenticar usuario com chave Anthropic propria ou credencial herdada do Claude Code antes de iniciar qualquer fluxo do app",
+      "states": [
+        "idle",
+        "error"
+      ],
+      "actions": [
+        {
+          "id": "action-login-submit",
+          "label": "Conectar",
+          "type": "submit",
+          "userStoryIds": [
+            "US-16"
+          ],
+          "apiExpectationIds": [
+            "api-auth-validate"
+          ]
+        },
+        {
+          "id": "action-login-byok",
+          "label": "Usar chave ja configurada no Claude Code",
+          "type": "button",
+          "userStoryIds": [
+            "US-16"
+          ],
+          "apiExpectationIds": [
+            "api-claude-code-inherit"
+          ]
+        }
+      ],
+      "dataRequirementIds": [
+        "data-anthropic-credentials"
+      ]
+    },
+    {
+      "id": "welcome",
+      "userStoryIds": [
+        "US-01",
+        "US-16",
+        "US-17"
+      ],
+      "title": "Welcome (sem pasta aberta)",
+      "route": "#welcome",
+      "purpose": "Permitir ao usuario abrir uma pasta, clonar repositorio ou acessar o Agent Manager quando nenhum workspace esta ativo. Mostra estado de autenticacao Anthropic",
+      "states": [
+        "unauthenticated",
+        "authenticated",
+        "empty"
+      ],
+      "actions": [
+        {
+          "id": "action-open-folder",
+          "label": "Abrir pasta",
+          "type": "button",
+          "userStoryIds": [
+            "US-01"
+          ],
+          "apiExpectationIds": [
+            "api-open-folder"
+          ]
+        },
+        {
+          "id": "action-clone-repo",
+          "label": "Clonar repositorio",
+          "type": "button",
+          "userStoryIds": [
+            "US-01"
+          ],
+          "apiExpectationIds": [
+            "api-clone-repo"
+          ]
+        },
+        {
+          "id": "action-open-agent-manager",
+          "label": "Abrir Agent Manager",
+          "type": "button",
+          "userStoryIds": [
+            "US-07",
+            "US-10",
+            "US-12"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-open-recent",
+          "label": "Abrir workspace recente",
+          "type": "button",
+          "userStoryIds": [
+            "US-01",
+            "US-02"
+          ],
+          "apiExpectationIds": [
+            "api-open-folder"
+          ]
+        }
+      ],
+      "dataRequirementIds": [
+        "data-recent-workspaces",
+        "data-anthropic-credentials"
+      ]
+    },
+    {
+      "id": "workspace",
+      "userStoryIds": [
+        "US-01",
+        "US-02",
+        "US-03",
+        "US-04",
+        "US-05",
+        "US-06",
+        "US-16"
+      ],
+      "title": "Workspace IDE",
+      "route": "#workspace",
+      "purpose": "Ambiente principal de desenvolvimento: file tree, editor com tabs, terminal integrado, painel lateral do agente com chat e arvore de tarefas de subagentes",
+      "states": [
+        "idle",
+        "agent-running",
+        "agent-idle",
+        "commit-pending",
+        "mic-recording",
+        "plan-on"
+      ],
+      "actions": [
+        {
+          "id": "action-send-message",
+          "label": "Enviar mensagem ao agente",
+          "type": "submit",
+          "userStoryIds": [
+            "US-03",
+            "US-04"
+          ],
+          "apiExpectationIds": [
+            "api-agent-send"
+          ]
+        },
+        {
+          "id": "action-toggle-plan",
+          "label": "Modo Plan",
+          "type": "button",
+          "userStoryIds": [
+            "US-03"
+          ],
+          "apiExpectationIds": [
+            "api-agent-send"
+          ]
+        },
+        {
+          "id": "action-toggle-mic",
+          "label": "Falar (mic)",
+          "type": "button",
+          "userStoryIds": [
+            "US-03"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-select-model",
+          "label": "Selecionar modelo",
+          "type": "button",
+          "userStoryIds": [
+            "US-03",
+            "US-07"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-open-file",
+          "label": "Abrir arquivo no editor",
+          "type": "button",
+          "userStoryIds": [
+            "US-04"
+          ],
+          "apiExpectationIds": [
+            "api-read-file"
+          ]
+        },
+        {
+          "id": "action-open-commit",
+          "label": "Revisar commit pendente",
+          "type": "button",
+          "userStoryIds": [
+            "US-05"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-confirm-commit",
+          "label": "Confirmar e fazer commit",
+          "type": "submit",
+          "userStoryIds": [
+            "US-05"
+          ],
+          "apiExpectationIds": [
+            "api-git-commit"
+          ]
+        },
+        {
+          "id": "action-close-commit",
+          "label": "Cancelar commit",
+          "type": "button",
+          "userStoryIds": [
+            "US-05"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-open-agent-manager-from-ws",
+          "label": "Abrir Agent Manager",
+          "type": "button",
+          "userStoryIds": [
+            "US-07",
+            "US-10",
+            "US-12"
+          ],
+          "apiExpectationIds": []
+        }
+      ],
+      "dataRequirementIds": [
+        "data-message-input",
+        "data-workspace-context",
+        "data-task-tree",
+        "data-commit-payload",
+        "data-file-content"
+      ]
+    },
+    {
+      "id": "agent-manager",
+      "userStoryIds": [
+        "US-07",
+        "US-10",
+        "US-11",
+        "US-12",
+        "US-13",
+        "US-15"
+      ],
+      "title": "Agent Manager",
+      "route": "#agent-manager",
+      "purpose": "Painel central para gerenciar subagentes, skills e MCP servers de forma visual. Tres abas integradas, com filtros de escopo (projeto vs global)",
+      "states": [
+        "tab-agents",
+        "tab-skills",
+        "tab-mcp",
+        "scope-project",
+        "scope-global"
+      ],
+      "actions": [
+        {
+          "id": "action-tab-agents",
+          "label": "Aba Agentes",
+          "type": "button",
+          "userStoryIds": [
+            "US-07",
+            "US-09"
+          ],
+          "apiExpectationIds": [
+            "api-list-agents"
+          ]
+        },
+        {
+          "id": "action-tab-skills",
+          "label": "Aba Skills",
+          "type": "button",
+          "userStoryIds": [
+            "US-10",
+            "US-11"
+          ],
+          "apiExpectationIds": [
+            "api-list-skills"
+          ]
+        },
+        {
+          "id": "action-tab-mcp",
+          "label": "Aba MCP",
+          "type": "button",
+          "userStoryIds": [
+            "US-12"
+          ],
+          "apiExpectationIds": [
+            "api-list-mcp"
+          ]
+        },
+        {
+          "id": "action-scope-project",
+          "label": "Escopo: projeto",
+          "type": "button",
+          "userStoryIds": [
+            "US-02",
+            "US-15"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-scope-global",
+          "label": "Escopo: global",
+          "type": "button",
+          "userStoryIds": [
+            "US-02"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-new-agent-cta",
+          "label": "Novo Agente",
+          "type": "button",
+          "userStoryIds": [
+            "US-07",
+            "US-08"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-new-skill-cta",
+          "label": "Nova Skill",
+          "type": "button",
+          "userStoryIds": [
+            "US-10"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-new-mcp-cta",
+          "label": "Novo MCP",
+          "type": "button",
+          "userStoryIds": [
+            "US-14"
+          ],
+          "apiExpectationIds": []
+        },
+        {
+          "id": "action-toggle-skill",
+          "label": "Ativar/desativar skill",
+          "type": "button",
+          "userStoryIds": [
+            "US-11"
+          ],
+          "apiExpectationIds": [
+            "api-toggle-skill"
+          ]
+        },
+        {
+          "id": "action-toggle-mcp",
+          "label": "Ativar/desativar MCP no projeto",
+          "type": "button",
+          "userStoryIds": [
+            "US-15"
+          ],
+          "apiExpectationIds": [
+            "api-toggle-mcp"
+          ]
+        },
+        {
+          "id": "action-mcp-authenticate",
+          "label": "Autenticar MCP via OAuth",
+          "type": "button",
+          "userStoryIds": [
+            "US-13"
+          ],
+          "apiExpectationIds": [
+            "api-mcp-oauth"
+          ]
+        },
+        {
+          "id": "action-sync-claude-code",
+          "label": "Sincronizar com Claude Code",
+          "type": "button",
+          "userStoryIds": [
+            "US-12"
+          ],
+          "apiExpectationIds": [
+            "api-list-mcp"
+          ]
+        }
+      ],
+      "dataRequirementIds": [
+        "data-agents-list",
+        "data-skills-list",
+        "data-mcp-list",
+        "data-project-config"
+      ]
+    },
+    {
+      "id": "new-agent",
+      "userStoryIds": [
+        "US-07",
+        "US-08",
+        "US-09"
+      ],
+      "title": "Novo Agente",
+      "route": "#new-agent",
+      "purpose": "Formulario visual para criar subagentes especializados. Campos cobrem identidade, modelo, comportamento (esforco, raciocinio), prompt do sistema e checkboxes de tools permitidas",
+      "states": [
+        "idle",
+        "invalid",
+        "saving",
+        "model-local-selected"
+      ],
+      "actions": [
+        {
+          "id": "action-save-agent",
+          "label": "Salvar agente",
+          "type": "submit",
+          "userStoryIds": [
+            "US-07",
+            "US-08",
+            "US-09"
+          ],
+          "apiExpectationIds": [
+            "api-save-agent"
+          ]
+        },
+        {
+          "id": "action-cancel-agent",
+          "label": "Cancelar",
+          "type": "button",
+          "userStoryIds": [
+            "US-07"
+          ],
+          "apiExpectationIds": []
+        }
+      ],
+      "dataRequirementIds": [
+        "data-agent-form"
+      ]
+    },
+    {
+      "id": "new-skill",
+      "userStoryIds": [
+        "US-10"
+      ],
+      "title": "Nova Skill",
+      "route": "#new-skill",
+      "purpose": "Formulario visual para criar skills reutilizaveis com nome, descricao, prompt da habilidade, tools necessarias e categoria",
+      "states": [
+        "idle",
+        "invalid",
+        "saving"
+      ],
+      "actions": [
+        {
+          "id": "action-save-skill",
+          "label": "Salvar skill",
+          "type": "submit",
+          "userStoryIds": [
+            "US-10"
+          ],
+          "apiExpectationIds": [
+            "api-save-skill"
+          ]
+        },
+        {
+          "id": "action-cancel-skill",
+          "label": "Cancelar",
+          "type": "button",
+          "userStoryIds": [
+            "US-10"
+          ],
+          "apiExpectationIds": []
+        }
+      ],
+      "dataRequirementIds": [
+        "data-skill-form"
+      ]
+    },
+    {
+      "id": "new-mcp",
+      "userStoryIds": [
+        "US-14"
+      ],
+      "title": "Novo MCP Server",
+      "route": "#new-mcp",
+      "purpose": "Formulario para adicionar MCP server customizado com nome, origem, transporte (stdio/HTTP/SSE), comando, argumentos e env vars. Permite testar conexao antes de salvar",
+      "states": [
+        "idle",
+        "testing",
+        "test-ok",
+        "test-fail",
+        "invalid",
+        "saving"
+      ],
+      "actions": [
+        {
+          "id": "action-test-mcp",
+          "label": "Testar conexao",
+          "type": "button",
+          "userStoryIds": [
+            "US-14"
+          ],
+          "apiExpectationIds": [
+            "api-mcp-test"
+          ]
+        },
+        {
+          "id": "action-save-mcp",
+          "label": "Salvar server",
+          "type": "submit",
+          "userStoryIds": [
+            "US-14"
+          ],
+          "apiExpectationIds": [
+            "api-save-mcp"
+          ]
+        },
+        {
+          "id": "action-cancel-mcp",
+          "label": "Cancelar",
+          "type": "button",
+          "userStoryIds": [
+            "US-14"
+          ],
+          "apiExpectationIds": []
+        }
+      ],
+      "dataRequirementIds": [
+        "data-mcp-form"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "comp-titlebar",
+      "name": "Titlebar com menu nativo",
+      "type": "chrome",
+      "usedInScreenIds": [
+        "welcome",
+        "workspace",
+        "agent-manager",
+        "new-agent",
+        "new-skill",
+        "new-mcp"
+      ],
+      "props": {},
+      "states": []
+    },
+    {
+      "id": "comp-activity-bar",
+      "name": "Activity bar VS Code",
+      "type": "nav",
+      "usedInScreenIds": [
+        "welcome",
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "active",
+        "inactive",
+        "badge"
+      ]
+    },
+    {
+      "id": "comp-file-tree",
+      "name": "Explorer file tree",
+      "type": "list",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "expanded",
+        "collapsed",
+        "selected",
+        "modified-badge"
+      ]
+    },
+    {
+      "id": "comp-editor-tab",
+      "name": "Tab do editor",
+      "type": "tab",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "active",
+        "inactive",
+        "modified"
+      ]
+    },
+    {
+      "id": "comp-code-block",
+      "name": "Bloco de codigo com syntax highlight",
+      "type": "display",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": []
+    },
+    {
+      "id": "comp-terminal",
+      "name": "Terminal integrado",
+      "type": "display",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "idle",
+        "running",
+        "ok",
+        "error"
+      ]
+    },
+    {
+      "id": "comp-chat-message",
+      "name": "Mensagem de chat (user/agent)",
+      "type": "display",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": []
+    },
+    {
+      "id": "comp-task-tree",
+      "name": "Arvore de tarefas/subagentes em tempo real",
+      "type": "display",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "pending",
+        "running",
+        "done"
+      ]
+    },
+    {
+      "id": "comp-agent-input",
+      "name": "Input do chat com modelo, plan e mic",
+      "type": "form",
+      "usedInScreenIds": [
+        "welcome",
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "disabled",
+        "idle",
+        "plan-on",
+        "mic-recording"
+      ]
+    },
+    {
+      "id": "comp-auth-banner",
+      "name": "Banner de status Anthropic",
+      "type": "display",
+      "usedInScreenIds": [
+        "welcome"
+      ],
+      "props": {},
+      "states": [
+        "success",
+        "warning",
+        "missing"
+      ]
+    },
+    {
+      "id": "comp-am-tabs",
+      "name": "Abas do Agent Manager",
+      "type": "nav",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "active",
+        "inactive"
+      ]
+    },
+    {
+      "id": "comp-scope-toggle",
+      "name": "Toggle de escopo Projeto/Global",
+      "type": "form",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": []
+    },
+    {
+      "id": "comp-agent-card",
+      "name": "Card de subagente",
+      "type": "card",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "default",
+        "new-cta"
+      ]
+    },
+    {
+      "id": "comp-skill-card",
+      "name": "Card de skill com toggle",
+      "type": "card",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "active",
+        "inactive"
+      ]
+    },
+    {
+      "id": "comp-skill-category",
+      "name": "Agrupamento de skills por categoria",
+      "type": "list",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": []
+    },
+    {
+      "id": "comp-mcp-row",
+      "name": "Linha de MCP server na tabela",
+      "type": "row",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "connected",
+        "needs-auth",
+        "authenticating",
+        "custom",
+        "disabled"
+      ]
+    },
+    {
+      "id": "comp-mcp-status-pill",
+      "name": "Pill de status do MCP",
+      "type": "display",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "connected",
+        "needs-auth",
+        "authenticating",
+        "custom"
+      ]
+    },
+    {
+      "id": "comp-toggle",
+      "name": "Toggle switch",
+      "type": "form",
+      "usedInScreenIds": [
+        "agent-manager"
+      ],
+      "props": {},
+      "states": [
+        "on",
+        "off"
+      ]
+    },
+    {
+      "id": "comp-radio-card",
+      "name": "Cartao de radio para escolha de modelo/esforco/etc",
+      "type": "form",
+      "usedInScreenIds": [
+        "new-agent",
+        "new-skill",
+        "new-mcp"
+      ],
+      "props": {},
+      "states": [
+        "selected",
+        "idle"
+      ]
+    },
+    {
+      "id": "comp-tool-checklist",
+      "name": "Checklist de tools permitidas",
+      "type": "form",
+      "usedInScreenIds": [
+        "new-agent",
+        "new-skill"
+      ],
+      "props": {},
+      "states": [
+        "checked",
+        "unchecked"
+      ]
+    },
+    {
+      "id": "comp-icon-picker",
+      "name": "Picker de icone do agente",
+      "type": "form",
+      "usedInScreenIds": [
+        "new-agent"
+      ],
+      "props": {},
+      "states": [
+        "selected",
+        "idle"
+      ]
+    },
+    {
+      "id": "comp-commit-modal",
+      "name": "Modal de confirmacao de commit com diff",
+      "type": "modal",
+      "usedInScreenIds": [
+        "workspace"
+      ],
+      "props": {},
+      "states": [
+        "open",
+        "closed"
+      ]
+    },
+    {
+      "id": "comp-login-form",
+      "name": "Formulario de login Anthropic",
+      "type": "form",
+      "usedInScreenIds": [
+        "login"
+      ],
+      "props": {},
+      "states": [
+        "idle",
+        "error"
+      ]
+    },
+    {
+      "id": "comp-toast",
+      "name": "Toast de notificacao",
+      "type": "display",
+      "usedInScreenIds": [
+        "login",
+        "welcome",
+        "workspace",
+        "agent-manager",
+        "new-agent",
+        "new-skill",
+        "new-mcp"
+      ],
+      "props": {},
+      "states": [
+        "visible",
+        "hidden"
+      ]
+    },
+    {
+      "id": "comp-statusbar",
+      "name": "Status bar inferior",
+      "type": "chrome",
+      "usedInScreenIds": [
+        "welcome",
+        "workspace",
+        "agent-manager"
+      ],
+      "props": {},
+      "states": []
+    }
+  ],
+  "dataRequirements": [
+    {
+      "id": "data-anthropic-credentials",
+      "name": "Credenciais Anthropic do usuario",
+      "description": "Email + chave de API ou login Anthropic herdado do Claude Code. Nao armazenado em servidor externo.",
+      "fields": [
+        {
+          "name": "email",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "apiKeyOrPassword",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "source",
+          "typeHint": "enum: own | claude-code-inherited",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "login"
+      ],
+      "userStoryIds": [
+        "US-16"
+      ]
+    },
+    {
+      "id": "data-recent-workspaces",
+      "name": "Lista de workspaces recentes",
+      "description": "Pastas abertas anteriormente, com path absoluto e nome para reabrir rapidamente.",
+      "fields": [
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "path",
+          "typeHint": "string (absoluto)",
+          "required": true
+        },
+        {
+          "name": "lastOpenedAt",
+          "typeHint": "ISO-8601 datetime",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "welcome"
+      ],
+      "userStoryIds": [
+        "US-01",
+        "US-02"
+      ]
+    },
+    {
+      "id": "data-workspace-context",
+      "name": "Contexto do workspace ativo",
+      "description": "Pasta aberta como workspace ativo + framework detectado + .lion/config.json carregado.",
+      "fields": [
+        {
+          "name": "rootPath",
+          "typeHint": "string (absoluto)",
+          "required": true
+        },
+        {
+          "name": "projectName",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "framework",
+          "typeHint": "string (ex: Next.js 14)",
+          "required": false
+        },
+        {
+          "name": "lionConfig",
+          "typeHint": "object | null (.lion/config.json)",
+          "required": false
+        }
+      ],
+      "sourceScreenIds": [
+        "welcome",
+        "workspace"
+      ],
+      "userStoryIds": [
+        "US-01",
+        "US-02"
+      ]
+    },
+    {
+      "id": "data-message-input",
+      "name": "Mensagem do usuario para o agente",
+      "description": "Texto digitado pelo usuario no chat, com selecao de modelo e modo Plan.",
+      "fields": [
+        {
+          "name": "text",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "modelId",
+          "typeHint": "enum: sonnet-4-6 | opus-4-7 | haiku-4-5 | local",
+          "required": true
+        },
+        {
+          "name": "planMode",
+          "typeHint": "boolean",
+          "required": false
+        },
+        {
+          "name": "voiceInput",
+          "typeHint": "boolean",
+          "required": false
+        }
+      ],
+      "sourceScreenIds": [
+        "workspace"
+      ],
+      "userStoryIds": [
+        "US-03"
+      ]
+    },
+    {
+      "id": "data-task-tree",
+      "name": "Arvore de tarefas e subagentes",
+      "description": "Estado em tempo real da hierarquia de tarefas: agente principal -> subagentes -> sub-passos.",
+      "fields": [
+        {
+          "name": "nodeId",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "parentId",
+          "typeHint": "string | null",
+          "required": false
+        },
+        {
+          "name": "agentName",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "title",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "typeHint": "enum: pending | running | done | error",
+          "required": true
+        },
+        {
+          "name": "startedAt",
+          "typeHint": "ISO-8601 datetime",
+          "required": false
+        }
+      ],
+      "sourceScreenIds": [
+        "workspace"
+      ],
+      "userStoryIds": [
+        "US-06"
+      ]
+    },
+    {
+      "id": "data-file-content",
+      "name": "Conteudo de arquivo do workspace",
+      "description": "Arquivo lido ou editado pelo agente, mostrado no editor.",
+      "fields": [
+        {
+          "name": "relativePath",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "content",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "modified",
+          "typeHint": "boolean",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "workspace"
+      ],
+      "userStoryIds": [
+        "US-04"
+      ]
+    },
+    {
+      "id": "data-commit-payload",
+      "name": "Payload de commit pendente",
+      "description": "Escopo de alteracoes + mensagem de commit (proposta pelo agente, editavel pelo usuario).",
+      "fields": [
+        {
+          "name": "files",
+          "typeHint": "array<{path,additions,deletions,diff}>",
+          "required": true
+        },
+        {
+          "name": "branch",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "proposedMessage",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "finalMessage",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "testsStatus",
+          "typeHint": "string (ex: 13/13 passing)",
+          "required": false
+        }
+      ],
+      "sourceScreenIds": [
+        "workspace"
+      ],
+      "userStoryIds": [
+        "US-05"
+      ]
+    },
+    {
+      "id": "data-agents-list",
+      "name": "Lista de subagentes do workspace",
+      "description": "Subagentes ativos no contexto, com modelo, tools, esforco e raciocinio.",
+      "fields": [
+        {
+          "name": "id",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "model",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "tools",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "effort",
+          "typeHint": "enum: low | medium | high",
+          "required": true
+        },
+        {
+          "name": "reasoning",
+          "typeHint": "enum: off | adaptive | on",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "typeHint": "enum: project | global",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "agent-manager"
+      ],
+      "userStoryIds": [
+        "US-07",
+        "US-09"
+      ]
+    },
+    {
+      "id": "data-skills-list",
+      "name": "Lista de skills disponiveis",
+      "description": "Skills cadastradas, agrupadas por categoria, com toggle ativo/inativo no workspace.",
+      "fields": [
+        {
+          "name": "id",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "category",
+          "typeHint": "enum: design | documents | tools | custom",
+          "required": true
+        },
+        {
+          "name": "tools",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "active",
+          "typeHint": "boolean (por workspace)",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "typeHint": "enum: project | global",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "agent-manager"
+      ],
+      "userStoryIds": [
+        "US-10",
+        "US-11"
+      ]
+    },
+    {
+      "id": "data-mcp-list",
+      "name": "Lista de MCP servers",
+      "description": "MCP servers herdados do Claude Code + customizados, com status, origem, versao, tools e toggle por projeto.",
+      "fields": [
+        {
+          "name": "id",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "origin",
+          "typeHint": "string (ex: claude.ai, ~/.lion/mcp)",
+          "required": true
+        },
+        {
+          "name": "version",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "toolsCount",
+          "typeHint": "integer",
+          "required": true
+        },
+        {
+          "name": "status",
+          "typeHint": "enum: connected | needs-auth | authenticating | custom-local",
+          "required": true
+        },
+        {
+          "name": "activeInProject",
+          "typeHint": "boolean",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "agent-manager"
+      ],
+      "userStoryIds": [
+        "US-12",
+        "US-13",
+        "US-15"
+      ]
+    },
+    {
+      "id": "data-project-config",
+      "name": "Configuracoes do projeto (.lion/config.json)",
+      "description": "Conjunto de subagentes, skills e MCPs ativos para o workspace atual, com fallback para defaults globais em ~/.lion/.",
+      "fields": [
+        {
+          "name": "activeAgentIds",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "activeSkillIds",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "activeMcpIds",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "defaultModelId",
+          "typeHint": "string",
+          "required": false
+        }
+      ],
+      "sourceScreenIds": [
+        "workspace",
+        "agent-manager"
+      ],
+      "userStoryIds": [
+        "US-02",
+        "US-11",
+        "US-15"
+      ]
+    },
+    {
+      "id": "data-agent-form",
+      "name": "Formulario de novo subagente",
+      "description": "Campos coletados ao criar um subagente novo via interface visual.",
+      "fields": [
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "icon",
+          "typeHint": "string",
+          "required": false
+        },
+        {
+          "name": "description",
+          "typeHint": "string",
+          "required": false
+        },
+        {
+          "name": "model",
+          "typeHint": "enum: haiku-4-5 | sonnet-4-6 | opus-4-7 | local",
+          "required": true
+        },
+        {
+          "name": "localUrl",
+          "typeHint": "url (obrigatorio se model=local)",
+          "required": false
+        },
+        {
+          "name": "effort",
+          "typeHint": "enum: low | medium | high",
+          "required": true
+        },
+        {
+          "name": "reasoning",
+          "typeHint": "enum: off | adaptive | on",
+          "required": true
+        },
+        {
+          "name": "systemPrompt",
+          "typeHint": "string (markdown)",
+          "required": true
+        },
+        {
+          "name": "tools",
+          "typeHint": "array<enum: read_file | write_file | edit_file | bash | grep | web_search>",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "typeHint": "enum: project | global",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "new-agent"
+      ],
+      "userStoryIds": [
+        "US-07",
+        "US-08",
+        "US-09"
+      ]
+    },
+    {
+      "id": "data-skill-form",
+      "name": "Formulario de nova skill",
+      "description": "Campos coletados ao criar uma skill nova.",
+      "fields": [
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "typeHint": "string",
+          "required": false
+        },
+        {
+          "name": "category",
+          "typeHint": "enum: design | documents | tools | custom",
+          "required": true
+        },
+        {
+          "name": "prompt",
+          "typeHint": "string (markdown)",
+          "required": true
+        },
+        {
+          "name": "tools",
+          "typeHint": "array<string>",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "typeHint": "enum: project | global",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "new-skill"
+      ],
+      "userStoryIds": [
+        "US-10"
+      ]
+    },
+    {
+      "id": "data-mcp-form",
+      "name": "Formulario de MCP server customizado",
+      "description": "Campos coletados ao adicionar um MCP server customizado.",
+      "fields": [
+        {
+          "name": "name",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "origin",
+          "typeHint": "string",
+          "required": true
+        },
+        {
+          "name": "transport",
+          "typeHint": "enum: stdio | http | sse",
+          "required": true
+        },
+        {
+          "name": "command",
+          "typeHint": "string (comando ou URL)",
+          "required": true
+        },
+        {
+          "name": "args",
+          "typeHint": "array<string>",
+          "required": false
+        },
+        {
+          "name": "env",
+          "typeHint": "object<string,string> (criptografado)",
+          "required": false
+        },
+        {
+          "name": "scope",
+          "typeHint": "enum: project | global",
+          "required": true
+        }
+      ],
+      "sourceScreenIds": [
+        "new-mcp"
+      ],
+      "userStoryIds": [
+        "US-14"
+      ]
+    }
+  ],
+  "apiExpectations": [
+    {
+      "id": "api-auth-validate",
+      "operation": "Validar credenciais Anthropic localmente",
+      "screenIds": [
+        "login"
+      ],
+      "actionIds": [
+        "action-login-submit"
+      ],
+      "methodHint": "POST (Anthropic API direta, sem servidor LionIDE)",
+      "requestShape": {
+        "email": "string",
+        "apiKeyOrPassword": "string"
+      },
+      "responseShape": {
+        "ok": "boolean",
+        "sessionToken": "string",
+        "source": "string"
+      },
+      "userStoryIds": [
+        "US-16"
+      ]
+    },
+    {
+      "id": "api-claude-code-inherit",
+      "operation": "Herdar credenciais ja configuradas no Claude Code",
+      "screenIds": [
+        "login"
+      ],
+      "actionIds": [
+        "action-login-byok"
+      ],
+      "methodHint": "IPC local (sem servidor LionIDE)",
+      "requestShape": {},
+      "responseShape": {
+        "available": "boolean",
+        "source": "claude-code"
+      },
+      "userStoryIds": [
+        "US-16"
+      ]
+    },
+    {
+      "id": "api-open-folder",
+      "operation": "Abrir pasta como workspace ativo",
+      "screenIds": [
+        "welcome"
+      ],
+      "actionIds": [
+        "action-open-folder",
+        "action-open-recent"
+      ],
+      "methodHint": "IPC Electron -> filesystem",
+      "requestShape": {
+        "path": "string (absoluto)"
+      },
+      "responseShape": {
+        "workspacePath": "string",
+        "projectName": "string",
+        "framework": "string",
+        "lionConfig": "object|null"
+      },
+      "userStoryIds": [
+        "US-01",
+        "US-02"
+      ]
+    },
+    {
+      "id": "api-clone-repo",
+      "operation": "Clonar repositorio git",
+      "screenIds": [
+        "welcome"
+      ],
+      "actionIds": [
+        "action-clone-repo"
+      ],
+      "methodHint": "spawn git clone",
+      "requestShape": {
+        "url": "string",
+        "targetPath": "string"
+      },
+      "responseShape": {
+        "workspacePath": "string",
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-01"
+      ]
+    },
+    {
+      "id": "api-agent-send",
+      "operation": "Enviar mensagem ao Claude Code via Agent SDK",
+      "screenIds": [
+        "workspace"
+      ],
+      "actionIds": [
+        "action-send-message",
+        "action-toggle-plan"
+      ],
+      "methodHint": "Streaming via Anthropic Agent SDK (Python)",
+      "requestShape": {
+        "workspacePath": "string",
+        "text": "string",
+        "modelId": "string",
+        "planMode": "boolean"
+      },
+      "responseShape": {
+        "stream": "events<message-delta | tool-use | subagent-event | task-tree-update | final>"
+      },
+      "userStoryIds": [
+        "US-03",
+        "US-04",
+        "US-06"
+      ]
+    },
+    {
+      "id": "api-read-file",
+      "operation": "Leitura de arquivo do workspace (pelo agente ou pelo usuario)",
+      "screenIds": [
+        "workspace"
+      ],
+      "actionIds": [
+        "action-open-file"
+      ],
+      "methodHint": "filesystem local",
+      "requestShape": {
+        "relativePath": "string"
+      },
+      "responseShape": {
+        "content": "string",
+        "size": "integer"
+      },
+      "userStoryIds": [
+        "US-04"
+      ]
+    },
+    {
+      "id": "api-git-commit",
+      "operation": "Executar git commit apos confirmacao do usuario",
+      "screenIds": [
+        "workspace"
+      ],
+      "actionIds": [
+        "action-confirm-commit"
+      ],
+      "methodHint": "spawn git commit no workspace ativo",
+      "requestShape": {
+        "workspacePath": "string",
+        "message": "string",
+        "files": "array<string>"
+      },
+      "responseShape": {
+        "ok": "boolean",
+        "commitHash": "string",
+        "output": "string"
+      },
+      "userStoryIds": [
+        "US-05"
+      ]
+    },
+    {
+      "id": "api-list-agents",
+      "operation": "Listar subagentes do workspace (SQLite local)",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-tab-agents"
+      ],
+      "methodHint": "SQLite local (better-sqlite3)",
+      "requestShape": {
+        "workspacePath": "string",
+        "scope": "string"
+      },
+      "responseShape": {
+        "agents": "array<Agent>"
+      },
+      "userStoryIds": [
+        "US-07",
+        "US-09"
+      ]
+    },
+    {
+      "id": "api-save-agent",
+      "operation": "Persistir novo subagente no SQLite local",
+      "screenIds": [
+        "new-agent"
+      ],
+      "actionIds": [
+        "action-save-agent"
+      ],
+      "methodHint": "SQLite local",
+      "requestShape": {
+        "agent": "AgentForm"
+      },
+      "responseShape": {
+        "id": "string",
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-07",
+        "US-08",
+        "US-09"
+      ]
+    },
+    {
+      "id": "api-list-skills",
+      "operation": "Listar skills cadastradas + estado ativo do workspace",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-tab-skills"
+      ],
+      "methodHint": "SQLite local + .lion/config.json",
+      "requestShape": {
+        "workspacePath": "string"
+      },
+      "responseShape": {
+        "skills": "array<Skill>"
+      },
+      "userStoryIds": [
+        "US-10",
+        "US-11"
+      ]
+    },
+    {
+      "id": "api-save-skill",
+      "operation": "Persistir nova skill no SQLite local",
+      "screenIds": [
+        "new-skill"
+      ],
+      "actionIds": [
+        "action-save-skill"
+      ],
+      "methodHint": "SQLite local",
+      "requestShape": {
+        "skill": "SkillForm"
+      },
+      "responseShape": {
+        "id": "string",
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-10"
+      ]
+    },
+    {
+      "id": "api-toggle-skill",
+      "operation": "Ativar/desativar skill no workspace ativo",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-toggle-skill"
+      ],
+      "methodHint": "Escrever em .lion/config.json",
+      "requestShape": {
+        "skillId": "string",
+        "active": "boolean"
+      },
+      "responseShape": {
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-11"
+      ]
+    },
+    {
+      "id": "api-list-mcp",
+      "operation": "Listar MCP servers herdados + customizados, com status",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-tab-mcp",
+        "action-sync-claude-code"
+      ],
+      "methodHint": "Ler config Claude Code + SQLite local",
+      "requestShape": {
+        "workspacePath": "string"
+      },
+      "responseShape": {
+        "servers": "array<McpServer>"
+      },
+      "userStoryIds": [
+        "US-12"
+      ]
+    },
+    {
+      "id": "api-mcp-oauth",
+      "operation": "Iniciar fluxo OAuth nativo do MCP server",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-mcp-authenticate"
+      ],
+      "methodHint": "Spawn browser via Electron shell.openExternal",
+      "requestShape": {
+        "serverId": "string"
+      },
+      "responseShape": {
+        "status": "enum: connected | failed | cancelled"
+      },
+      "userStoryIds": [
+        "US-13"
+      ]
+    },
+    {
+      "id": "api-toggle-mcp",
+      "operation": "Ativar/desativar MCP server por projeto",
+      "screenIds": [
+        "agent-manager"
+      ],
+      "actionIds": [
+        "action-toggle-mcp"
+      ],
+      "methodHint": "Escrever em .lion/config.json",
+      "requestShape": {
+        "serverId": "string",
+        "active": "boolean"
+      },
+      "responseShape": {
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-15"
+      ]
+    },
+    {
+      "id": "api-mcp-test",
+      "operation": "Testar conexao de MCP server customizado antes de salvar",
+      "screenIds": [
+        "new-mcp"
+      ],
+      "actionIds": [
+        "action-test-mcp"
+      ],
+      "methodHint": "spawn processo + handshake MCP",
+      "requestShape": {
+        "transport": "string",
+        "command": "string",
+        "args": "array<string>",
+        "env": "object"
+      },
+      "responseShape": {
+        "ok": "boolean",
+        "toolsDetected": "integer",
+        "tools": "array<string>",
+        "error": "string|null"
+      },
+      "userStoryIds": [
+        "US-14"
+      ]
+    },
+    {
+      "id": "api-save-mcp",
+      "operation": "Persistir MCP customizado no SQLite local",
+      "screenIds": [
+        "new-mcp"
+      ],
+      "actionIds": [
+        "action-save-mcp"
+      ],
+      "methodHint": "SQLite local (env criptografada)",
+      "requestShape": {
+        "server": "McpForm"
+      },
+      "responseShape": {
+        "id": "string",
+        "ok": "boolean"
+      },
+      "userStoryIds": [
+        "US-14"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "id": "delta-001",
+      "type": "ux-decision",
+      "description": "Tela de login Anthropic adicionada como primeira tela do SPA para validar o estado de autenticacao (US-16) antes de qualquer outro fluxo. No produto desktop final esse fluxo aconteceria nas configuracoes do Claude Code, mas como o briefing exigiu 'login com form real que muda de tela ao submit', expomos um gate explicito.",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-16"
+      ],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-002",
+      "type": "ux-decision",
+      "description": "Modal de confirmacao de commit (US-05) renderizado como overlay dentro do screen 'workspace' em vez de screen propria, porque o usuario nao sai do workspace para aprovar; e um estado modal.",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-05"
+      ],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-003",
+      "type": "ux-decision",
+      "description": "Cada workspace recente na tela Welcome reabre direto no workspace (UX-01) sem passo intermediario. O briefing nao detalhou esse fluxo; foi assumido pelo padrao de IDEs (VS Code/Cursor).",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-01",
+        "US-02"
+      ],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-004",
+      "type": "ux-decision",
+      "description": "Status 'Autenticando' do MCP (US-13) e implementado como estado transiente na coluna de acao, com toast de progresso. A UI volta automaticamente para 'Conectado' quando o fluxo OAuth termina.",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-13"
+      ],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-005",
+      "type": "scope-included",
+      "description": "Toggle global 'Sincronizar com Claude Code' na tela MCP forca releitura das integracoes herdadas (RF-35). Util quando o usuario instala um MCP via Claude Code em paralelo.",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-12"
+      ],
+      "requiresRequirementsChange": false
+    },
+    {
+      "id": "delta-006",
+      "type": "non-functional-visualized",
+      "description": "US-17 (branding) e US-18 (distribuicao desktop) sao requisitos transversais aplicados a TODA a UI (paleta, fonte Inter, mencao 'LionIDE' em titlebar/statusbar/About). Nao tem screen dedicada porque sao observaveis em qualquer screen.",
+      "impact": "low",
+      "relatedUserStoryIds": [
+        "US-17",
+        "US-18"
+      ],
+      "requiresRequirementsChange": false
+    }
+  ]
+}
