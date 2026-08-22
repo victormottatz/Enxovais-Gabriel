@@ -3,13 +3,13 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NODE_ENV=development
 
-# Copia arquivos de configuração e instala dependências de build (TypeScript)
+# Copia arquivos de configuração e instala dependências completas
 COPY backend/package*.json backend/tsconfig.json ./
-RUN npm install
+RUN npm install --include=dev
 
-# Copia código fonte do backend e compila
+# Copia código fonte do backend e compila TypeScript
 COPY backend/src/ ./src/
-RUN npm run build
+RUN npx tsc
 
 FROM node:22-alpine AS runner
 
