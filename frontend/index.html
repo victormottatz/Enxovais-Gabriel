@@ -3,189 +3,501 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Enxovais Gabriel - Gestão & Crediário</title>
+  <title>Enxovais Gabriel - Gestão Comercial & Crediário</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#8C3A4B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
-  <!-- Header Superior -->
-  <header class="app-header">
-    <div class="app-title">
-      <h1>Enxovais Gabriel 🏠</h1>
-      <p>Utilidades Domésticas & Crediário</p>
+  <!-- ========================================================================= -->
+  <!-- SIDEBAR LATERAL (VISÍVEL NO DESKTOP & TABLETS) -->
+  <!-- ========================================================================= -->
+  <aside class="sidebar" id="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🏠</div>
+      <div class="brand-info">
+        <h2>Enxovais Gabriel</h2>
+        <span>Utilidades & Crediário</span>
+      </div>
     </div>
-    <div class="badge-vps">
-      <span class="status-dot active"></span>
-      <span>VPS Online</span>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="navegarAba('cobrancas')">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Cobranças do Dia</span>
+        <span class="badge-count" id="badge-cobrancas-count">0</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('fichas')">
+        <span class="nav-icon">📑</span>
+        <span class="nav-label">Fichas & Crediário</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('vendas')">
+        <span class="nav-icon">🛒</span>
+        <span class="nav-label">Nova Venda / PDV</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('catalogo')">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">Catálogo & Estoque</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('clientes')">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Clientes</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('whatsapp')">
+        <span class="nav-icon">📱</span>
+        <span class="nav-label">WhatsApp Gateway</span>
+        <span class="status-indicator online" id="sidebar-zap-status"></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="server-status-card">
+        <div class="status-header">
+          <span class="status-dot pulse"></span>
+          <span>VPS Compartilhada</span>
+        </div>
+        <small id="server-time">Porta 3005 • Online</small>
+      </div>
     </div>
-  </header>
+  </aside>
 
-  <!-- Conteúdo Principal -->
-  <main class="container">
+  <!-- ========================================================================= -->
+  <!-- CONTEÚDO PRINCIPAL (DESKTOP + MOBILE) -->
+  <!-- ========================================================================= -->
+  <div class="main-wrapper">
 
-    <!-- ========================================================================= -->
-    <!-- ABA 1: COBRANÇAS DO DIA (VALE / PAGAMENTO) -->
-    <!-- ========================================================================= -->
-    <section id="tab-cobrancas" class="tab-content active">
-      <div class="metric-grid">
-        <div class="metric-card">
-          <span>A Receber Hoje</span>
-          <h3 id="metric-receber-hoje">R$ 0,00</h3>
+    <!-- Header Superior Mobile & Desktop -->
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Abrir Menu">
+          <span>☰</span>
+        </button>
+        <div class="header-title-box">
+          <h1 id="page-current-title">Cobranças do Dia</h1>
+          <span class="header-subtitle" id="page-current-subtitle">Lembretes no dia do vale e pagamento</span>
         </div>
-        <div class="metric-card">
-          <span>Total no Dividendo</span>
-          <h3 id="metric-total-dividendo">R$ 0,00</h3>
-        </div>
       </div>
 
-      <div class="filter-pills">
-        <button class="filter-pill active" onclick="filtrarCobrancas('todos', this)">Todos</button>
-        <button class="filter-pill" onclick="filtrarCobrancas(5, this)">Dia 05 (Pagamento)</button>
-        <button class="filter-pill" onclick="filtrarCobrancas(20, this)">Dia 20 (Vale)</button>
-        <button class="filter-pill" onclick="filtrarCobrancas(10, this)">Dia 10</button>
+      <div class="header-actions">
+        <button class="btn btn-outline btn-sm" onclick="abrirModalConexaoWhatsApp()">
+          <span id="header-zap-icon">📱</span>
+          <span class="desktop-only">WhatsApp: </span>
+          <strong id="header-zap-text">Conectado</strong>
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalNovaVenda()">
+          <span>+ Nova Venda</span>
+        </button>
       </div>
+    </header>
 
-      <div id="lista-cobrancas">
-        <!-- Cards gerados dinamicamente via JS -->
-      </div>
-    </section>
+    <!-- Área de Conteúdo Dinâmico -->
+    <main class="content-area">
 
-    <!-- ========================================================================= -->
-    <!-- ABA 2: FICHAS DE CREDIÁRIO -->
-    <!-- ========================================================================= -->
-    <section id="tab-fichas" class="tab-content">
-      <div class="form-group">
-        <input type="text" id="busca-ficha" class="form-control" placeholder="🔍 Buscar cliente por nome ou WhatsApp..." oninput="buscarFichas(this.value)">
-      </div>
-
-      <div id="lista-fichas">
-        <!-- Fichas carregadas via JS -->
-      </div>
-    </section>
-
-    <!-- ========================================================================= -->
-    <!-- ABA 3: NOVA VENDA EXPRESS -->
-    <!-- ========================================================================= -->
-    <section id="tab-vendas" class="tab-content">
-      <div class="card-item" style="padding: 20px;">
-        <h2 style="font-size: 1.2rem; margin-bottom: 16px; color: var(--primary);">🛒 Registrar Nova Venda</h2>
+      <!-- ===================================================================== -->
+      <!-- ABA 1: COBRANÇAS DO DIA (VALE / PAGAMENTO) -->
+      <!-- ===================================================================== -->
+      <section id="tab-cobrancas" class="tab-pane active">
         
-        <form id="form-venda" onsubmit="salvarVenda(event)">
-          <div class="form-group">
-            <label>Cliente</label>
-            <select id="venda-cliente-id" class="form-control" required>
-              <option value="">Selecione a cliente...</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Descrição dos Itens / Produtos</label>
-            <textarea id="venda-descricao-itens" class="form-control" rows="2" placeholder="Ex: 1x Edredom Casal + 2x Jogo de Lençol 4 Peças" required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Origem do Item</label>
-            <select id="venda-tipo-item" class="form-control">
-              <option value="ESTOQUE_LOCAL">📦 Pronta Entrega (Estoque Local)</option>
-              <option value="ENCOMENDA">🚚 Sob Encomenda (Pedir ao Distribuidor)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Forma de Pagamento</label>
-            <select id="venda-forma-pagamento" class="form-control" onchange="toggleCrediarioFields(this.value)" required>
-              <option value="CREDIARIO">📑 Crediário Próprio (Lançar na Ficha)</option>
-              <option value="PIX">⚡ Pix à Vista</option>
-              <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
-              <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
-              <option value="DINHEIRO">💵 Dinheiro</option>
-              <option value="MISTO">🔀 Misto (Entrada Pix/Dinheiro + Ficha)</option>
-            </select>
-          </div>
-
-          <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
-              <label>Valor Total (R$)</label>
-              <input type="number" step="0.01" id="venda-valor-total" class="form-control" placeholder="0.00" required>
-            </div>
-            <div class="form-group" id="group-entrada" style="flex: 1; display: none;">
-              <label>Valor Entrada (R$)</label>
-              <input type="number" step="0.01" id="venda-valor-entrada" class="form-control" placeholder="0.00">
+        <!-- Cards de Estatísticas / KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card highlight-gold">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-details">
+              <span>A Receber Hoje</span>
+              <h3 id="kpi-receber-hoje">R$ 0,00</h3>
+              <small id="kpi-clientes-hoje-count">0 clientes para cobrar</small>
             </div>
           </div>
-
-          <div class="form-group" id="group-renegociar-parcela">
-            <label>Parcela Negociada (Opcional)</label>
-            <input type="number" step="0.01" id="venda-parcela-negociada" class="form-control" placeholder="Deixe em branco p/ manter a parcela atual">
-            <small style="color: var(--text-muted); font-size: 0.75rem;">Se não informado, o valor da parcela mensal atual será mantido, apenas estendendo o prazo.</small>
+          <div class="kpi-card highlight-terracota">
+            <div class="kpi-icon">📑</div>
+            <div class="kpi-details">
+              <span>Total no Dividendo</span>
+              <h3 id="kpi-total-dividendo">R$ 0,00</h3>
+              <small>Saldo acumulado em fichas</small>
+            </div>
           </div>
+          <div class="kpi-card highlight-green">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-details">
+              <span>Recebido no Mês</span>
+              <h3 id="kpi-recebido-mes">R$ 0,00</h3>
+              <small>Amortizações quitadas</small>
+            </div>
+          </div>
+        </div>
 
-          <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
-            ✅ Concluir Venda
+        <!-- Filtros Rápidos de Dia do Vencimento / Vale -->
+        <div class="filter-bar">
+          <div class="filter-chips">
+            <button class="chip active" onclick="filtrarCobrancas('todos', this)">Todos</button>
+            <button class="chip" onclick="filtrarCobrancas('hoje', this)">📅 Vence Hoje</button>
+            <button class="chip" onclick="filtrarCobrancas(5, this)">💵 Dia 05 (Pagamento)</button>
+            <button class="chip" onclick="filtrarCobrancas(20, this)">🎟️ Dia 20 (Vale)</button>
+            <button class="chip" onclick="filtrarCobrancas(10, this)">Dia 10</button>
+          </div>
+          <div class="filter-search">
+            <input type="text" id="search-cobrancas" placeholder="Filtrar por nome ou WhatsApp..." oninput="filtrarListaCobrancasInput(this.value)">
+          </div>
+        </div>
+
+        <!-- Lista de Clientes para Cobrança -->
+        <div id="cobrancas-container" class="cards-grid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Carregando fichas e parcelas do dia...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 2: FICHAS DE CREDIÁRIO (DIVIDENDO CONTÍNUO) -->
+      <!-- ===================================================================== -->
+      <section id="tab-fichas" class="tab-pane">
+        <div class="section-toolbar">
+          <div class="search-box-large">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-fichas" placeholder="Buscar cliente por nome, telefone ou CPF..." oninput="buscarFichas(this.value)">
+          </div>
+          <button class="btn btn-secondary" onclick="abrirModalNovoCliente()">
+            <span>+ Nova Cliente</span>
           </button>
-        </form>
-      </div>
-    </section>
+        </div>
 
-    <!-- ========================================================================= -->
-    <!-- ABA 4: ESTOQUE & ENCOMENDAS -->
-    <!-- ========================================================================= -->
-    <section id="tab-estoque" class="tab-content">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 style="font-size: 1.1rem; font-weight: 700;">Catálogo de Utilidades</h2>
-        <button class="btn btn-primary" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" onclick="abrirModalProduto()">+ Novo Item</button>
-      </div>
+        <div id="fichas-container" class="cards-grid">
+          <!-- Cards de Fichas gerados dinamicamente -->
+        </div>
+      </section>
 
-      <div id="lista-produtos">
-        <!-- Produtos e estoque carregados via JS -->
-      </div>
-    </section>
+      <!-- ===================================================================== -->
+      <!-- ABA 3: NOVA VENDA / PDV EXPRESS -->
+      <!-- ===================================================================== -->
+      <section id="tab-vendas" class="tab-pane">
+        <div class="pos-layout">
+          
+          <!-- Lado Esquerdo: Catálogo Rápido com Busca -->
+          <div class="pos-catalog-panel">
+            <div class="catalog-header">
+              <input type="text" id="pos-search-product" placeholder="🔍 Buscar utilidade, edredom, panela..." oninput="filtrarProdutosPDV(this.value)">
+              <div class="category-pills" id="pos-category-pills">
+                <button class="pill-btn active" onclick="filtrarCategoriaPDV('TODOS', this)">Todos</button>
+                <button class="pill-btn" onclick="filtrarCategoriaPDV('CAMA', this)">Cama & Banho</button>
+                <button class="pill-btn" onclick="filtrarCategoriaPDV('COZINHA', this)">Cozinha</button>
+                <button class="pill-btn" onclick="filtrarCategoriaPDV('DECORACAO', this)">Decoração</button>
+                <button class="pill-btn" onclick="filtrarCategoriaPDV('ORGANIZACAO', this)">Organização</button>
+              </div>
+            </div>
 
-  </main>
+            <div class="pos-products-grid" id="pos-products-list">
+              <!-- Grid de Produtos com Toque Rápido -->
+            </div>
+          </div>
+
+          <!-- Lado Direito: Carrinho e Fechamento de Venda -->
+          <div class="pos-cart-panel">
+            <div class="cart-card">
+              <div class="cart-header">
+                <h3>🛒 Carrinho da Venda</h3>
+                <button class="btn-clear" onclick="limparCarrinho()">Limpar</button>
+              </div>
+
+              <!-- Seleção da Cliente -->
+              <div class="form-group">
+                <label>Cliente:</label>
+                <select id="venda-cliente-select" class="form-control" onchange="aoSelecionarCliente(this.value)" required>
+                  <option value="">Selecione ou busque a cliente...</option>
+                </select>
+                <div id="cliente-ficha-preview" class="ficha-preview-box" style="display: none;">
+                  <!-- Info de saldo e parcela padrão da cliente -->
+                </div>
+              </div>
+
+              <!-- Itens Selecionados no Carrinho -->
+              <div class="cart-items-list" id="cart-items-list">
+                <div class="empty-cart-msg">
+                  <span>Toque nos produtos ao lado para adicionar à venda</span>
+                </div>
+              </div>
+
+              <!-- Item Avulso / Personalizado -->
+              <div class="custom-item-row">
+                <input type="text" id="custom-item-name" placeholder="Item avulso / encomenda especial...">
+                <input type="number" id="custom-item-price" placeholder="R$ 0,00" step="0.50">
+                <button class="btn btn-sm btn-outline" onclick="adicionarItemAvulso()">+ Add</button>
+              </div>
+
+              <!-- Resumo Financeiro do Carrinho -->
+              <div class="cart-summary">
+                <div class="summary-row">
+                  <span>Subtotal:</span>
+                  <strong id="cart-subtotal">R$ 0,00</strong>
+                </div>
+
+                <!-- Tipo de Entrega -->
+                <div class="form-group" style="margin: 10px 0;">
+                  <label>Tipo da Venda:</label>
+                  <div class="radio-toggle-group">
+                    <label class="radio-btn">
+                      <input type="radio" name="tipo-entrega" value="PRONTA_ENTREGA" checked>
+                      <span>📦 Pronta Entrega</span>
+                    </label>
+                    <label class="radio-btn">
+                      <input type="radio" name="tipo-entrega" value="ENCOMENDA">
+                      <span>🚚 Encomenda</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Forma de Pagamento -->
+                <div class="form-group">
+                  <label>Forma de Pagamento:</label>
+                  <select id="venda-forma-pagamento" class="form-control" onchange="aoMudarFormaPagamento(this.value)">
+                    <option value="CREDIARIO">📑 Crediário (Adicionar ao Dividendo)</option>
+                    <option value="PIX">⚡ Pix à Vista</option>
+                    <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+                    <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+                    <option value="DINHEIRO">💵 Dinheiro em Espécie</option>
+                  </select>
+                </div>
+
+                <!-- Painel Condicional de Crediário (Ajuste de Parcela) -->
+                <div id="painel-ajuste-crediario" class="crediario-options-box">
+                  <div class="form-group">
+                    <label>Valor da Parcela Fixa:</label>
+                    <div class="input-with-hint">
+                      <input type="number" id="venda-parcela-valor" class="form-control" placeholder="Manter atual ou novo valor" step="1.00">
+                      <small id="hint-parcela-fixa">Mantém o valor mensal e alonga o prazo</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botão de Finalizar -->
+                <button class="btn btn-primary btn-block btn-lg" onclick="finalizarVenda()">
+                  <span>Finalizar Venda & Gerar Recibo</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 4: CATÁLOGO & ESTOQUE DE UTILIDADES -->
+      <!-- ===================================================================== -->
+      <section id="tab-catalogo" class="tab-pane">
+        <div class="section-toolbar">
+          <div class="search-box-large">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-catalogo" placeholder="Buscar produtos no estoque ou catálogo..." oninput="filtrarCatalogo(this.value)">
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalNovoProduto()">
+            <span>+ Novo Produto</span>
+          </button>
+        </div>
+
+        <div class="catalogo-grid" id="catalogo-container">
+          <!-- Produtos em estoque renderizados via JS -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 5: CLIENTES -->
+      <!-- ===================================================================== -->
+      <section id="tab-clientes" class="tab-pane">
+        <div class="section-toolbar">
+          <div class="search-box-large">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-clientes-tab" placeholder="Buscar cliente por nome, telefone, bairro..." oninput="filtrarClientesTab(this.value)">
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalNovoCliente()">
+            <span>+ Cadastrar Cliente</span>
+          </button>
+        </div>
+
+        <div class="table-responsive desktop-only">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nome da Cliente</th>
+                <th>WhatsApp</th>
+                <th>Cidade / Bairro</th>
+                <th>Dia Combinado</th>
+                <th>Saldo no Crediário</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="clientes-table-body">
+              <!-- Linhas preenchidas via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="cards-grid mobile-only" id="clientes-cards-mobile">
+          <!-- Cards mobile de clientes -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 6: WHATSAPP GATEWAY & CONFIGURAÇÕES -->
+      <!-- ===================================================================== -->
+      <section id="tab-whatsapp" class="tab-pane">
+        <div class="zap-dashboard-grid">
+          
+          <div class="card-item zap-status-card">
+            <h3>📱 Status da Conexão WhatsApp</h3>
+            <div class="zap-status-badge" id="zap-status-badge-full">
+              <span class="status-dot active"></span>
+              <strong id="zap-status-text-full">Conectado e Operacional</strong>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 12px 0;">
+              Instância: <strong>enxovais_gabriel</strong> na porta isolada <strong>8085</strong>.
+            </p>
+            <div class="btn-group">
+              <button class="btn btn-outline" onclick="testarConexaoWhatsApp()">🔄 Testar Status</button>
+              <button class="btn btn-secondary" onclick="abrirModalConexaoWhatsApp()">📲 Ver QR Code</button>
+            </div>
+          </div>
+
+          <div class="card-item">
+            <h3>⚙️ Templates de Mensagens</h3>
+            <div class="form-group">
+              <label>Lembrete de Cobrança (Vale / Pagamento):</label>
+              <textarea class="form-control" rows="4" id="template-cobranca" readonly>
+Olá, {nome}! Tudo bem? 🏠✨
+Passando para lembrar que hoje é o dia combinado do seu pagamento na Enxovais Gabriel.
+💰 Parcela do Mês: R$ {valor_parcela}
+🔑 Chave Pix: 12345678900 (Enxovais Gabriel)
+Qualquer dúvida, estamos à disposição!</textarea>
+            </div>
+            <div class="form-group">
+              <label>Recibo de Pagamento / Amortização:</label>
+              <textarea class="form-control" rows="4" id="template-recibo" readonly>
+Recebemos o seu pagamento de R$ {valor_pago}! ✅
+Seu saldo restante no crediário agora é de R$ {saldo_restante}.
+Muito obrigado pela preferência! 🏠❤️</textarea>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ======================================================================= -->
+    <!-- BOTTOM NAVIGATION BAR (FIXA NO MOBILE) -->
+    <!-- ======================================================================= -->
+    <nav class="bottom-nav">
+      <button class="bottom-nav-item active" onclick="navegarAba('cobrancas')">
+        <span class="bnav-icon">📅</span>
+        <span class="bnav-label">Hoje</span>
+        <span class="bnav-badge" id="bnav-badge-count">0</span>
+      </button>
+      <button class="bottom-nav-item" onclick="navegarAba('fichas')">
+        <span class="bnav-icon">📑</span>
+        <span class="bnav-label">Fichas</span>
+      </button>
+      <button class="bottom-nav-item" onclick="navegarAba('vendas')">
+        <span class="bnav-icon">🛒</span>
+        <span class="bnav-label">Venda</span>
+      </button>
+      <button class="bottom-nav-item" onclick="navegarAba('catalogo')">
+        <span class="bnav-icon">📦</span>
+        <span class="bnav-label">Estoque</span>
+      </button>
+      <button class="bottom-nav-item" onclick="navegarAba('clientes')">
+        <span class="bnav-icon">👥</span>
+        <span class="bnav-label">Clientes</span>
+      </button>
+    </nav>
+
+  </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: REGISTRAR PAGAMENTO / AMORTIZAÇÃO DE FICHA -->
+  <!-- MODAL: DETALHES DA FICHA & EXTRATO DE CREDIÁRIO -->
   <!-- ========================================================================= -->
-  <div id="modal-pagamento" class="modal-backdrop">
+  <div class="modal-backdrop" id="modal-ficha-detalhes">
     <div class="modal-sheet">
       <div class="modal-header">
-        <h3 id="modal-pagamento-titulo">💵 Baixa de Pagamento</h3>
-        <button class="close-btn" onclick="fecharModalPagamento()">&times;</button>
+        <div>
+          <h3 id="modal-ficha-nome-cliente">Ficha de Crediário</h3>
+          <span class="text-muted" id="modal-ficha-telefone"></span>
+        </div>
+        <button class="btn-close" onclick="fecharModal('modal-ficha-detalhes')">✕</button>
       </div>
 
-      <form id="form-pagamento" onsubmit="confirmarPagamento(event)">
-        <input type="hidden" id="pagamento-ficha-id">
+      <div class="modal-body">
+        <div class="ficha-summary-cards">
+          <div class="fcard highlight-red">
+            <span>Saldo Devedor Total</span>
+            <h2 id="modal-ficha-saldo-total">R$ 0,00</h2>
+          </div>
+          <div class="fcard highlight-blue">
+            <span>Parcela Fixa Combinada</span>
+            <h3 id="modal-ficha-valor-parcela">R$ 0,00</h3>
+            <small id="modal-ficha-dia-vencimento">Dia 05 de cada mês</small>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn btn-success btn-block" onclick="abrirModalAmortizacaoFicha()">
+            💵 Registrar Pagamento / Amortização
+          </button>
+          <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
+            📱 Cobrar no WhatsApp
+          </button>
+        </div>
+
+        <h4 style="margin: 20px 0 10px; color: var(--text-dark);">📜 Extrato de Movimentações da Ficha</h4>
+        <div class="extrato-timeline" id="modal-ficha-extrato">
+          <!-- Histórico cronológico de débitos e créditos -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: REGISTRAR PAGAMENTO / AMORTIZAÇÃO -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-amortizacao">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-header">
+        <h3>💵 Registrar Pagamento</h3>
+        <button class="btn-close" onclick="fecharModal('modal-amortizacao')">✕</button>
+      </div>
+      <form id="form-amortizacao" onsubmit="salvarAmortizacao(event)">
+        <input type="hidden" id="amortizacao-ficha-id">
         
-        <div class="card-finance-info" style="margin-bottom: 16px;">
-          <div class="finance-col">
-            <span>Saldo Devedor Atual</span>
-            <strong id="pagamento-saldo-atual" class="highlight">R$ 0,00</strong>
-          </div>
-          <div class="finance-col">
-            <span>Parcela Acordada</span>
-            <strong id="pagamento-parcela-valor">R$ 0,00</strong>
-          </div>
+        <div class="form-group">
+          <label>Valor Pago:</label>
+          <input type="number" id="amortizacao-valor" class="form-control input-lg" step="0.50" required placeholder="R$ 0,00">
         </div>
 
         <div class="form-group">
-          <label>Valor Recebido (R$)</label>
-          <input type="number" step="0.01" id="pagamento-valor-pago" class="form-control" style="font-size: 1.3rem; font-weight: 700; color: var(--success);" required>
+          <label>Forma de Pagamento:</label>
+          <select id="amortizacao-forma" class="form-control">
+            <option value="PIX">⚡ Pix</option>
+            <option value="DINHEIRO">💵 Dinheiro em Espécie</option>
+            <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+            <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+          </select>
         </div>
 
         <div class="form-group">
-          <label>Observação / Descrição</label>
-          <input type="text" id="pagamento-descricao" class="form-control" placeholder="Ex: Pagamento no dinheiro / Pix do vale">
+          <label>Renegociar Parcela Mensal? (Opcional)</label>
+          <input type="number" id="amortizacao-nova-parcela" class="form-control" placeholder="Deixe vazio para manter o mesmo valor" step="1.00">
+          <small class="text-muted">Se a vendedora combinou um novo valor de parcela com a cliente.</small>
         </div>
 
-        <div class="btn-group" style="margin-top: 16px;">
-          <button type="button" class="btn btn-outline" onclick="fecharModalPagamento()">Cancelar</button>
-          <button type="submit" class="btn btn-success">Confirmar & Emitir Recibo</button>
-        </div>
+        <button type="submit" class="btn btn-success btn-block btn-lg">
+          Confirmar Pagamento & Emitir Recibo
+        </button>
       </form>
     </div>
   </div>
@@ -193,80 +505,134 @@
   <!-- ========================================================================= -->
   <!-- MODAL: NOVO PRODUTO -->
   <!-- ========================================================================= -->
-  <div id="modal-produto" class="modal-backdrop">
-    <div class="modal-sheet">
+  <div class="modal-backdrop" id="modal-novo-produto">
+    <div class="modal-sheet modal-sm">
       <div class="modal-header">
-        <h3>📦 Cadastrar Produto</h3>
-        <button class="close-btn" onclick="fecharModalProduto()">&times;</button>
+        <h3>📦 Cadastrar Produto / Utilidade</h3>
+        <button class="btn-close" onclick="fecharModal('modal-novo-produto')">✕</button>
       </div>
-
-      <form id="form-produto" onsubmit="salvarProduto(event)">
+      <form id="form-novo-produto" onsubmit="salvarNovoProduto(event)">
         <div class="form-group">
-          <label>Nome do Produto</label>
-          <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Jogo de Cama King 400 Fios" required>
+          <label>Nome do Produto:</label>
+          <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Edredom Casal Dupla Face Soft" required>
         </div>
 
-        <div class="form-group">
-          <label>Categoria</label>
-          <select id="prod-categoria" class="form-control">
-            <option value="CAMA_MESA_BANHO">🛏️ Cama, Mesa e Banho</option>
-            <option value="COZINHA">🍳 Cozinha & Utensílios</option>
-            <option value="DECORACAO">🖼️ Decoração</option>
-            <option value="ORGANIZACAO">🧺 Organização</option>
-            <option value="OUTROS">✨ Outros</option>
-          </select>
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label>Preço à Vista (R$)</label>
-            <input type="number" step="0.01" id="prod-preco-vista" class="form-control" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria:</label>
+            <select id="prod-categoria" class="form-control">
+              <option value="CAMA">Cama & Banho</option>
+              <option value="COZINHA">Mesa & Cozinha</option>
+              <option value="DECORACAO">Decoração</option>
+              <option value="ORGANIZACAO">Organização</option>
+              <option value="UTILIDADES">Outras Utilidades</option>
+            </select>
           </div>
-          <div class="form-group" style="flex: 1;">
-            <label>Preço Crediário (R$)</label>
-            <input type="number" step="0.01" id="prod-preco-crediario" class="form-control" required>
+          <div class="form-group">
+            <label>Estoque Atual:</label>
+            <input type="number" id="prod-estoque" class="form-control" value="10" min="0" required>
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label>Estoque Atual</label>
-            <input type="number" id="prod-estoque" class="form-control" value="5" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Preço de Venda (R$):</label>
+            <input type="number" id="prod-preco-venda" class="form-control input-lg" step="0.50" placeholder="180.00" required>
           </div>
-          <div class="form-group" style="flex: 1;">
-            <label>Estoque Mínimo</label>
-            <input type="number" id="prod-estoque-min" class="form-control" value="2">
+          <div class="form-group">
+            <label>Preço de Custo (R$):</label>
+            <input type="number" id="prod-preco-custo" class="form-control" step="0.50" placeholder="95.00">
           </div>
         </div>
 
-        <div class="btn-group" style="margin-top: 16px;">
-          <button type="button" class="btn btn-outline" onclick="fecharModalProduto()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Salvar Produto</button>
-        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">
+          Salvar no Catálogo
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- Barra de Navegação Inferior -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="trocarAba('cobrancas', this)">
-      <span class="nav-icon">📅</span>
-      <span>Cobranças</span>
-    </button>
-    <button class="nav-item" onclick="trocarAba('fichas', this)">
-      <span class="nav-icon">📑</span>
-      <span>Fichas</span>
-    </button>
-    <button class="nav-item" onclick="trocarAba('vendas', this)">
-      <span class="nav-icon">🛒</span>
-      <span>Vender</span>
-    </button>
-    <button class="nav-item" onclick="trocarAba('estoque', this)">
-      <span class="nav-icon">📦</span>
-      <span>Estoque</span>
-    </button>
-  </nav>
+  <!-- ========================================================================= -->
+  <!-- MODAL: CADASTRAR CLIENTE -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-novo-cliente">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-header">
+        <h3>👥 Cadastrar Nova Cliente</h3>
+        <button class="btn-close" onclick="fecharModal('modal-novo-cliente')">✕</button>
+      </div>
+      <form id="form-novo-cliente" onsubmit="salvarNovoCliente(event)">
+        <div class="form-group">
+          <label>Nome Completo:</label>
+          <input type="text" id="cli-nome" class="form-control" placeholder="Nome da cliente" required>
+        </div>
 
+        <div class="form-row">
+          <div class="form-group">
+            <label>WhatsApp (com DDD):</label>
+            <input type="tel" id="cli-telefone" class="form-control" placeholder="Ex: 11987654321" required>
+          </div>
+          <div class="form-group">
+            <label>Dia Combinado:</label>
+            <select id="cli-dia-vencimento" class="form-control">
+              <option value="5">Dia 05 (Pagamento)</option>
+              <option value="20">Dia 20 (Vale)</option>
+              <option value="10">Dia 10</option>
+              <option value="15">Dia 15</option>
+              <option value="1">Dia 01</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Endereço / Bairro / Referência:</label>
+          <input type="text" id="cli-endereco" class="form-control" placeholder="Rua, número e bairro para entregas">
+        </div>
+
+        <div class="form-group">
+          <label>Valor da Parcela Padrão Combinada (R$):</label>
+          <input type="number" id="cli-parcela-padrao" class="form-control" placeholder="Ex: 50.00 ou 100.00" value="50.00" step="1.00">
+          <small class="text-muted">Valor base fixo que a cliente paga mensalmente no crediário.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg">
+          Criar Cadastro & Ficha
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CONEXÃO WHATSAPP (QR CODE) -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-conexao-zap">
+    <div class="modal-sheet modal-sm" style="text-align: center;">
+      <div class="modal-header">
+        <h3>📲 Conectar WhatsApp</h3>
+        <button class="btn-close" onclick="fecharModal('modal-conexao-zap')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Escaneie o QR Code abaixo com o celular da <strong>Enxovais Gabriel</strong> para enviar avisos e recibos.
+        </p>
+        
+        <div id="qrcode-container" style="margin: 20px 0; min-height: 220px; display: flex; align-items: center; justify-content: center;">
+          <div class="spinner"></div>
+        </div>
+
+        <div class="steps-box">
+          <small>1. Abra o WhatsApp $\rightarrow$ Três Pontinhos $\rightarrow$ <strong>Aparelhos Conectados</strong></small><br>
+          <small>2. Toque em <strong>Conectar Aparelho</strong> e aponte para o QR Code acima.</small>
+        </div>
+
+        <button class="btn btn-outline btn-block" style="margin-top: 15px;" onclick="carregarQRCodeModal()">
+          🔄 Gerar Novo QR Code
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts da Aplicação -->
   <script src="/app.js"></script>
 </body>
 </html>
