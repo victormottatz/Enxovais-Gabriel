@@ -1,58 +1,66 @@
 ---
 name: appsheet-data-modeler
-description: Guia de boas práticas e modelagem de dados para Google Sheets integrado ao AppSheet no contexto do Ateliê de Enxovais.
+description: Guia de boas práticas e modelagem de dados para Fichas de Crediário, Catálogo de Utilidades Domésticas e Encomendas no Enxovais Gabriel.
 ---
 
-# AppSheet & Google Sheets Data Modeler
+# Modelagem de Dados & Crediário Próprio: Enxovais Gabriel
 
-Esta skill orienta a criação, normalização e configuração de planilhas do Google Sheets para atuarem perfeitamente como banco de dados no AppSheet.
-
-## 1. Estrutura Padrão de Planilhas (Google Sheets)
-
-Para evitar erros de sincronização e perda de dados, cada tabela deve seguir regras estritas:
-1. **Primeira Linha:** Apenas os nomes exatos das colunas (sem mesclar células ou colocar títulos acima).
-2. **Coluna Chave Primária:** Cada tabela deve iniciar com um ID único (ex: `ID_Cliente`, `ID_Pedido`) gerado via `UNIQUEID()` no AppSheet.
-3. **Formatação Limpa:** Deixar as linhas de dados sem fórmulas complexas nas células; preferir *Virtual Columns* ou *App Formulas* no AppSheet.
+Esta skill orienta a estrutura de dados, regras de negócio do crediário contínuo e sincronização de planilhas/bancos de dados para o comércio de utilidades domésticas e enxovais.
 
 ---
 
-## 2. Esquema das Tabelas Recomendadas
+## 1. Regras Fundamentais do Crediário em Dividendo Acumulado
+
+1. **Conta-Corrente Única por Cliente:** Toda cliente que compra a prazo possui uma única ficha (`fichas_crediario`).
+2. **Dividendo Contínuo:** Novas compras a prazo aumentam o `saldo_devedor_total`.
+3. **Parcela Combinada Fixa:** O valor da parcela (`valor_parcela_padrao`) permanece constante (ex: R$ 100,00), alongando o número de meses, a menos que haja renegociação explícita da vendedora com a cliente.
+4. **Ciclo Sincronizado com Renda:** Cada ficha possui um dia fixo de vencimento:
+   - `MENSAL_PAGAMENTO` (ex: Dia 05 - dia do salário).
+   - `QUINZENAL_VALE` (ex: Dia 20 - adiantamento / vale salarial + Dia 05).
+
+---
+
+## 2. Esquema das Tabelas Principais
 
 ### Tabela 1: `Clientes`
-| Coluna | Tipo no AppSheet | Descrição / Configuração |
+| Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
-| `ID_Cliente` | Text / Key | Chave primária (`UNIQUEID()`) |
-| `Nome` | Name | Nome completo da cliente |
-| `WhatsApp` | Phone | Telefone com DDD (permite clique direto para abrir conversa) |
-| `Endereco` | Address / LongText | Endereço ou ponto de referência |
-| `Observacoes` | LongText | Preferências de cores, nome do bebê, restrições |
-| `Data_Cadastro` | Date | Data de inclusão (`TODAY()`) |
+| `id` | UUID / Key | Identificador único da cliente |
+| `nome` | String | Nome completo da titular da ficha |
+| `whatsapp` | Phone | Telefone tratado no padrão E.164 (`5511999999999`) |
+| `cpf` | String (Opcional) | CPF da cliente |
+| `endereco` | Text | Endereço residencial para entregas |
+| `ponto_referencia` | Text | Referência de localização |
+| `limite_credito` | Decimal (BRL) | Limite pré-aprovado de crediário (padrão R$ 1.000,00) |
 
-### Tabela 2: `Pedidos`
-| Coluna | Tipo no AppSheet | Descrição / Configuração |
+### Tabela 2: `Fichas_Crediario` (Conta Corrente)
+| Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
-| `ID_Pedido` | Text / Key | Chave primária (`UNIQUEID()`) |
-| `ID_Cliente` | Ref | Referência à tabela `Clientes` |
-| `Data_Pedido` | Date | Data do fechamento (`TODAY()`) |
-| `Data_Previsao_Entrega` | Date | Data combinada para entrega |
-| `Descricao_Itens` | LongText | Resumo das peças (ex: "Kit berço 5 peças bordado urso") |
-| `Valor_Total` | Price (BRL) | Valor total da encomenda |
-| `Valor_Sinal` | Price (BRL) | Valor pago antecipadamente |
-| `Valor_Restante` | Price (BRL) | Virtual Column: `[Valor_Total] - [Valor_Sinal]` |
-| `Status_Producao` | Enum | Opções: `Fila de Espera`, `Cortando/Bordando`, `Costura Final`, `Pronto p/ Entrega`, `Entregue` |
-| `Status_Pagamento` | Enum | Opções: `Aguardando Sinal`, `Sinal Pago`, `Pago Integral`, `Pendente Pagamento Final` |
-| `Foto_Referencia` | Image | Foto enviada pela cliente ou do produto modelo |
+| `id` | UUID / Key | Identificador único da ficha |
+| `cliente_id` | Ref Clientes | Vinculação com o cliente |
+| `saldo_devedor_total`| Decimal (BRL) | Saldo total acumulado a pagar |
+| `valor_parcela_padrao`| Decimal (BRL) | Valor fixo mensal/quinzenal acordado |
+| `dia_vencimento_padrao`| Integer | Dia do mês de vencimento (1 a 31) |
+| `tipo_ciclo` | Enum | `MENSAL_PAGAMENTO` ou `QUINZENAL_VALE` |
+| `dia_vale_secundario` | Integer | Dia do vale (se quinzenal) |
+| `status_ficha` | Enum | `ATIVO`, `BLOQUEADO`, `QUITADO` |
+
+### Tabela 3: `Movimentacoes_Ficha` (Extrato Auditável)
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | UUID / Key | Identificador da movimentação |
+| `ficha_id` | Ref Fichas | Referência da ficha |
+| `tipo_movimentacao` | Enum | `DEBITO_COMPRA`, `CREDITO_PAGAMENTO`, `AJUSTE_PARCELA`, `ESTORNO` |
+| `valor` | Decimal (BRL) | Valor da operação |
+| `saldo_anterior` | Decimal (BRL) | Saldo antes do lançamento |
+| `saldo_posterior` | Decimal (BRL) | Saldo resultante após o lançamento |
+| `descricao` | Text | Detalhe (ex: "Compra: Jogo de Panelas", "Pagamento Pix") |
 
 ---
 
-## 3. Configurações de UX no AppSheet
+## 3. Padrão de Importação em Lote de Fichas Físicas (Migração)
 
-1. **Ações Rápidas (Actions):**
-   - Botão **"Conversar no WhatsApp"**: `CONCATENATE("https://wa.me/55", [WhatsApp])`
-   - Botão **"Marcar como Pronto"**: Altera `Status_Producao` para `Pronto p/ Entrega` com 1 toque.
-   - Botão **"Confirmar Pagamento Restante"**: Atualiza `Status_Pagamento` para `Pago Integral`.
-
-2. **Visualizações (Views):**
-   - **Visão 1: "Produção da Semana"** (Deck ou Card view filtrando pedidos com entrega nos próximos 7 dias).
-   - **Visão 2: "Cobranças Pendentes"** (Tabela filtrando pedidos prontos/entregues com saldo devedor).
-   - **Visão 3: "Clientes"** (Lista com busca rápida por nome ou telefone).
+Para digitalizar fichas de papel sem cadastrar histórico antigo linha por linha:
+1. Cadastrar o cliente com Nome, WhatsApp e Endereço.
+2. Criar a ficha com o `saldo_devedor_total` atual, `valor_parcela_padrao` e `dia_vencimento_padrao`.
+3. Inserir uma movimentação inicial do tipo `DEBITO_COMPRA` com descrição `"Saldo Inicial de Migração - Ficha Física"`.

@@ -1,55 +1,69 @@
 ---
 name: make-whatsapp-automator
-description: Padrões e templates para automações no Make.com integrando Google Sheets e WhatsApp para o Ateliê de Enxovais.
+description: Padrões e templates para automações de mensagens WhatsApp no Enxovais Gabriel (Lembretes de Vale/Pagamento, Recibos de Amortização e Avisos de Encomendas).
 ---
 
-# Make.com & WhatsApp Automation Skill
+# Automações de WhatsApp: Enxovais Gabriel
 
-Esta skill descreve como montar os cenários de automação no Make.com conectando o Google Sheets às notificações no WhatsApp de forma humanizada e segura.
+Esta skill padroniza os templates de mensagens, rotinas de agendamento e fluxos de notificação via WhatsApp para o comércio e crediário próprio.
 
-## 1. Cenários Principais de Automação
+---
 
-### Cenário 1: Lembrete Gentil de Pagamento Restante
-* **Gatilho (Trigger):** Watch Rows no Google Sheets (quando `Status_Producao` mudar para `Pronto p/ Entrega` e `Valor_Restante` > 0) OU Agendamento Diário às 09:00 verificando pedidos prontos para retirada/entrega.
-* **Ação:** Disparo de mensagem via API do WhatsApp.
+## 1. Cenários Principais de Notificação
+
+### Cenário 1: Lembrete no Dia do Pagamento (Dia 05) ou Dia do Vale (Dia 20)
+* **Gatilho (Trigger):** Agendamento diário às 08:30 buscando fichas ativas com vencimento no dia de hoje.
 * **Modelo da Mensagem:**
 ```text
-Olá, {Nome_Cliente}! Tudo bem com você? 🥰
-Aqui é a Lucelia do Ateliê de Enxovais!
+Olá, {Nome_Cliente}! Tudo bem com você? Esperamos que sim! 😊
+Aqui é do Ateliê Enxovais Gabriel!
 
-Passando com muita alegria para avisar que o seu pedido ({Descricao_Itens}) já está prontinho e embalado com todo carinho! ✨
+Passando para lembrar que hoje ({Data_Hoje}) é o dia do seu pagamento/vale combinado da sua ficha.
 
-Para a entrega/retirada, o saldo restante é de R$ {Valor_Restante}.
-Você pode realizar o pagamento direto pelo Pix abaixo:
+💰 Valor da Parcela: R$ {Valor_Parcela}
+📑 Saldo Total Restante: R$ {Saldo_Devedor}
 
+Para sua comodidade, você pode pagar direto pelo Pix:
 Chave Pix: {Chave_Pix}
 (Copia e cola)
 {Pix_Copia_Cola}
 
-Qualquer dúvida ou para combinarmos o melhor horário de entrega, me avise por aqui! Muito obrigada! 💖
+Assim que realizar o pagamento, nos envie o comprovante por aqui para atualizarmos seu saldo e enviarmos seu recibo. Muito obrigado pela confiança! 🏠✨
 ```
 
 ---
 
-### Cenário 2: Confirmação de Pedido Fechado
-* **Gatilho:** Inclusão de nova linha na tabela `Pedidos`.
-* **Ação:** Disparo automático de boas-vindas e resumo dos detalhes combinados.
+### Cenário 2: Recibo Instantâneo de Amortização / Pagamento Efetuado
+* **Gatilho:** Confirmação de baixa de pagamento (total ou parcial) na ficha da cliente.
 * **Modelo da Mensagem:**
 ```text
-Oi {Nome_Cliente}, que felicidade fazer parte desse momento especial! 👶🧶
+Olá, {Nome_Cliente}! Recebemos seu pagamento com sucesso! 🎉
 
-Seu pedido foi registrado com sucesso em nosso ateliê:
-📝 Encomenda: {Descricao_Itens}
-📅 Previsão de entrega: {Data_Previsao_Entrega}
-💰 Valor Total: R$ {Valor_Total} (Sinal confirmado: R$ {Valor_Sinal})
+🧾 *RECIBO DE PAGAMENTO*
+💵 Valor Pago: R$ {Valor_Pago}
+📅 Data: {Data_Pagamento}
+📑 *Novo Saldo Restante na Ficha: R$ {Novo_Saldo_Devedor}*
 
-Assim que as peças entrarem na fase final de acabamento, eu te aviso! Um abraço carinhoso! 💕
+Agradecemos muito pela sua pontualidade e preferência! Qualquer dúvida ou precisando de novas utilidades para o seu lar, estamos à disposição! 💖
 ```
 
 ---
 
-## 2. Boas Práticas Técnicas no Make.com
+### Cenário 3: Aviso de Chegada de Encomenda do Fornecedor
+* **Gatilho:** Status da encomenda alterado para `RECEBIDO_ESTOQUE`.
+* **Modelo da Mensagem:**
+```text
+Olá, {Nome_Cliente}! Temos uma ótima notícia! 📦✨
 
-1. **Validação de Número:** Tratar o número de telefone no Make para garantir formato DDI + DDD + Número (ex: `5511999999999`).
-2. **Prevenção de Spam / Duplicidade:** Criar uma coluna de controle no Google Sheets chamada `Status_Notificacao` para marcar "Notificado" e não reenviar repetidamente.
-3. **Tratamento de Erros:** Adicionar um módulo *Error Handler (Resume/Commit)* para registrar falhas de envio em uma aba de logs caso o WhatsApp esteja fora do ar ou o número seja inválido.
+O seu produto sob encomenda (*{Nome_Produto}*) acabou de chegar ao nosso ateliê!
+
+Já conferimos o item e ele está separadinho com muito carinho para você. 
+Podemos agendar a sua entrega ou você prefere retirar aqui conosco? Aguardo seu retorno! 🥰
+```
+
+---
+
+## 2. Boas Práticas Técnicas
+1. **Higienização do Telefone:** Garantir código do país (`55`) + DDD + 9 dígitos (total de 12 a 13 dígitos numéricos).
+2. **Chave Pix em Linha Exclusiva:** O código copia-e-cola deve sempre estar isolado para facilitar a cópia com um toque no celular.
+3. **Fila Assíncrona:** Todos os disparos devem passar por fila (BullMQ/Redis) com controle de taxa para evitar bloqueios no WhatsApp.

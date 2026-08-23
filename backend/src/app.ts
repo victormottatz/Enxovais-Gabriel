@@ -12,6 +12,8 @@ import fichaCrediarioRouter from './routes/ficha-crediario.routes.js';
 import { configuracaoRouter } from './routes/configuracao.routes.js';
 import { whatsappRouter } from './routes/whatsapp.routes.js';
 import { webhookRouter } from './routes/webhook.routes.js';
+import { pedidoRouter } from './routes/pedido.routes.js';
+import importacaoRouter from './routes/importacao.routes.js';
 
 export const app = express();
 
@@ -64,6 +66,8 @@ app.use('/api/v1/clientes', clienteRouter);
 app.use('/api/v1/produtos', produtoRouter);
 app.use('/api/v1/vendas', vendaRouter);
 app.use('/api/v1/fichas', fichaCrediarioRouter);
+app.use('/api/v1/pedidos', pedidoRouter);
+app.use('/api/v1/importacao', importacaoRouter);
 app.use('/api/v1/configuracoes', configuracaoRouter);
 app.use('/api/v1/whatsapp', whatsappRouter);
 app.use('/api/v1/webhook', webhookRouter);

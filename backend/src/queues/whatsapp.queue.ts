@@ -95,9 +95,24 @@ export class WhatsAppQueue {
     }
 
     // Aguarda delay antes de disparar o próximo item da fila
-    setTimeout(() => {
+    this.timeoutId = setTimeout(() => {
+      this.timeoutId = null;
       this.processNext();
     }, this.DELAY_ENTRE_ENVIOS_MS);
+  }
+
+  private static timeoutId: NodeJS.Timeout | null = null;
+
+  /**
+   * Limpa a fila e cancela processamentos pendentes (útil para testes unitários)
+   */
+  public static clear(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this.queue = [];
+    this.isProcessing = false;
   }
 
   /**

@@ -168,6 +168,53 @@ CREATE TABLE IF NOT EXISTS parcelas_crediario (
 );
 ```
 
+### 2.9 Tabela `fornecedores` (Evolução / Gestão de Compras)
+```sql
+CREATE TABLE IF NOT EXISTS fornecedores (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome_fantasia VARCHAR(150) NOT NULL,
+    razao_social VARCHAR(150),
+    cnpj VARCHAR(18),
+    whatsapp VARCHAR(20),
+    contato_vendedor VARCHAR(100),
+    prazo_medio_entrega_dias INT DEFAULT 7,
+    categoria_principal VARCHAR(50),
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### 2.10 Tabela `movimentacoes_caixa` (Evolução / Fluxo de Caixa Diário)
+```sql
+CREATE TABLE IF NOT EXISTS movimentacoes_caixa (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data_movimento DATE NOT NULL DEFAULT CURRENT_DATE,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('ENTRADA', 'SAIDA')),
+    categoria VARCHAR(50) NOT NULL, -- 'VENDA_VISTA', 'AMORTIZACAO_CREDIARIO', 'PAGAMENTO_FORNECEDOR', 'DESPESA_OPERACIONAL', 'RETIRADA'
+    forma_pagamento VARCHAR(30) NOT NULL, -- 'DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'
+    valor NUMERIC(10, 2) NOT NULL CHECK (valor > 0),
+    origem_id UUID, -- ID da venda ou amortização se aplicável
+    descricao VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### 2.11 Tabela `notificacoes_whatsapp_log` (Evolução / Rastreio de Disparos)
+```sql
+CREATE TABLE IF NOT EXISTS notificacoes_whatsapp_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cliente_id UUID NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+    ficha_id UUID REFERENCES fichas_crediario(id) ON DELETE SET NULL,
+    tipo_mensagem VARCHAR(50) NOT NULL, -- 'LEMBRETE_COBRANCA', 'RECIBO_PAGAMENTO', 'AVISO_ENCOMENDA_CHEGOU'
+    telefone_destino VARCHAR(20) NOT NULL,
+    conteudo_mensagem TEXT NOT NULL,
+    status_envio VARCHAR(30) NOT NULL DEFAULT 'ENVIADO', -- 'ENVIADO', 'FALHA', 'FILA'
+    error_detalhes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
 ---
 
 ## 3. 🌐 Endpoints RESTful da API
@@ -190,3 +237,8 @@ CREATE TABLE IF NOT EXISTS parcelas_crediario (
 ### Encomendas (`/api/v1/encomendas`)
 * `GET /api/v1/encomendas` - Listar itens encomendados a fornecedores e prazos.
 * `PATCH /api/v1/encomendas/:id/status` - Atualizar status da encomenda (ex: de 'A_CAMINHO' para 'RECEBIDA_ESTOQUE').
+
+### Caixa e Relatórios (`/api/v1/caixa`)
+* `GET /api/v1/caixa/resumo-diario` - Resumo de entradas e saídas do dia por forma de pagamento.
+* `POST /api/v1/caixa/movimentacao` - Registro de entrada/saída avulsa.
+

@@ -324,7 +324,8 @@ export class FichaCrediarioService {
       `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp, c.cpf as cliente_cpf
        FROM fichas_crediario f
        JOIN clientes c ON c.id = f.cliente_id
-       WHERE f.id = $1`,
+       WHERE f.id = $1 OR f.cliente_id = $1
+       LIMIT 1`,
       [id]
     );
 
@@ -332,22 +333,24 @@ export class FichaCrediarioService {
       throw new AppError('Ficha de crediário não encontrada.', 404, 'FICHA_NOT_FOUND');
     }
 
+    const ficha = fichaRes.rows[0];
+
     const parcelasRes = await pool.query<ParcelaDTO>(
       `SELECT * FROM parcelas_crediario
        WHERE ficha_id = $1
        ORDER BY data_vencimento ASC`,
-      [id]
+      [ficha.id]
     );
 
     const movRes = await pool.query<MovimentacaoFichaDTO>(
       `SELECT * FROM movimentacoes_ficha
        WHERE ficha_id = $1
        ORDER BY created_at DESC`,
-      [id]
+      [ficha.id]
     );
 
     return {
-      ficha: fichaRes.rows[0],
+      ficha,
       parcelas: parcelasRes.rows,
       movimentacoes: movRes.rows,
     };

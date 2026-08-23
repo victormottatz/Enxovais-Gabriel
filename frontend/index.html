@@ -49,6 +49,18 @@
         <span class="nav-icon">👥</span>
         <span class="nav-label">Clientes</span>
       </button>
+      <button class="nav-item" onclick="navegarAba('encomendas')">
+        <span class="nav-icon">🚚</span>
+        <span class="nav-label">Encomendas</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('caixa')">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">Caixa do Dia</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('importacao')">
+        <span class="nav-icon">📥</span>
+        <span class="nav-label">Importar Fichas</span>
+      </button>
       <button class="nav-item" onclick="navegarAba('whatsapp')">
         <span class="nav-icon">📱</span>
         <span class="nav-label">WhatsApp Gateway</span>
@@ -265,14 +277,45 @@
                   </select>
                 </div>
 
-                <!-- Painel Condicional de Crediário (Ajuste de Parcela) -->
+                <!-- Painel Condicional de Crediário com Simulador em Tempo Real -->
                 <div id="painel-ajuste-crediario" class="crediario-options-box">
-                  <div class="form-group">
-                    <label>Valor da Parcela Fixa:</label>
-                    <div class="input-with-hint">
-                      <input type="number" id="venda-parcela-valor" class="form-control" placeholder="Manter atual ou novo valor" step="1.00">
-                      <small id="hint-parcela-fixa">Mantém o valor mensal e alonga o prazo</small>
+                  <div class="simulator-header">
+                    <span class="sim-badge">✨ Simulador de Crediário</span>
+                    <small>Cálculo automático de dividendo</small>
+                  </div>
+                  
+                  <div class="sim-metrics-grid">
+                    <div class="sim-metric">
+                      <span>Saldo Atual:</span>
+                      <strong id="sim-saldo-atual">R$ 0,00</strong>
                     </div>
+                    <div class="sim-metric">
+                      <span>+ Nova Compra:</span>
+                      <strong id="sim-compra-valor" style="color: var(--terracota);">+ R$ 0,00</strong>
+                    </div>
+                    <div class="sim-metric highlight">
+                      <span>= Novo Dividendo:</span>
+                      <strong id="sim-novo-dividendo" style="color: var(--wine-primary);">R$ 0,00</strong>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-top: 12px;">
+                    <label>Valor da Parcela Fixa Combinada (R$):</label>
+                    <div class="input-with-hint">
+                      <input type="number" id="venda-parcela-valor" class="form-control" placeholder="Manter atual ou novo valor" step="1.00" oninput="aoAtualizarParcelaSimulador(this.value)">
+                    </div>
+                    <div class="quick-parcela-chips" id="quick-parcela-chips">
+                      <!-- Chips de sugestões: + R$ 20, + R$ 50, etc -->
+                    </div>
+                  </div>
+
+                  <!-- Comparativo de Prazos -->
+                  <div class="sim-projection-box" id="sim-projection-box">
+                    <div class="projection-row">
+                      <span>📅 Projeção de Quitação:</span>
+                      <strong id="sim-projeção-texto">Calculando parcelas...</strong>
+                    </div>
+                    <small id="sim-economia-texto" class="text-success"></small>
                   </div>
                 </div>
 
@@ -345,7 +388,186 @@
       </section>
 
       <!-- ===================================================================== -->
-      <!-- ABA 6: WHATSAPP GATEWAY & CONFIGURAÇÕES -->
+      <!-- ABA 6: GESTÃO DE ENCOMENDAS (FORNECEDORES & DISTRIBUIDOR) -->
+      <!-- ===================================================================== -->
+      <section id="tab-encomendas" class="tab-pane">
+        <div class="section-toolbar">
+          <div class="filter-chips">
+            <button class="chip active" onclick="filtrarEncomendas('TODAS', this)">Todas</button>
+            <button class="chip" onclick="filtrarEncomendas('SOLICITADO', this)">🏭 Solicitado Fornecedor</button>
+            <button class="chip" onclick="filtrarEncomendas('A_CAMINHO', this)">🚚 A Caminho</button>
+            <button class="chip" onclick="filtrarEncomendas('RECEBIDO_ESTOQUE', this)">📦 Chegou no Estoque</button>
+            <button class="chip" onclick="filtrarEncomendas('ENTREGUE', this)">✅ Entregue</button>
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalNovaVenda()">
+            <span>+ Nova Encomenda</span>
+          </button>
+        </div>
+
+        <div id="encomendas-container" class="cards-grid">
+          <!-- Cards de Encomendas gerados via JS -->
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 7: IMPORTADOR VISUAL DE PLANILHAS (DIGITALIZAÇÃO EM LOTE) -->
+      <!-- ===================================================================== -->
+      <section id="tab-importacao" class="tab-pane">
+        <div class="import-container">
+          
+          <div class="import-header-card">
+            <div class="import-info">
+              <h2>📥 Digitalização de Fichas em Lote</h2>
+              <p>Importe sua planilha de clientes e fichas de crediário (CSV) com validação automática antes de salvar.</p>
+            </div>
+            <div class="import-actions-top">
+              <a href="/template_fichas_crediario.csv" download class="btn btn-outline">
+                📄 Baixar Modelo de Planilha (.CSV)
+              </a>
+            </div>
+          </div>
+
+          <!-- Área de Upload Drag & Drop -->
+          <div class="upload-dropzone" id="csv-dropzone" onclick="document.getElementById('csv-file-input').click()">
+            <input type="file" id="csv-file-input" accept=".csv, text/csv" style="display: none;" onchange="aoSelecionarArquivoCSV(event)">
+            <div class="dropzone-content">
+              <span class="dropzone-icon">📁</span>
+              <h3>Clique ou arraste o arquivo da planilha CSV aqui</h3>
+              <p>Formato suportado: <code>.csv</code> (separado por vírgula ou ponto-e-vírgula)</p>
+            </div>
+          </div>
+
+          <!-- Painel de Pré-Visualização e Validação -->
+          <div id="import-preview-panel" style="display: none; margin-top: 24px;">
+            <div class="kpi-grid">
+              <div class="kpi-card highlight-blue">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-details">
+                  <span>Total Identificado</span>
+                  <h3 id="import-total-count">0 fichas</h3>
+                </div>
+              </div>
+              <div class="kpi-card highlight-green">
+                <div class="kpi-icon">✅</div>
+                <div class="kpi-details">
+                  <span>Prontas p/ Importar</span>
+                  <h3 id="import-validas-count">0</h3>
+                  <small>Sem erros de validação</small>
+                </div>
+              </div>
+              <div class="kpi-card highlight-terracota">
+                <div class="kpi-icon">⚠️</div>
+                <div class="kpi-details">
+                  <span>Com Inconsistências</span>
+                  <h3 id="import-erros-count">0</h3>
+                  <small>Corrija antes de gravar</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabela de Conferência -->
+            <div class="table-responsive" style="margin: 20px 0; max-height: 400px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Linha</th>
+                    <th>Status</th>
+                    <th>Nome da Cliente</th>
+                    <th>WhatsApp</th>
+                    <th>Dia Vencimento</th>
+                    <th>Saldo Inicial</th>
+                    <th>Parcela Padrão</th>
+                    <th>Observações / Erros</th>
+                  </tr>
+                </thead>
+                <tbody id="import-preview-tbody">
+                  <!-- Linhas da prévia renderizadas via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="import-footer-actions">
+              <button class="btn btn-outline" onclick="cancelarImportacao()">✕ Cancelar</button>
+              <button class="btn btn-success btn-lg" id="btn-confirmar-importacao" onclick="executarImportacaoFinal()">
+                🚀 Confirmar e Digitalizar Fichas Válidas
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 8: FLUXO E FECHAMENTO DE CAIXA DIÁRIO -->
+      <!-- ===================================================================== -->
+      <section id="tab-caixa" class="tab-pane">
+        <div class="kpi-grid">
+          <div class="kpi-card highlight-green">
+            <div class="kpi-icon">💵</div>
+            <div class="kpi-details">
+              <span>Total Recebido Hoje</span>
+              <h3 id="kpi-caixa-total">R$ 0,00</h3>
+              <small id="kpi-caixa-entradas-count">0 entradas registradas</small>
+            </div>
+          </div>
+          <div class="kpi-card highlight-gold">
+            <div class="kpi-icon">⚡</div>
+            <div class="kpi-details">
+              <span>Entradas em Pix</span>
+              <h3 id="kpi-caixa-pix">R$ 0,00</h3>
+              <small>Direto na conta</small>
+            </div>
+          </div>
+          <div class="kpi-card highlight-terracota">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-details">
+              <span>Dinheiro em Espécie</span>
+              <h3 id="kpi-caixa-dinheiro">R$ 0,00</h3>
+              <small>Gaveta da loja</small>
+            </div>
+          </div>
+          <div class="kpi-card highlight-blue">
+            <div class="kpi-icon">💳</div>
+            <div class="kpi-details">
+              <span>Cartão Débito/Crédito</span>
+              <h3 id="kpi-caixa-cartao">R$ 0,00</h3>
+              <small>Maquininha</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-toolbar" style="margin-top: 20px;">
+          <div class="filter-chips">
+            <button class="chip active" onclick="filtrarExtratoCaixa('TODOS', this)">Todas Movimentações</button>
+            <button class="chip" onclick="filtrarExtratoCaixa('AMORTIZACAO', this)">📑 Amortizações</button>
+            <button class="chip" onclick="filtrarExtratoCaixa('VENDA_VISTA', this)">🛒 Vendas à Vista</button>
+            <button class="chip" onclick="filtrarExtratoCaixa('SAIDA', this)">📤 Saídas / Despesas</button>
+          </div>
+          <button class="btn btn-outline" onclick="abrirModalNovoMovimentoCaixa()">
+            <span>+ Lançamento Avulso (Sangria/Despesa)</span>
+          </button>
+        </div>
+
+        <div class="table-responsive" style="margin-top: 15px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Forma de Pagamento</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody id="caixa-extrato-tbody">
+              <!-- Linhas do extrato geradas via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- ABA 9: WHATSAPP GATEWAY & CONFIGURAÇÕES -->
       <!-- ===================================================================== -->
       <section id="tab-whatsapp" class="tab-pane">
         <div class="zap-dashboard-grid">
@@ -475,8 +697,11 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
         <input type="hidden" id="amortizacao-ficha-id">
         
         <div class="form-group">
-          <label>Valor Pago:</label>
-          <input type="number" id="amortizacao-valor" class="form-control input-lg" step="0.50" required placeholder="R$ 0,00">
+          <label>Valor Pago (R$):</label>
+          <input type="number" id="amortizacao-valor" class="form-control input-lg" step="0.50" min="0.50" inputmode="decimal" required placeholder="R$ 0,00">
+          <div class="quick-amort-chips" id="quick-amort-chips">
+            <!-- Chips gerados via JS com sugestões rápidas de valor -->
+          </div>
         </div>
 
         <div class="form-group">
@@ -491,8 +716,15 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
 
         <div class="form-group">
           <label>Renegociar Parcela Mensal? (Opcional)</label>
-          <input type="number" id="amortizacao-nova-parcela" class="form-control" placeholder="Deixe vazio para manter o mesmo valor" step="1.00">
-          <small class="text-muted">Se a vendedora combinou um novo valor de parcela com a cliente.</small>
+          <input type="number" id="amortizacao-nova-parcela" class="form-control" placeholder="Deixe vazio para manter o mesmo valor" step="1.00" inputmode="decimal">
+          <small class="text-muted">Se a vendedora combinou um novo valor de parcela fixa com a cliente.</small>
+        </div>
+
+        <div class="form-group checkbox-row" style="display: flex; align-items: center; gap: 8px; margin: 15px 0;">
+          <input type="checkbox" id="amortizacao-enviar-zap" checked style="width: 18px; height: 18px; cursor: pointer;">
+          <label for="amortizacao-enviar-zap" style="margin-bottom: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+            📱 Enviar recibo de pagamento no WhatsApp da cliente
+          </label>
         </div>
 
         <button type="submit" class="btn btn-success btn-block btn-lg">
@@ -513,7 +745,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
       </div>
       <form id="form-novo-produto" onsubmit="salvarNovoProduto(event)">
         <div class="form-group">
-          <label>Nome do Produto:</label>
+          <label>Nome do Produto / Descrição Comercial:</label>
           <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Edredom Casal Dupla Face Soft" required>
         </div>
 
@@ -530,19 +762,25 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           </div>
           <div class="form-group">
             <label>Estoque Atual:</label>
-            <input type="number" id="prod-estoque" class="form-control" value="10" min="0" required>
+            <input type="number" id="prod-estoque" class="form-control" value="10" min="0" inputmode="numeric" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>Preço de Venda (R$):</label>
-            <input type="number" id="prod-preco-venda" class="form-control input-lg" step="0.50" placeholder="180.00" required>
+            <label>Preço Crediário (R$):</label>
+            <input type="number" id="prod-preco-venda" class="form-control input-lg" step="0.50" min="0" placeholder="180.00" inputmode="decimal" required oninput="calcularMargemLucroFormulario()">
           </div>
           <div class="form-group">
-            <label>Preço de Custo (R$):</label>
-            <input type="number" id="prod-preco-custo" class="form-control" step="0.50" placeholder="95.00">
+            <label>Preço Custo (R$):</label>
+            <input type="number" id="prod-preco-custo" class="form-control" step="0.50" min="0" placeholder="95.00" inputmode="decimal" oninput="calcularMargemLucroFormulario()">
           </div>
+        </div>
+
+        <!-- Indicador de Margem de Lucro em Tempo Real -->
+        <div id="prod-margem-box" class="margem-indicator-box" style="margin-bottom: 15px; padding: 10px 14px; background: rgba(140, 58, 75, 0.08); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Margem Bruta Estimada:</span>
+          <strong id="prod-margem-val" style="color: var(--wine-primary); font-size: 0.95rem;">-- %</strong>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block btn-lg">
@@ -563,20 +801,20 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
       </div>
       <form id="form-novo-cliente" onsubmit="salvarNovoCliente(event)">
         <div class="form-group">
-          <label>Nome Completo:</label>
+          <label>Nome Completo da Cliente:</label>
           <input type="text" id="cli-nome" class="form-control" placeholder="Nome da cliente" required>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label>WhatsApp (com DDD):</label>
-            <input type="tel" id="cli-telefone" class="form-control" placeholder="Ex: 11987654321" required>
+            <input type="tel" id="cli-telefone" class="form-control" placeholder="Ex: (11) 98765-4321" inputmode="tel" required oninput="mascararTelefoneInput(this)">
           </div>
           <div class="form-group">
             <label>Dia Combinado:</label>
             <select id="cli-dia-vencimento" class="form-control">
-              <option value="5">Dia 05 (Pagamento)</option>
-              <option value="20">Dia 20 (Vale)</option>
+              <option value="5">Dia 05 (Pagamento / Salário)</option>
+              <option value="20">Dia 20 (Vale / Adiantamento)</option>
               <option value="10">Dia 10</option>
               <option value="15">Dia 15</option>
               <option value="1">Dia 01</option>
@@ -585,13 +823,18 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
         </div>
 
         <div class="form-group">
-          <label>Endereço / Bairro / Referência:</label>
+          <label>Endereço e Bairro:</label>
           <input type="text" id="cli-endereco" class="form-control" placeholder="Rua, número e bairro para entregas">
         </div>
 
         <div class="form-group">
+          <label>Ponto de Referência:</label>
+          <input type="text" id="cli-referencia" class="form-control" placeholder="Ex: Próximo à padaria central">
+        </div>
+
+        <div class="form-group">
           <label>Valor da Parcela Padrão Combinada (R$):</label>
-          <input type="number" id="cli-parcela-padrao" class="form-control" placeholder="Ex: 50.00 ou 100.00" value="50.00" step="1.00">
+          <input type="number" id="cli-parcela-padrao" class="form-control input-lg" placeholder="Ex: 50.00 ou 100.00" value="50.00" step="1.00" min="10.00" inputmode="decimal">
           <small class="text-muted">Valor base fixo que a cliente paga mensalmente no crediário.</small>
         </div>
 
@@ -603,34 +846,101 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CONEXÃO WHATSAPP (QR CODE) -->
+  <!-- MODAL: COMPROVANTE & RECIBO DIGITAL DE VENDA -->
   <!-- ========================================================================= -->
-  <div class="modal-backdrop" id="modal-conexao-zap">
-    <div class="modal-sheet modal-sm" style="text-align: center;">
+  <div class="modal-backdrop" id="modal-recibo-venda">
+    <div class="modal-sheet modal-sm">
       <div class="modal-header">
-        <h3>📲 Conectar WhatsApp</h3>
-        <button class="btn-close" onclick="fecharModal('modal-conexao-zap')">✕</button>
+        <h3>🧾 Comprovante de Venda</h3>
+        <button class="btn-close" onclick="fecharModal('modal-recibo-venda')">✕</button>
       </div>
-      <div class="modal-body">
-        <p style="color: var(--text-muted); font-size: 0.9rem;">
-          Escaneie o QR Code abaixo com o celular da <strong>Enxovais Gabriel</strong> para enviar avisos e recibos.
-        </p>
-        
-        <div id="qrcode-container" style="margin: 20px 0; min-height: 220px; display: flex; align-items: center; justify-content: center;">
-          <div class="spinner"></div>
+      <div class="modal-body" id="recibo-venda-content">
+        <div class="receipt-box" id="receipt-printable-area">
+          <div class="receipt-header">
+            <h4>🏠 Enxovais Gabriel</h4>
+            <small>Utilidades Domésticas & Enxovais</small>
+            <p id="recibo-data-hora" style="font-size: 0.8rem; color: var(--text-muted);"></p>
+          </div>
+          <hr style="border: none; border-top: 1px dashed var(--border-color); margin: 12px 0;">
+          <div class="receipt-client">
+            <span id="recibo-cliente-nome"><strong>Cliente:</strong> --</span>
+            <span id="recibo-forma-pagto"><strong>Forma:</strong> --</span>
+          </div>
+          <div class="receipt-items-list" id="recibo-itens-list" style="margin: 12px 0;">
+            <!-- Itens vendidos listados aqui -->
+          </div>
+          <hr style="border: none; border-top: 1px dashed var(--border-color); margin: 12px 0;">
+          <div class="receipt-total-row">
+            <span>Total da Venda:</span>
+            <strong id="recibo-total-val">R$ 0,00</strong>
+          </div>
+          <div id="recibo-crediario-detalhes" style="display: none; margin-top: 8px; font-size: 0.85rem; color: var(--wine-primary);">
+            <!-- Novo dividendo e parcela -->
+          </div>
         </div>
 
-        <div class="steps-box">
-          <small>1. Abra o WhatsApp $\rightarrow$ Três Pontinhos $\rightarrow$ <strong>Aparelhos Conectados</strong></small><br>
-          <small>2. Toque em <strong>Conectar Aparelho</strong> e aponte para o QR Code acima.</small>
+        <div class="modal-actions-col" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+          <button class="btn btn-success btn-lg btn-block" onclick="compartilharReciboVendaWhatsApp()">
+            📱 Enviar Comprovante no WhatsApp
+          </button>
+          <button class="btn btn-outline btn-block" onclick="imprimirRecibo()">
+            🖨️ Imprimir Cupom
+          </button>
         </div>
-
-        <button class="btn btn-outline btn-block" style="margin-top: 15px;" onclick="carregarQRCodeModal()">
-          🔄 Gerar Novo QR Code
-        </button>
       </div>
     </div>
   </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: NOVO MOVIMENTO DE CAIXA (SANGRIA / SUPRIMENTO) -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-novo-movimento-caixa">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-header">
+        <h3>💰 Lançamento Avulso no Caixa</h3>
+        <button class="btn-close" onclick="fecharModal('modal-novo-movimento-caixa')">✕</button>
+      </div>
+      <form id="form-novo-movimento-caixa" onsubmit="salvarMovimentoCaixaAvulso(event)">
+        <div class="form-group">
+          <label>Tipo de Lançamento:</label>
+          <select id="caixa-mov-tipo" class="form-control">
+            <option value="SAIDA">📤 Saída / Despesa / Sangria</option>
+            <option value="ENTRADA">📥 Entrada / Suprimento de Troco</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Descrição do Movimento:</label>
+          <input type="text" id="caixa-mov-desc" class="form-control" placeholder="Ex: Compra de sacolas, Frete fornecedor, Sangria" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor (R$):</label>
+            <input type="number" id="caixa-mov-valor" class="form-control input-lg" step="0.50" min="0.50" placeholder="0,00" inputmode="decimal" required>
+          </div>
+          <div class="form-group">
+            <label>Forma:</label>
+            <select id="caixa-mov-forma" class="form-control">
+              <option value="DINHEIRO">💵 Dinheiro</option>
+              <option value="PIX">⚡ Pix</option>
+              <option value="CARTAO_DEBITO">💳 Débito</option>
+              <option value="CARTAO_CREDITO">💳 Crédito</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg">
+          Gravar Lançamento no Caixa
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- TOAST NOTIFICATION CONTAINER (FEEDBACK VISUAL ELEGANTE) -->
+  <!-- ========================================================================= -->
+  <div id="toast-container" class="toast-container"></div>
 
   <!-- Scripts da Aplicação -->
   <script src="/app.js"></script>
