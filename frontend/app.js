@@ -120,14 +120,20 @@ function navegarAba(abaId) {
     document.getElementById('page-current-subtitle').textContent = titulos[abaId].sub;
   }
 
-  // Fecha sidebar no mobile ao navegar
+  // Fecha sidebar e overlay no mobile ao navegar
   const sidebar = document.getElementById('app-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
   if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('active');
 }
 
 function toggleSidebar() {
   const sidebar = document.getElementById('app-sidebar');
-  if (sidebar) sidebar.classList.toggle('open');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) {
+    const isOpen = sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active', isOpen);
+  }
 }
 
 // =============================================================================
