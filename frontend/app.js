@@ -37,6 +37,23 @@ const PRODUTOS_PADRAO = [
   { id: '9', nome: 'Cortina Corta Luz Blackout 2,80 x 1,80', categoria: 'DECORACAO', preco_venda: 160.0, estoque: 9, emoji: '🪟' },
 ];
 
+// Função utilitária para gerar avatar circular com iniciais e paleta harmônica
+function obterAvatarHTML(nome) {
+  const partes = (nome || 'Cliente').trim().split(/\s+/);
+  const iniciais = (partes[0]?.[0] || '') + (partes[1]?.[0] || partes[0]?.[1] || '');
+  const cores = [
+    { bg: '#FDF2F4', fg: '#8C2D40', border: '#F3D1D9' },
+    { bg: '#FFFBEB', fg: '#B45309', border: '#FDE68A' },
+    { bg: '#EDFDF2', fg: '#15803D', border: '#BBF7D0' },
+    { bg: '#EFF6FF', fg: '#1D4ED8', border: '#BFDBFE' },
+    { bg: '#FAF5FF', fg: '#7E22CE', border: '#E9D5FF' },
+  ];
+  let soma = 0;
+  for (let i = 0; i < (nome || '').length; i++) soma += nome.charCodeAt(i);
+  const cor = cores[soma % cores.length];
+  return `<div class="client-avatar" style="background: ${cor.bg}; color: ${cor.fg}; border: 1px solid ${cor.border};">${iniciais.toUpperCase()}</div>`;
+}
+
 // =============================================================================
 // INICIALIZAÇÃO DA APLICAÇÃO
 // =============================================================================
@@ -186,9 +203,12 @@ function atualizarDashboardCobrancas() {
       return `
       <div class="client-card">
         <div class="client-card-header">
-          <div>
-            <h4>${nome}</h4>
-            <span>📱 ${fone || 'Sem WhatsApp'}</span>
+          <div class="client-header-info">
+            ${obterAvatarHTML(nome)}
+            <div>
+              <h4>${nome}</h4>
+              <span>📱 ${fone || 'Sem WhatsApp'}</span>
+            </div>
           </div>
           <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
             ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${diaVenc}`}
@@ -201,8 +221,8 @@ function atualizarDashboardCobrancas() {
             <strong style="color: var(--primary);">${formatarMoeda(ficha.valor_parcela_padrao)}</strong>
           </div>
           <div class="val-group">
-            <span>Saldo Devedor Total</span>
-            <strong>${formatarMoeda(ficha.saldo_devedor_total)}</strong>
+            <span>Saldo Devedor</span>
+            <strong style="color: var(--danger);">${formatarMoeda(ficha.saldo_devedor_total)}</strong>
           </div>
         </div>
 
@@ -280,9 +300,12 @@ function renderizarFichas() {
       return `
       <div class="client-card">
         <div class="client-card-header">
-          <div>
-            <h4>${nome}</h4>
-            <span>📱 ${fone || 'Sem contato'}</span>
+          <div class="client-header-info">
+            ${obterAvatarHTML(nome)}
+            <div>
+              <h4>${nome}</h4>
+              <span>📱 ${fone || 'Sem contato'}</span>
+            </div>
           </div>
           <span class="badge-tag ${diaVenc === 20 ? 'vale' : 'pagamento'}">
             Dia 0${diaVenc}
@@ -291,8 +314,8 @@ function renderizarFichas() {
 
         <div class="client-card-body">
           <div class="val-group">
-            <span>Saldo Devedor Total</span>
-            <strong style="color: ${Number(ficha.saldo_devedor_total) > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.1rem;">
+            <span>Saldo Devedor</span>
+            <strong style="color: ${Number(ficha.saldo_devedor_total) > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.15rem;">
               ${formatarMoeda(ficha.saldo_devedor_total)}
             </strong>
           </div>
@@ -1195,7 +1218,12 @@ function renderizarTabelaClientes() {
           const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
           return `
       <tr>
-        <td><strong>${c.nome}</strong></td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${obterAvatarHTML(c.nome)}
+            <strong>${c.nome}</strong>
+          </div>
+        </td>
         <td>📱 ${c.whatsapp || c.telefone || '-'}</td>
         <td>${c.endereco || 'São Paulo'}</td>
         <td><span class="badge-tag ${Number(c.dia_vencimento_padrao) === 20 ? 'vale' : 'pagamento'}">Dia 0${c.dia_vencimento_padrao || 5}</span></td>
@@ -1218,9 +1246,12 @@ function renderizarTabelaClientes() {
           return `
       <div class="client-card">
         <div class="client-card-header">
-          <div>
-            <h4>${c.nome}</h4>
-            <span>📱 ${c.whatsapp || c.telefone || 'Sem contato'}</span>
+          <div class="client-header-info">
+            ${obterAvatarHTML(c.nome)}
+            <div>
+              <h4>${c.nome}</h4>
+              <span>📱 ${c.whatsapp || c.telefone || 'Sem contato'}</span>
+            </div>
           </div>
           <span class="badge-tag ${Number(c.dia_vencimento_padrao) === 20 ? 'vale' : 'pagamento'}">Dia 0${c.dia_vencimento_padrao || 5}</span>
         </div>

@@ -646,6 +646,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-ficha-detalhes">
     <div class="modal-sheet">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <div>
           <h3 id="modal-ficha-nome-cliente">Ficha de Crediário</h3>
@@ -667,12 +668,12 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           </div>
         </div>
 
-        <div class="modal-actions-row">
+        <div class="modal-actions-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
           <button class="btn btn-success btn-block" onclick="abrirModalAmortizacaoFicha()">
             💵 Registrar Pagamento / Amortização
           </button>
           <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
-            📱 Cobrar no WhatsApp
+            📱 Cobrar no Zap
           </button>
         </div>
 
@@ -689,6 +690,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-amortizacao">
     <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3>💵 Registrar Pagamento</h3>
         <button class="btn-close" onclick="fecharModal('modal-amortizacao')">✕</button>
@@ -739,6 +741,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-novo-produto">
     <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3>📦 Cadastrar Produto / Utilidade</h3>
         <button class="btn-close" onclick="fecharModal('modal-novo-produto')">✕</button>
@@ -778,7 +781,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
         </div>
 
         <!-- Indicador de Margem de Lucro em Tempo Real -->
-        <div id="prod-margem-box" class="margem-indicator-box" style="margin-bottom: 15px; padding: 10px 14px; background: rgba(140, 58, 75, 0.08); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div id="prod-margem-box" class="margem-indicator-box" style="margin-bottom: 15px; padding: 10px 14px; background: rgba(140, 45, 64, 0.08); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 0.85rem; color: var(--text-muted);">Margem Bruta Estimada:</span>
           <strong id="prod-margem-val" style="color: var(--wine-primary); font-size: 0.95rem;">-- %</strong>
         </div>
@@ -795,6 +798,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-novo-cliente">
     <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3>👥 Cadastrar Nova Cliente</h3>
         <button class="btn-close" onclick="fecharModal('modal-novo-cliente')">✕</button>
@@ -850,6 +854,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-recibo-venda">
     <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3>🧾 Comprovante de Venda</h3>
         <button class="btn-close" onclick="fecharModal('modal-recibo-venda')">✕</button>
@@ -896,6 +901,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-novo-movimento-caixa">
     <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3>💰 Lançamento Avulso no Caixa</h3>
         <button class="btn-close" onclick="fecharModal('modal-novo-movimento-caixa')">✕</button>
