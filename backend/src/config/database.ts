@@ -116,6 +116,26 @@ export async function initDatabase(): Promise<void> {
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS pedidos (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          cliente_id UUID NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+          descricao_itens TEXT NOT NULL,
+          data_pedido DATE NOT NULL DEFAULT CURRENT_DATE,
+          data_previsao_entrega DATE,
+          valor_total NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (valor_total >= 0),
+          valor_sinal NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (valor_sinal >= 0),
+          valor_restante NUMERIC(10, 2) GENERATED ALWAYS AS (valor_total - valor_sinal) STORED,
+          status_producao VARCHAR(30) NOT NULL DEFAULT 'FILA' CHECK (status_producao IN ('FILA', 'EM_PRODUCAO', 'PRONTO_ENTREGA', 'ENTREGUE')),
+          status_pagamento VARCHAR(30) NOT NULL DEFAULT 'AGUARDANDO_SINAL' CHECK (status_pagamento IN ('AGUARDANDO_SINAL', 'SINAL_PAGO', 'PAGO_INTEGRAL')),
+          notificacao_boas_vindas_enviada BOOLEAN NOT NULL DEFAULT FALSE,
+          notificacao_pronto_enviada BOOLEAN NOT NULL DEFAULT FALSE,
+          foto_referencia_url TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos (cliente_id);
+      CREATE INDEX IF NOT EXISTS idx_pedidos_status_producao ON pedidos (status_producao);
+
       CREATE TABLE IF NOT EXISTS movimentacoes_ficha (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           ficha_id UUID NOT NULL REFERENCES fichas_crediario(id) ON DELETE CASCADE,

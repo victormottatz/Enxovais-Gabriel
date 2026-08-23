@@ -73,14 +73,19 @@ function registrarServiceWorker() {
 }
 
 async function carregarDadosIniciais() {
-  await Promise.all([
-    carregarClientes(),
-    carregarProdutos(),
-    carregarFichas(),
-    carregarEncomendas(),
-    carregarMovimentacoesCaixa(),
-  ]);
-  atualizarDashboardCobrancas();
+  try {
+    await Promise.allSettled([
+      carregarClientes(),
+      carregarProdutos(),
+      carregarFichas(),
+      carregarEncomendas(),
+      carregarMovimentacoesCaixa(),
+    ]);
+  } catch (err) {
+    console.log('Aviso carregarDadosIniciais:', err);
+  } finally {
+    atualizarDashboardCobrancas();
+  }
 }
 
 // =============================================================================
