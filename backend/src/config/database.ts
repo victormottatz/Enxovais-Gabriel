@@ -169,14 +169,53 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
       preco_venda_vista: Number(params[5]) || 0,
       preco_venda_crediario: Number(params[6]) || 0,
       estoque_atual: Number(params[7]) || 10,
+      estoque_minimo: Number(params[8]) || 2,
+      permite_encomenda: params[9] !== undefined ? Boolean(params[9]) : true,
+      foto_url: params[10] || null,
       ativo: true,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     memoryStore.produtos.push(novoProduto);
     return { rows: [novoProduto] };
   }
 
+  if (qUpper.includes('UPDATE PRODUTOS')) {
+    if (qUpper.includes('WHERE ID =')) {
+      const id = params[params.length - 1];
+      const prodIndex = memoryStore.produtos.findIndex((p) => p.id === id);
+      if (prodIndex >= 0) {
+        const prod = memoryStore.produtos[prodIndex];
+        if (qUpper.includes('SET ATIVO = FALSE') || qUpper.includes('ATIVO = $') || qUpper.includes('ATIVO = FALSE')) {
+          prod.ativo = false;
+        } else if (qUpper.includes('ESTOQUE_ATUAL = GREATEST')) {
+          const delta = Number(params[0]) || 0;
+          prod.estoque_atual = Math.max(0, (prod.estoque_atual || 0) + delta);
+        } else if (params.length >= 10) {
+          prod.nome = params[0] !== undefined ? params[0] : prod.nome;
+          prod.descricao = params[1] !== undefined ? params[1] : prod.descricao;
+          prod.categoria = params[2] !== undefined ? params[2] : prod.categoria;
+          prod.preco_custo = params[3] !== undefined ? Number(params[3]) : prod.preco_custo;
+          prod.preco_venda_vista = params[4] !== undefined ? Number(params[4]) : prod.preco_venda_vista;
+          prod.preco_venda_crediario = params[5] !== undefined ? Number(params[5]) : prod.preco_venda_crediario;
+          prod.estoque_atual = params[6] !== undefined ? Number(params[6]) : prod.estoque_atual;
+          prod.estoque_minimo = params[7] !== undefined ? Number(params[7]) : prod.estoque_minimo;
+          prod.permite_encomenda = params[8] !== undefined ? Boolean(params[8]) : prod.permite_encomenda;
+          prod.foto_url = params[9] !== undefined ? params[9] : prod.foto_url;
+        }
+        prod.updated_at = new Date().toISOString();
+        return { rows: [prod] };
+      }
+      return { rows: [] };
+    }
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM PRODUTOS')) {
+    if (qUpper.includes('WHERE ID =')) {
+      const id = params[0];
+      const prod = memoryStore.produtos.find((p) => p.id === id);
+      return { rows: prod ? [prod] : [] };
+    }
     return { rows: memoryStore.produtos.filter((p) => p.ativo !== false) };
   }
 
@@ -270,10 +309,13 @@ export async function initDatabase(): Promise<void> {
           estoque_atual INT NOT NULL DEFAULT 0,
           estoque_minimo INT NOT NULL DEFAULT 2,
           permite_encomenda BOOLEAN NOT NULL DEFAULT TRUE,
+          foto_url TEXT,
           ativo BOOLEAN NOT NULL DEFAULT TRUE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        ALTER TABLE produtos ADD COLUMN IF NOT EXISTS foto_url TEXT;
 
         CREATE TABLE IF NOT EXISTS fichas_crediario (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

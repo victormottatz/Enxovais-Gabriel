@@ -623,15 +623,21 @@ function renderizarProdutosPDV() {
 
   container.innerHTML = filtrados
     .map(
-      (p) => `
+      (p) => {
+        const thumbHTML = p.foto_url
+          ? `<div class="pos-product-thumb"><img src="${p.foto_url}" alt="${p.nome}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'thumb-emoji\\'>${p.emoji || '📦'}</span>'"></div>`
+          : `<div class="pos-product-thumb"><span class="thumb-emoji">${p.emoji || '📦'}</span></div>`;
+
+        return `
     <div class="product-touch-card" onclick="adicionarAoCarrinho('${p.id}')">
-      <div class="prod-emoji">${p.emoji || '📦'}</div>
-      <div class="prod-info">
-        <h4>${p.nome}</h4>
-        <div class="prod-price">${formatarMoeda(p.preco_venda || p.preco_venda_vista || 0)}</div>
+      ${thumbHTML}
+      <div class="prod-info" style="flex: 1;">
+        <h4 style="font-size: 0.95rem; margin-bottom: 2px;">${p.nome}</h4>
+        <div class="prod-price" style="font-weight: 700; color: var(--primary);">${formatarMoeda(p.preco_venda || p.preco_venda_vista || 0)}</div>
       </div>
     </div>
-  `
+  `;
+      }
     )
     .join('');
 }
@@ -1237,38 +1243,80 @@ function renderizarCatalogo() {
   const container = document.getElementById('catalogo-container');
   if (!container) return;
 
-  container.innerHTML = state.produtos
-    .map(
-      (p) => `
-    <div class="client-card">
-      <div style="display: flex; gap: 14px; align-items: center;">
-        <span style="font-size: 2.2rem; background: var(--bg-main); padding: 10px; border-radius: 12px;">${p.emoji || '📦'}</span>
-        <div style="flex: 1;">
-          <h4 style="margin-bottom: 4px;">${p.nome}</h4>
-          <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">${p.categoria}</span>
-        </div>
+  if (!state.produtos || state.produtos.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+        <span style="font-size: 3rem; display: block; margin-bottom: 10px;">📦</span>
+        <h4 style="color: var(--text-dark); margin-bottom: 6px;">Nenhum produto cadastrado no catálogo</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">Adicione utilidades, colchas e produtos para controlar o estoque.</p>
+        <button class="btn btn-primary" onclick="abrirModalNovoProduto()">+ Cadastrar Primeiro Produto</button>
       </div>
-      <div class="client-card-body" style="margin-top: 8px;">
-        <div class="val-group">
-          <span>Estoque Atual</span>
-          <strong>${p.estoque || p.estoque_atual || 10} un</strong>
+    `;
+    return;
+  }
+
+  container.innerHTML = state.produtos
+    .map((p) => {
+      const estoque = Number(p.estoque_atual !== undefined ? p.estoque_atual : (p.estoque || 0));
+      let badgeEstoqueClass = 'badge-estoque-ok';
+      let badgeEstoqueTexto = `Estoque: ${estoque} un`;
+
+      if (estoque <= 0) {
+        badgeEstoqueClass = 'badge-estoque-zero';
+        badgeEstoqueTexto = 'Esgotado (0 un)';
+      } else if (estoque <= 3) {
+        badgeEstoqueClass = 'badge-estoque-baixo';
+        badgeEstoqueTexto = `Poucas un (${estoque})`;
+      }
+
+      const imgHTML = p.foto_url
+        ? `<img src="${p.foto_url}" class="product-photo-img" alt="${p.nome}" loading="lazy" onerror="this.outerHTML='<div class=\\'product-emoji-fallback\\'>${p.emoji || '📦'}</div>'">`
+        : `<div class="product-emoji-fallback">${p.emoji || '📦'}</div>`;
+
+      const precoVenda = Number(p.preco_venda_crediario || p.preco_venda_vista || p.preco_venda || 0);
+
+      return `
+    <div class="product-card-modern" data-id="${p.id}">
+      <div class="product-img-wrapper" onclick="visualizarFotoAmpliada('${p.foto_url || ''}', '${p.nome.replace(/'/g, "\\'")}')" title="Clique para ampliar a foto">
+        ${imgHTML}
+      </div>
+
+      <div class="product-card-details">
+        <div class="product-badges">
+          <span class="badge-cat">${p.categoria || 'OUTROS'}</span>
+          <span class="badge-estoque ${badgeEstoqueClass}">${badgeEstoqueTexto}</span>
         </div>
-        <div class="val-group">
-          <span>Preço de Venda</span>
-          <strong style="color: var(--primary);">${formatarMoeda(p.preco_venda || p.preco_venda_vista || 0)}</strong>
+
+        <div class="product-card-header">
+          <h4 class="product-card-title">${p.nome}</h4>
+        </div>
+
+        <div class="product-card-pricing">
+          <div>
+            <div class="price-label">Preço de Venda</div>
+            <div class="price-val">${formatarMoeda(precoVenda)}</div>
+          </div>
+          ${p.preco_custo ? `<div style="text-align: right;"><div class="price-label">Custo</div><div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">${formatarMoeda(p.preco_custo)}</div></div>` : ''}
+        </div>
+
+        <div class="product-card-actions">
+          <button class="btn-card-edit" onclick="abrirModalEditarProduto('${p.id}')">
+            <span>✏️ Editar / Foto</span>
+          </button>
         </div>
       </div>
     </div>
-  `
-    )
+  `;
+    })
     .join('');
 }
 
 function filtrarCatalogo(texto) {
   const q = texto.toLowerCase();
-  document.querySelectorAll('#catalogo-container .client-card').forEach((card) => {
-    const nome = card.querySelector('h4')?.textContent.toLowerCase() || '';
-    if (nome.includes(q)) {
+  document.querySelectorAll('#catalogo-container .product-card-modern').forEach((card) => {
+    const nome = card.querySelector('.product-card-title')?.textContent.toLowerCase() || '';
+    const cat = card.querySelector('.badge-cat')?.textContent.toLowerCase() || '';
+    if (nome.includes(q) || cat.includes(q)) {
       card.style.display = 'flex';
     } else {
       card.style.display = 'none';
@@ -1532,16 +1580,139 @@ async function salvarNovoCliente(e) {
   }
 }
 
+// =============================================================================
+// MÓDULO DE FOTOS DE PRODUTOS & GESTÃO DO CATÁLOGO
+// =============================================================================
+
+// Utilitário de Compressão Inteligente em Canvas (Mobile-Friendly)
+function processarEComprimirImagem(file, maxWidth = 1200, qualidade = 0.85) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('Arquivo selecionado não é uma imagem válida.'));
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const base64Comprimido = canvas.toDataURL('image/jpeg', qualidade);
+        resolve(base64Comprimido);
+      };
+      img.onerror = () => reject(new Error('Erro ao carregar imagem no navegador.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo do dispositivo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Envia imagem comprimida ao servidor e obtém a URL estática
+async function fazerUploadFoto(base64) {
+  if (!base64) return null;
+  try {
+    const res = await fetch(`${API_BASE}/produtos/upload-foto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imagem_base64: base64 }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data.foto_url;
+    }
+  } catch (err) {
+    console.warn('⚠️ Falha ao salvar foto no backend. Utilizando base64 offline resiliente:', err);
+  }
+  return base64; // Fallback caso servidor esteja offline
+}
+
+// Handlers de Foto no Cadastro (Novo Produto)
+function abrirModalNovoProduto() {
+  const form = document.getElementById('form-novo-produto');
+  if (form) form.reset();
+  removerFotoNovoProduto();
+  calcularMargemLucroFormulario();
+  abrirModal('modal-novo-produto');
+}
+
+async function aoSelecionarFotoNovoProduto(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  try {
+    const base64 = await processarEComprimirImagem(file);
+    const previewImg = document.getElementById('prod-preview-img');
+    const previewContainer = document.getElementById('prod-preview-container');
+    const promptContent = document.getElementById('prod-upload-prompt');
+    const inputHidden = document.getElementById('prod-foto-base64');
+
+    if (previewImg && previewContainer && promptContent && inputHidden) {
+      previewImg.src = base64;
+      previewContainer.style.display = 'flex';
+      promptContent.style.display = 'none';
+      inputHidden.value = base64;
+    }
+  } catch (err) {
+    console.error(err);
+    mostrarToast('Não foi possível processar a imagem selecionada.', 'error');
+  }
+}
+
+function removerFotoNovoProduto(event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const fileInput = document.getElementById('prod-foto-input');
+  const previewImg = document.getElementById('prod-preview-img');
+  const previewContainer = document.getElementById('prod-preview-container');
+  const promptContent = document.getElementById('prod-upload-prompt');
+  const inputHidden = document.getElementById('prod-foto-base64');
+
+  if (fileInput) fileInput.value = '';
+  if (previewImg) previewImg.src = '';
+  if (previewContainer) previewContainer.style.display = 'none';
+  if (promptContent) promptContent.style.display = 'flex';
+  if (inputHidden) inputHidden.value = '';
+}
+
 async function salvarNovoProduto(e) {
   e.preventDefault();
   const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const textoOriginal = submitBtn ? submitBtn.innerHTML : 'Salvar no Catálogo';
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Salvando produto...';
+  }
+
   const nome = document.getElementById('prod-nome').value.trim();
   const categoria = document.getElementById('prod-categoria').value;
   const estoque = Number(document.getElementById('prod-estoque').value);
   const precoVenda = Number(document.getElementById('prod-preco-venda').value);
   const precoCusto = Number(document.getElementById('prod-preco-custo').value) || 0;
+  const fotoBase64 = document.getElementById('prod-foto-base64').value.trim();
 
   try {
+    let fotoUrl = null;
+    if (fotoBase64) {
+      fotoUrl = await fazerUploadFoto(fotoBase64);
+    }
+
     const res = await fetch(`${API_BASE}/produtos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1552,13 +1723,15 @@ async function salvarNovoProduto(e) {
         preco_venda_vista: precoVenda,
         preco_venda_crediario: precoVenda,
         preco_custo: precoCusto,
+        foto_url: fotoUrl,
       }),
     });
 
     if (res.ok) {
       fecharModal('modal-novo-produto');
       if (form) form.reset();
-      mostrarToast(`📦 Produto "${nome}" adicionado ao catálogo!`, 'success');
+      removerFotoNovoProduto();
+      mostrarToast(`📦 Produto "${nome}" adicionado com sucesso!`, 'success');
       await carregarProdutos();
     } else {
       const err = await res.json().catch(() => ({}));
@@ -1567,6 +1740,195 @@ async function salvarNovoProduto(e) {
   } catch (err) {
     console.error('Erro ao salvar produto:', err);
     mostrarToast('Erro de conexão ao salvar produto no servidor.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = textoOriginal;
+    }
+  }
+}
+
+// Handlers de Edição de Produto
+function abrirModalEditarProduto(id) {
+  const prod = state.produtos.find((p) => String(p.id) === String(id));
+  if (!prod) {
+    mostrarToast('Produto não encontrado.', 'error');
+    return;
+  }
+
+  document.getElementById('edit-prod-id').value = prod.id;
+  document.getElementById('edit-prod-nome').value = prod.nome || '';
+  document.getElementById('edit-prod-categoria').value = prod.categoria || 'UTILIDADES';
+  document.getElementById('edit-prod-estoque').value = prod.estoque_atual !== undefined ? prod.estoque_atual : (prod.estoque || 0);
+  document.getElementById('edit-prod-preco-venda').value = Number(prod.preco_venda_crediario || prod.preco_venda_vista || prod.preco_venda || 0);
+  document.getElementById('edit-prod-preco-custo').value = Number(prod.preco_custo || 0);
+
+  const fotoAtual = prod.foto_url || '';
+  document.getElementById('edit-prod-foto-atual').value = fotoAtual;
+  document.getElementById('edit-prod-foto-base64').value = '';
+
+  const previewImg = document.getElementById('edit-prod-preview-img');
+  const previewContainer = document.getElementById('edit-prod-preview-container');
+  const promptContent = document.getElementById('edit-prod-upload-prompt');
+  const fileInput = document.getElementById('edit-prod-foto-input');
+  if (fileInput) fileInput.value = '';
+
+  if (fotoAtual) {
+    if (previewImg) previewImg.src = fotoAtual;
+    if (previewContainer) previewContainer.style.display = 'flex';
+    if (promptContent) promptContent.style.display = 'none';
+  } else {
+    if (previewImg) previewImg.src = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (promptContent) promptContent.style.display = 'flex';
+  }
+
+  abrirModal('modal-editar-produto');
+}
+
+async function aoSelecionarFotoEditarProduto(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  try {
+    const base64 = await processarEComprimirImagem(file);
+    const previewImg = document.getElementById('edit-prod-preview-img');
+    const previewContainer = document.getElementById('edit-prod-preview-container');
+    const promptContent = document.getElementById('edit-prod-upload-prompt');
+    const inputHidden = document.getElementById('edit-prod-foto-base64');
+
+    if (previewImg && previewContainer && promptContent && inputHidden) {
+      previewImg.src = base64;
+      previewContainer.style.display = 'flex';
+      promptContent.style.display = 'none';
+      inputHidden.value = base64;
+    }
+  } catch (err) {
+    console.error(err);
+    mostrarToast('Não foi possível processar a imagem.', 'error');
+  }
+}
+
+function removerFotoEditarProduto(event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const fileInput = document.getElementById('edit-prod-foto-input');
+  const previewImg = document.getElementById('edit-prod-preview-img');
+  const previewContainer = document.getElementById('edit-prod-preview-container');
+  const promptContent = document.getElementById('edit-prod-upload-prompt');
+  const inputBase64 = document.getElementById('edit-prod-foto-base64');
+  const inputAtual = document.getElementById('edit-prod-foto-atual');
+
+  if (fileInput) fileInput.value = '';
+  if (previewImg) previewImg.src = '';
+  if (previewContainer) previewContainer.style.display = 'none';
+  if (promptContent) promptContent.style.display = 'flex';
+  if (inputBase64) inputBase64.value = '';
+  if (inputAtual) inputAtual.value = '';
+}
+
+async function salvarEdicaoProduto(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-prod-id').value;
+  const nome = document.getElementById('edit-prod-nome').value.trim();
+  const categoria = document.getElementById('edit-prod-categoria').value;
+  const estoque = Number(document.getElementById('edit-prod-estoque').value);
+  const precoVenda = Number(document.getElementById('edit-prod-preco-venda').value);
+  const precoCusto = Number(document.getElementById('edit-prod-preco-custo').value) || 0;
+  const fotoBase64 = document.getElementById('edit-prod-foto-base64').value.trim();
+  const fotoAtual = document.getElementById('edit-prod-foto-atual').value.trim();
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const textoOriginal = submitBtn ? submitBtn.innerHTML : 'Salvar Alterações';
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Salvando...';
+  }
+
+  try {
+    let fotoUrlFinal = fotoAtual;
+    if (fotoBase64) {
+      fotoUrlFinal = await fazerUploadFoto(fotoBase64);
+    }
+
+    const res = await fetch(`${API_BASE}/produtos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome,
+        categoria,
+        estoque_atual: estoque,
+        preco_venda_vista: precoVenda,
+        preco_venda_crediario: precoVenda,
+        preco_custo: precoCusto,
+        foto_url: fotoUrlFinal || null,
+      }),
+    });
+
+    if (res.ok) {
+      fecharModal('modal-editar-produto');
+      mostrarToast(`✅ Produto "${nome}" atualizado com sucesso!`, 'success');
+      await carregarProdutos();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      mostrarToast(`Erro ao atualizar: ${err.message || 'Tente novamente.'}`, 'error');
+    }
+  } catch (err) {
+    console.error('Erro ao atualizar produto:', err);
+    mostrarToast('Erro de conexão ao salvar alterações.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = textoOriginal;
+    }
+  }
+}
+
+async function confirmarExclusaoProduto() {
+  const id = document.getElementById('edit-prod-id').value;
+  const nome = document.getElementById('edit-prod-nome').value;
+
+  if (!confirm(`Tem certeza que deseja desativar o produto "${nome}" do catálogo?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/produtos/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      fecharModal('modal-editar-produto');
+      mostrarToast(`🗑️ Produto "${nome}" desativado do catálogo.`, 'info');
+      await carregarProdutos();
+    } else {
+      mostrarToast('Não foi possível desativar o produto.', 'error');
+    }
+  } catch (err) {
+    console.error('Erro ao desativar produto:', err);
+    mostrarToast('Erro ao comunicar com o servidor.', 'error');
+  }
+}
+
+// Lightbox de Foto Ampliada
+function visualizarFotoAmpliada(url, nome) {
+  if (!url) return;
+  const modal = document.getElementById('modal-lightbox');
+  const img = document.getElementById('lightbox-img');
+  const cap = document.getElementById('lightbox-caption');
+  if (!modal || !img) return;
+
+  img.src = url;
+  if (cap) cap.textContent = nome || 'Foto do Produto';
+  modal.style.display = 'flex';
+}
+
+function fecharLightbox(event) {
+  if (event.target.id === 'modal-lightbox') {
+    fecharModal('modal-lightbox');
   }
 }
 

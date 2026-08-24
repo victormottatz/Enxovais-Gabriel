@@ -750,6 +750,27 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
         <button class="btn-close" onclick="fecharModal('modal-novo-produto')">✕</button>
       </div>
       <form id="form-novo-produto" onsubmit="salvarNovoProduto(event)">
+        
+        <!-- Área de Upload de Foto do Produto -->
+        <div class="form-group">
+          <label>Foto do Produto (Opcional):</label>
+          <div class="image-upload-zone" id="prod-dropzone" onclick="document.getElementById('prod-foto-input').click()">
+            <input type="file" id="prod-foto-input" accept="image/*" capture="environment" style="display: none;" onchange="aoSelecionarFotoNovoProduto(event)">
+            
+            <div id="prod-upload-prompt" class="upload-prompt-content">
+              <span class="upload-icon">📸</span>
+              <div class="upload-text-main">Toque para tirar foto ou escolher da galeria</div>
+              <div class="upload-text-sub">Formatos aceitos: JPG, PNG ou WEBP</div>
+            </div>
+
+            <div id="prod-preview-container" class="preview-container" style="display: none;">
+              <img id="prod-preview-img" src="" alt="Preview do Produto">
+              <button type="button" class="btn-remove-foto" onclick="removerFotoNovoProduto(event)" title="Remover Foto">✕</button>
+            </div>
+          </div>
+          <input type="hidden" id="prod-foto-base64">
+        </div>
+
         <div class="form-group">
           <label>Nome do Produto / Descrição Comercial:</label>
           <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Edredom Casal Dupla Face Soft" required>
@@ -767,7 +788,7 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
             </select>
           </div>
           <div class="form-group">
-            <label>Estoque Atual:</label>
+            <label>Estoque Inicial:</label>
             <input type="number" id="prod-estoque" class="form-control" value="10" min="0" inputmode="numeric" required>
           </div>
         </div>
@@ -793,6 +814,96 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           Salvar no Catálogo
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDITAR PRODUTO & FOTO -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-editar-produto">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h3>✏️ Editar Produto / Foto</h3>
+        <button class="btn-close" onclick="fecharModal('modal-editar-produto')">✕</button>
+      </div>
+      <form id="form-editar-produto" onsubmit="salvarEdicaoProduto(event)">
+        <input type="hidden" id="edit-prod-id">
+        <input type="hidden" id="edit-prod-foto-atual">
+        <input type="hidden" id="edit-prod-foto-base64">
+
+        <!-- Área de Upload de Foto do Produto na Edição -->
+        <div class="form-group">
+          <label>Foto do Produto:</label>
+          <div class="image-upload-zone" id="edit-prod-dropzone" onclick="document.getElementById('edit-prod-foto-input').click()">
+            <input type="file" id="edit-prod-foto-input" accept="image/*" capture="environment" style="display: none;" onchange="aoSelecionarFotoEditarProduto(event)">
+            
+            <div id="edit-prod-upload-prompt" class="upload-prompt-content" style="display: none;">
+              <span class="upload-icon">📸</span>
+              <div class="upload-text-main">Toque para trocar ou adicionar foto</div>
+              <div class="upload-text-sub">Formatos aceitos: JPG, PNG ou WEBP</div>
+            </div>
+
+            <div id="edit-prod-preview-container" class="preview-container">
+              <img id="edit-prod-preview-img" src="" alt="Foto do Produto">
+              <button type="button" class="btn-remove-foto" onclick="removerFotoEditarProduto(event)" title="Remover Foto">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nome do Produto:</label>
+          <input type="text" id="edit-prod-nome" class="form-control" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria:</label>
+            <select id="edit-prod-categoria" class="form-control">
+              <option value="CAMA">Cama & Banho</option>
+              <option value="COZINHA">Mesa & Cozinha</option>
+              <option value="DECORACAO">Decoração</option>
+              <option value="ORGANIZACAO">Organização</option>
+              <option value="UTILIDADES">Outras Utilidades</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estoque Atual:</label>
+            <input type="number" id="edit-prod-estoque" class="form-control" min="0" inputmode="numeric" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Preço Venda (R$):</label>
+            <input type="number" id="edit-prod-preco-venda" class="form-control" step="0.50" min="0" required>
+          </div>
+          <div class="form-group">
+            <label>Preço Custo (R$):</label>
+            <input type="number" id="edit-prod-preco-custo" class="form-control" step="0.50" min="0">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button type="button" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger-border);" onclick="confirmarExclusaoProduto()">
+            🗑️ Excluir
+          </button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: VISUALIZADOR DE FOTO AMPLIADA (LIGHTBOX) -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop lightbox-backdrop" id="modal-lightbox" onclick="fecharLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button class="lightbox-close-btn" onclick="fecharModal('modal-lightbox')">✕</button>
+      <img id="lightbox-img" src="" alt="Visualização da Foto">
+      <div class="lightbox-caption" id="lightbox-caption"></div>
     </div>
   </div>
 

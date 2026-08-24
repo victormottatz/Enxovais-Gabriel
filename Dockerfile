@@ -27,6 +27,9 @@ COPY --from=builder /app/dist ./dist
 COPY frontend/ ./frontend/
 COPY frontend/ /frontend/
 
+# Cria pasta de uploads persistente
+RUN mkdir -p /app/uploads/produtos
+
 EXPOSE 3000
 
 CMD ["node", "dist/server.js"]

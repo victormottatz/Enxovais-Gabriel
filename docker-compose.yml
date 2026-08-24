@@ -80,7 +80,7 @@ services:
   # ----------------------------------------------------------------------------
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     container_name: enxoval_backend
     restart: always
@@ -98,6 +98,8 @@ services:
       EVOLUTION_SERVER_URL: http://evolution-api:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-B6D711FCDE4D4FD5936544120E713976}
       EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME:-enxovais_gabriel}
+    volumes:
+      - enxoval_uploads_data:/app/uploads
     networks:
       - enxoval_network
 
@@ -112,3 +114,6 @@ volumes:
     driver: local
   enxoval_evolution_instances:
     driver: local
+  enxoval_uploads_data:
+    driver: local
+

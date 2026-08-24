@@ -43,14 +43,20 @@ function resolveFrontendPath(): string {
 }
 
 const frontendPath = resolveFrontendPath();
+const uploadsPath = path.resolve(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 
 // Middlewares Globais
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(requestIdMiddleware);
 
-// Servir arquivos estáticos do Frontend PWA
+// Servir arquivos estáticos do Frontend PWA e pasta de Uploads
 app.use(express.static(frontendPath));
+app.use('/uploads', express.static(uploadsPath));
 
 // Painel Interativo de Inspeção de APIs (Swagger UI)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -61,6 +67,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     app: 'Enxovais Gabriel - Gestão Comercial e Crediário API',
     frontend_path: frontendPath,
+    uploads_path: uploadsPath,
     time: new Date().toISOString(),
     request_id: req.requestId,
   });
@@ -79,7 +86,12 @@ app.use('/api/v1/webhook', webhookRouter);
 
 // Rota Principal e Fallback SPA para o Frontend
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/api-docs')) {
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/health') ||
+    req.path.startsWith('/api-docs') ||
+    req.path.startsWith('/uploads')
+  ) {
     return next();
   }
 
