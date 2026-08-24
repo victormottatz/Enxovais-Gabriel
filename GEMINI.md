@@ -24,6 +24,7 @@ Todos os agentes e ações executadas neste repositório seguem estritamente as 
 12. **Commits:** Conventional Commits (`feat:`, `fix:`, etc.) (`rule-12`).
 13. **Isolamento de Ambientes:** Separação rígida de bancos Dev/Staging/Prod (`rule-13`).
 14. **Documentação como Código:** Nomes claros, tipagem rigorosa e docstrings completas (`rule-14`).
+15. **Zero Navegador & Prints do Usuário:** Nunca utilizar ferramentas de navegador pelo agente; sempre instruir o usuário a testar e solicitar o envio de prints para resolução de questões visuais (`rule-15`).
 
 ---
 

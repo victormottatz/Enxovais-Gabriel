@@ -1,0 +1,18 @@
+{
+  "name": "enxovais-gabriel-workspace",
+  "version": "1.0.0",
+  "description": "Workspace de Gestão e Testes - Ateliê Enxovais Gabriel",
+  "private": true,
+  "scripts": {
+    "test:backend": "npm --prefix backend test",
+    "test:backend:ui": "npm --prefix backend run test:ui",
+    "test:backend:coverage": "npm --prefix backend run test:coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:codegen": "playwright codegen http://localhost:3000",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

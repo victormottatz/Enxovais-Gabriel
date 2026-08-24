@@ -25,6 +25,8 @@ export class ClienteService {
     ponto_referencia?: string;
     limite_credito?: number;
     observacoes?: string;
+    dia_vencimento?: number;
+    valor_parcela_padrao?: number;
   }): Promise<ClienteDTO> {
     const formattedPhone = WhatsAppService.sanitizePhone(data.whatsapp);
 
@@ -45,13 +47,18 @@ export class ClienteService {
       ]
     );
 
-    // Cria automaticamente a ficha de crediário inicial zerada
+    // Cria automaticamente a ficha de crediário inicial zerada com os dados combinados
     const cliente = result.rows[0];
+    const diaVenc = data.dia_vencimento ?? 5;
+    const valorParcela = data.valor_parcela_padrao ?? 50.0;
+
     await pool.query(
       `INSERT INTO fichas_crediario (cliente_id, saldo_devedor_total, valor_parcela_padrao, dia_vencimento_padrao)
-       VALUES ($1, 0.00, 100.00, 5)
-       ON CONFLICT (cliente_id) DO NOTHING`,
-      [cliente.id]
+       VALUES ($1, 0.00, $2, $3)
+       ON CONFLICT (cliente_id) DO UPDATE SET
+         valor_parcela_padrao = EXCLUDED.valor_parcela_padrao,
+         dia_vencimento_padrao = EXCLUDED.dia_vencimento_padrao`,
+      [cliente.id, valorParcela, diaVenc]
     );
 
     return cliente;

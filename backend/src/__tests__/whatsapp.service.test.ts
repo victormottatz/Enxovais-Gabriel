@@ -70,10 +70,10 @@ describe('WhatsAppService', () => {
 
       // Validação do log de auditoria no PostgreSQL
       expect(mockQuery).toHaveBeenCalledTimes(1);
-      const queryArgs = mockQuery.mock.calls[0][1];
-      expect(queryArgs[3]).toBe('5518997123456'); // telefone_destino
-      expect(queryArgs[4]).toBe('BOAS_VINDAS'); // tipo_mensagem
-      expect(queryArgs[5]).toBe('ENVIADO'); // status_envio
+      const queryArgs = mockQuery.mock.calls[0]?.[1] as any[];
+      expect(queryArgs?.[3]).toBe('5518997123456'); // telefone_destino
+      expect(queryArgs?.[4]).toBe('BOAS_VINDAS'); // tipo_mensagem
+      expect(queryArgs?.[5]).toBe('ENVIADO'); // status_envio
     });
 
     it('deve tratar resposta de erro da Evolution API e registrar log ERRO no banco', async () => {
@@ -97,10 +97,10 @@ describe('WhatsAppService', () => {
 
       // Verifica log de ERRO no banco
       expect(mockQuery).toHaveBeenCalledTimes(1);
-      const queryArgs = mockQuery.mock.calls[0][1];
-      expect(queryArgs[4]).toBe('LEMBRETE_PAGAMENTO');
-      expect(queryArgs[5]).toBe('ERRO');
-      expect(queryArgs[6]).toContain('Evolution API retornou status 400');
+      const queryArgs = mockQuery.mock.calls[0]?.[1] as any[];
+      expect(queryArgs?.[4]).toBe('LEMBRETE_PAGAMENTO');
+      expect(queryArgs?.[5]).toBe('ERRO');
+      expect(queryArgs?.[6]).toContain('Evolution API retornou status 400');
     });
   });
 

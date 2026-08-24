@@ -54,6 +54,67 @@ function obterAvatarHTML(nome) {
   return `<div class="client-avatar" style="background: ${cor.bg}; color: ${cor.fg}; border: 1px solid ${cor.border};">${iniciais.toUpperCase()}</div>`;
 }
 
+// Sistema de Notificações Toast Flutuante
+function mostrarToast(mensagem, tipo = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 90vw;
+      width: 380px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  const cores = {
+    success: { bg: '#059669', icon: '✅' },
+    error: { bg: '#DC2626', icon: '❌' },
+    info: { bg: '#8C2D40', icon: 'ℹ️' },
+    warning: { bg: '#D97706', icon: '⚠️' },
+  };
+  const config = cores[tipo] || cores.info;
+
+  toast.style.cssText = `
+    background: ${config.bg};
+    color: #FFFFFF;
+    padding: 14px 18px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(-15px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+  `;
+  toast.innerHTML = `<span>${config.icon}</span> <div style="flex: 1;">${mensagem}</div>`;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-15px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 // =============================================================================
 // INICIALIZAÇÃO DA APLICAÇÃO
 // =============================================================================
@@ -123,6 +184,21 @@ function navegarAba(abaId) {
   if (titulos[abaId]) {
     document.getElementById('page-current-title').textContent = titulos[abaId].titulo;
     document.getElementById('page-current-subtitle').textContent = titulos[abaId].sub;
+  }
+
+  // Recarrega/renderiza dados da aba selecionada
+  if (abaId === 'clientes') {
+    carregarClientes();
+  } else if (abaId === 'cobrancas') {
+    atualizarDashboardCobrancas();
+  } else if (abaId === 'fichas') {
+    carregarFichas();
+  } else if (abaId === 'catalogo') {
+    carregarProdutos();
+  } else if (abaId === 'encomendas') {
+    carregarEncomendas();
+  } else if (abaId === 'caixa') {
+    carregarMovimentacoesCaixa();
   }
 
   // Fecha sidebar e overlay no mobile ao navegar
@@ -278,7 +354,8 @@ async function carregarFichas() {
   try {
     const res = await fetch(`${API_BASE}/fichas`);
     if (res.ok) {
-      state.fichas = await res.json();
+      const data = await res.json();
+      state.fichas = Array.isArray(data) ? data : (data.data || []);
     }
   } catch (err) {
     console.log('Fichas offline fallback:', err);
@@ -523,7 +600,8 @@ async function carregarProdutos() {
     const res = await fetch(`${API_BASE}/produtos`);
     if (res.ok) {
       const data = await res.json();
-      state.produtos = data.data && data.data.length > 0 ? data.data : PRODUTOS_PADRAO;
+      const lista = Array.isArray(data) ? data : (data.data || []);
+      state.produtos = lista && lista.length > 0 ? lista : PRODUTOS_PADRAO;
     } else {
       state.produtos = PRODUTOS_PADRAO;
     }
@@ -1198,15 +1276,70 @@ function filtrarCatalogo(texto) {
   });
 }
 
+const CLIENTES_PADRAO = [
+  {
+    id: 'c1111111-1111-1111-1111-111111111111',
+    nome: 'Dona Francisca Silva',
+    whatsapp: '5511998765432',
+    telefone: '11998765432',
+    endereco: 'Rua das Flores, 120 - Jardim Primavera',
+    ponto_referencia: 'Em frente à Padaria Central',
+    saldo_devedor_total: 300.0,
+    valor_parcela_padrao: 100.0,
+    dia_vencimento_padrao: 5,
+    status_ficha: 'ATIVO',
+  },
+  {
+    id: 'c2222222-2222-2222-2222-222222222222',
+    nome: 'Maria Aparecida Souza',
+    whatsapp: '5511987654321',
+    telefone: '11987654321',
+    endereco: 'Av. Brasil, 450 - Centro',
+    ponto_referencia: 'Próximo ao Mercado Silva',
+    saldo_devedor_total: 240.0,
+    valor_parcela_padrao: 80.0,
+    dia_vencimento_padrao: 20,
+    status_ficha: 'ATIVO',
+  },
+  {
+    id: 'c3333333-3333-3333-3333-333333333333',
+    nome: 'Ana Paula Oliveira',
+    whatsapp: '5511976543210',
+    telefone: '11976543210',
+    endereco: 'Rua São João, 78 - Vila Nova',
+    ponto_referencia: 'Casa amarela com portão branco',
+    saldo_devedor_total: 450.0,
+    valor_parcela_padrao: 150.0,
+    dia_vencimento_padrao: 5,
+    status_ficha: 'ATIVO',
+  },
+  {
+    id: 'c4444444-4444-4444-4444-444444444444',
+    nome: 'Juliana Mendes',
+    whatsapp: '5511965432109',
+    telefone: '11965432109',
+    endereco: 'Rua Tiradentes, 890 - Bairro Alto',
+    ponto_referencia: 'Ao lado da farmácia',
+    saldo_devedor_total: 160.0,
+    valor_parcela_padrao: 80.0,
+    dia_vencimento_padrao: 20,
+    status_ficha: 'ATIVO',
+  },
+];
+
 async function carregarClientes() {
   try {
     const res = await fetch(`${API_BASE}/clientes`);
     if (res.ok) {
       const data = await res.json();
-      state.clientes = data.data || [];
+      const lista = Array.isArray(data) ? data : (data.data || []);
+      state.clientes = lista.length > 0 ? lista : CLIENTES_PADRAO;
+    } else {
+      if (state.clientes.length === 0) state.clientes = CLIENTES_PADRAO;
     }
   } catch (err) {
-    console.log('Aviso clientes:', err);
+    console.log('Aviso clientes (usando fallback):', err);
+    if (state.clientes.length === 0) state.clientes = CLIENTES_PADRAO;
   }
 
   const select = document.getElementById('venda-cliente-select');
@@ -1218,88 +1351,151 @@ async function carregarClientes() {
   renderizarTabelaClientes();
 }
 
-function renderizarTabelaClientes() {
+function renderizarTabelaClientes(lista = state.clientes) {
   const tbody = document.getElementById('clientes-table-body');
   const cardsMobile = document.getElementById('clientes-cards-mobile');
 
   if (tbody) {
-    tbody.innerHTML = state.clientes
-      .map(
-        (c) => {
-          const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
-          return `
-      <tr>
-        <td>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            ${obterAvatarHTML(c.nome)}
-            <strong>${c.nome}</strong>
-          </div>
-        </td>
-        <td>📱 ${c.whatsapp || c.telefone || '-'}</td>
-        <td>${c.endereco || 'São Paulo'}</td>
-        <td><span class="badge-tag ${Number(c.dia_vencimento_padrao) === 20 ? 'vale' : 'pagamento'}">Dia 0${c.dia_vencimento_padrao || 5}</span></td>
-        <td><strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'};">${formatarMoeda(saldo)}</strong></td>
-        <td>
-          <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${c.id}')">Ver Ficha</button>
-        </td>
-      </tr>
-    `;
-        }
-      )
-      .join('');
+    if (!lista || lista.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Nenhuma cliente encontrada. Clique em "+ Cadastrar Cliente" para começar.</td></tr>`;
+    } else {
+      tbody.innerHTML = lista
+        .map(
+          (c) => {
+            const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
+            const isVale = Number(c.dia_vencimento_padrao) === 20;
+            const fone = c.whatsapp || c.telefone || '';
+            const foneFmt = fone ? `📱 ${fone}` : '<span style="color: var(--text-muted);">Sem WhatsApp</span>';
+            const end = c.endereco ? `📍 ${c.endereco}${c.ponto_referencia ? ` (${c.ponto_referencia})` : ''}` : '<span style="color: var(--text-muted);">Não informado</span>';
+
+            return `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              ${obterAvatarHTML(c.nome)}
+              <div>
+                <strong style="font-size: 0.95rem; color: var(--text-dark);">${c.nome}</strong>
+                ${c.cpf ? `<br><small style="color: var(--text-muted); font-size: 0.78rem;">CPF: ${c.cpf}</small>` : ''}
+              </div>
+            </div>
+          </td>
+          <td>
+            ${fone ? `<a href="javascript:void(0)" onclick="abrirLinkWhatsApp('${fone}', 'Olá, ${c.nome}! Tudo bem?')" style="color: var(--success); font-weight: 600; text-decoration: none;">${foneFmt}</a>` : foneFmt}
+          </td>
+          <td style="max-width: 250px; font-size: 0.88rem;">${end}</td>
+          <td>
+            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
+              ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${c.dia_vencimento_padrao || 5}`}
+            </span>
+          </td>
+          <td>
+            <strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1rem;">
+              ${formatarMoeda(saldo)}
+            </strong>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${c.id}')" title="Ver ficha e extrato de compras">
+                📑 Ficha
+              </button>
+              ${fone ? `
+              <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo})" title="Cobrar / Enviar mensagem">
+                💬 Zap
+              </button>` : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+          }
+        )
+        .join('');
+    }
   }
 
   if (cardsMobile) {
-    cardsMobile.innerHTML = state.clientes
-      .map(
-        (c) => {
-          const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
-          return `
-      <div class="client-card">
-        <div class="client-card-header">
-          <div class="client-header-info">
-            ${obterAvatarHTML(c.nome)}
-            <div>
-              <h4>${c.nome}</h4>
-              <span>📱 ${c.whatsapp || c.telefone || 'Sem contato'}</span>
+    if (!lista || lista.length === 0) {
+      cardsMobile.innerHTML = `
+        <div class="empty-state">
+          <span style="font-size: 2.5rem;">👥</span>
+          <h3>Nenhuma cliente cadastrada</h3>
+          <p>Clique em "+ Cadastrar Cliente" para cadastrar sua primeira cliente.</p>
+        </div>
+      `;
+    } else {
+      cardsMobile.innerHTML = lista
+        .map(
+          (c) => {
+            const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
+            const isVale = Number(c.dia_vencimento_padrao) === 20;
+            const fone = c.whatsapp || c.telefone || '';
+
+            return `
+        <div class="client-card">
+          <div class="client-card-header">
+            <div class="client-header-info">
+              ${obterAvatarHTML(c.nome)}
+              <div>
+                <h4>${c.nome}</h4>
+                <span>📱 ${fone || 'Sem contato'}</span>
+              </div>
+            </div>
+            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
+              ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${c.dia_vencimento_padrao || 5}`}
+            </span>
+          </div>
+          <div class="client-card-body">
+            <div class="val-group">
+              <span>Saldo no Crediário</span>
+              <strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.1rem;">
+                ${formatarMoeda(saldo)}
+              </strong>
+            </div>
+            <div class="val-group">
+              <span>Parcela Combinada</span>
+              <strong>${formatarMoeda(c.valor_parcela_padrao || 50)}</strong>
             </div>
           </div>
-          <span class="badge-tag ${Number(c.dia_vencimento_padrao) === 20 ? 'vale' : 'pagamento'}">Dia 0${c.dia_vencimento_padrao || 5}</span>
-        </div>
-        <div class="client-card-body">
-          <div class="val-group">
-            <span>Saldo no Crediário</span>
-            <strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'};">${formatarMoeda(saldo)}</strong>
-          </div>
-          <div class="val-group">
-            <span>Parcela Combinada</span>
-            <strong>${formatarMoeda(c.valor_parcela_padrao || 100)}</strong>
+          <div class="client-card-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-outline btn-sm btn-block" onclick="abrirDetalhesFicha('${c.id}')">
+              📑 Ver Ficha
+            </button>
+            ${fone ? `
+            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo})">
+              💬 Zap
+            </button>` : ''}
           </div>
         </div>
-        <div class="client-card-actions">
-          <button class="btn btn-outline btn-sm btn-block" onclick="abrirDetalhesFicha('${c.id}')">Ver Ficha de Crediário</button>
-        </div>
-      </div>
-    `;
-        }
-      )
-      .join('');
+      `;
+          }
+        )
+        .join('');
+    }
   }
 }
 
 function filtrarClientesTab(texto) {
-  const q = texto.toLowerCase();
-  document.querySelectorAll('#clientes-table-body tr, #clientes-cards-mobile .client-card').forEach((el) => {
-    const txt = el.textContent.toLowerCase();
-    el.style.display = txt.includes(q) ? '' : 'none';
+  const q = (texto || '').toLowerCase().trim();
+  if (!q) {
+    renderizarTabelaClientes(state.clientes);
+    return;
+  }
+  const filtrados = state.clientes.filter((c) => {
+    const nome = (c.nome || '').toLowerCase();
+    const fone = (c.whatsapp || c.telefone || '').toLowerCase();
+    const end = (c.endereco || '').toLowerCase();
+    const cpf = (c.cpf || '').toLowerCase();
+    const ref = (c.ponto_referencia || '').toLowerCase();
+    return nome.includes(q) || fone.includes(q) || end.includes(q) || cpf.includes(q) || ref.includes(q);
   });
+  renderizarTabelaClientes(filtrados);
 }
 
 async function salvarNovoCliente(e) {
   e.preventDefault();
+  const form = e.target;
   const nome = document.getElementById('cli-nome').value.trim();
   const whatsapp = document.getElementById('cli-telefone').value.trim();
-  const diaVenc = Number(document.getElementById('cli-dia-vencimento').value);
+  const diaVenc = Number(document.getElementById('cli-dia-vencimento').value) || 5;
   const endereco = document.getElementById('cli-endereco').value.trim();
   const referencia = document.getElementById('cli-referencia') ? document.getElementById('cli-referencia').value.trim() : '';
   const parcela = Number(document.getElementById('cli-parcela-padrao').value) || 50.0;
@@ -1311,7 +1507,8 @@ async function salvarNovoCliente(e) {
       body: JSON.stringify({
         nome,
         whatsapp: whatsapp.replace(/\D/g, ''),
-        endereco: referencia ? `${endereco} (Ref: ${referencia})` : endereco,
+        endereco: endereco || undefined,
+        ponto_referencia: referencia || undefined,
         limite_credito: 1000.0,
         dia_vencimento: diaVenc,
         valor_parcela_padrao: parcela,
@@ -1320,21 +1517,24 @@ async function salvarNovoCliente(e) {
 
     if (res.ok) {
       fecharModal('modal-novo-cliente');
-      alert(`🎉 Cliente ${nome} cadastrada com sucesso!`);
+      if (form) form.reset();
+      mostrarToast(`🎉 Cliente ${nome} cadastrada com sucesso!`, 'success');
       await carregarClientes();
       await carregarFichas();
+      atualizarDashboardCobrancas();
     } else {
-      const err = await res.json();
-      alert(`Erro ao cadastrar: ${err.message || 'Verifique os dados'}`);
+      const err = await res.json().catch(() => ({}));
+      mostrarToast(`Não foi possível cadastrar: ${err.message || 'Verifique os dados informados.'}`, 'error');
     }
   } catch (err) {
-    alert('🎉 Cliente cadastrada com sucesso!');
-    fecharModal('modal-novo-cliente');
+    console.error('Erro ao salvar cliente:', err);
+    mostrarToast('Erro de conexão ao salvar cliente no servidor.', 'error');
   }
 }
 
 async function salvarNovoProduto(e) {
   e.preventDefault();
+  const form = e.target;
   const nome = document.getElementById('prod-nome').value.trim();
   const categoria = document.getElementById('prod-categoria').value;
   const estoque = Number(document.getElementById('prod-estoque').value);
@@ -1357,12 +1557,16 @@ async function salvarNovoProduto(e) {
 
     if (res.ok) {
       fecharModal('modal-novo-produto');
-      alert(`📦 Produto "${nome}" adicionado ao catálogo!`);
+      if (form) form.reset();
+      mostrarToast(`📦 Produto "${nome}" adicionado ao catálogo!`, 'success');
       await carregarProdutos();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      mostrarToast(`Não foi possível cadastrar produto: ${err.message || 'Erro de validação.'}`, 'error');
     }
   } catch (err) {
-    alert(`📦 Produto "${nome}" salvo no catálogo!`);
-    fecharModal('modal-novo-produto');
+    console.error('Erro ao salvar produto:', err);
+    mostrarToast('Erro de conexão ao salvar produto no servidor.', 'error');
   }
 }
 

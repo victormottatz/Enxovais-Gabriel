@@ -12,6 +12,8 @@ const createClienteSchema = z.object({
   ponto_referencia: z.string().optional(),
   limite_credito: z.number().min(0).optional(),
   observacoes: z.string().optional(),
+  dia_vencimento: z.number().int().min(1).max(31).optional(),
+  valor_parcela_padrao: z.number().min(0).optional(),
 });
 
 // GET /api/v1/clientes

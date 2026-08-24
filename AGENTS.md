@@ -12,6 +12,8 @@ Este documento é a fonte única de verdade para a atuação de qualquer agente 
    * Toda e qualquer implementação de código DEVE respeitar rigorosamente as **14 Leis para IDEs Agênticas (LionLab v2)** detalhadas na Seção 3.
 3. **Consistência de Documentação:**
    * O ecossistema do projeto é baseado nos documentos de arquitetura, requisitos e design localizados na pasta [`docs/`](file:///x:/enxovais%20gabriel/docs).
+4. **Proibição de Navegador & Validação Visual com Prints:**
+   * O agente **JAMAIS** deve utilizar ferramentas de navegador automatizado. Para qualquer questão visual, de interface ou layout, o agente deve **sempre orientar o usuário a testar e solicitar o envio de prints/capturas de tela** do resultado visual observado.
 
 ---
 
@@ -37,7 +39,8 @@ x:\enxovais gabriel\
 │   │   ├── rule-11-api-consistency.md          <-- Consistência de API REST
 │   │   ├── rule-12-commit-discipline.md        <-- Conventional Commits
 │   │   ├── rule-13-env-isolation.md            <-- Isolamento de Ambientes
-│   │   └── rule-14-documentation-code.md       <-- Documentação como Código
+│   │   ├── rule-14-documentation-code.md       <-- Documentação como Código
+│   │   └── rule-15-no-browser-screenshots.md   <-- Proibição de Navegador & Prints do Usuário
 │   ├── workflows\
 │   │   └── workflow_operacional.md             <-- Workflows do projeto
 │   └── skills\

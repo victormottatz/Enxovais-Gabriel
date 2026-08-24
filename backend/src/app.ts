@@ -3,6 +3,8 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerDocument } from './config/swagger.js';
 import { requestIdMiddleware } from './middlewares/request-id.middleware.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import clienteRouter from './routes/cliente.routes.js';
@@ -50,6 +52,9 @@ app.use(requestIdMiddleware);
 // Servir arquivos estáticos do Frontend PWA
 app.use(express.static(frontendPath));
 
+// Painel Interativo de Inspeção de APIs (Swagger UI)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Rota de Health Check
 app.get('/health', (req, res) => {
   res.json({
@@ -74,7 +79,7 @@ app.use('/api/v1/webhook', webhookRouter);
 
 // Rota Principal e Fallback SPA para o Frontend
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/api-docs')) {
     return next();
   }
 
