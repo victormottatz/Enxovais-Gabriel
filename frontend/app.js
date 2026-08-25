@@ -510,6 +510,91 @@ async function abrirDetalhesFicha(fichaId) {
   abrirModal('modal-ficha-detalhes');
 }
 
+function abrirModalAjustarSaldoFicha() {
+  fecharModal('modal-ficha-detalhes');
+  const ficha = state.fichaAtualModal;
+  if (!ficha) return;
+
+  const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+  const nome = cli.nome || ficha.cliente_nome || 'Cliente';
+  const saldo = Number(ficha.saldo_devedor_total) || 0;
+  const parcela = Number(ficha.valor_parcela_padrao) || 100;
+  const diaVenc = ficha.dia_vencimento_padrao || 5;
+
+  const hiddenId = document.getElementById('ajuste-ficha-id');
+  if (hiddenId) hiddenId.value = ficha.id;
+  const cliNome = document.getElementById('ajuste-cliente-nome');
+  if (cliNome) cliNome.textContent = nome;
+  const saldoAtualEl = document.getElementById('ajuste-saldo-atual');
+  if (saldoAtualEl) saldoAtualEl.textContent = formatarMoeda(saldo);
+  const inputNovoSaldo = document.getElementById('ajuste-novo-saldo');
+  if (inputNovoSaldo) inputNovoSaldo.value = saldo.toFixed(2);
+  const inputNovaParcela = document.getElementById('ajuste-nova-parcela');
+  if (inputNovaParcela) inputNovaParcela.value = parcela.toFixed(2);
+  const selectVenc = document.getElementById('ajuste-novo-vencimento');
+  if (selectVenc) selectVenc.value = String(diaVenc);
+  const inputMotivo = document.getElementById('ajuste-motivo');
+  if (inputMotivo) inputMotivo.value = '';
+
+  abrirModal('modal-ajustar-saldo');
+}
+
+async function salvarAjusteSaldoManual(e) {
+  e.preventDefault();
+  const fichaId = document.getElementById('ajuste-ficha-id').value;
+  const novoSaldo = parseFloat(document.getElementById('ajuste-novo-saldo').value);
+  const motivo = document.getElementById('ajuste-motivo').value.trim();
+  const novaParcela = parseFloat(document.getElementById('ajuste-nova-parcela').value);
+  const novoVencimento = parseInt(document.getElementById('ajuste-novo-vencimento').value, 10);
+
+  if (isNaN(novoSaldo) || novoSaldo < 0) {
+    mostrarToast('Informe um saldo válido (maior ou igual a zero).', 'warning');
+    return;
+  }
+
+  if (!motivo || motivo.length < 3) {
+    mostrarToast('Informe o motivo do ajuste manual de saldo.', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/fichas/${fichaId}/ajustar-saldo`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        novo_saldo: novoSaldo,
+        motivo,
+        novo_valor_parcela: isNaN(novaParcela) ? undefined : novaParcela,
+        novo_dia_vencimento: isNaN(novoVencimento) ? undefined : novoVencimento,
+      }),
+    });
+
+    if (res.ok) {
+      fecharModal('modal-ajustar-saldo');
+      mostrarToast(`✅ Saldo devedor ajustado com sucesso para ${formatarMoeda(novoSaldo)}!`, 'success');
+      await carregarFichas();
+      await carregarClientes();
+      atualizarDashboardCobrancas();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      mostrarToast(`Erro ao ajustar saldo: ${err.message || 'Verifique os dados.'}`, 'error');
+    }
+  } catch (err) {
+    console.error('Erro de conexão ao ajustar saldo:', err);
+    // Fallback local
+    const fichaLocal = state.fichas.find((f) => f.id === fichaId);
+    if (fichaLocal) {
+      fichaLocal.saldo_devedor_total = novoSaldo;
+      if (!isNaN(novaParcela) && novaParcela > 0) fichaLocal.valor_parcela_padrao = novaParcela;
+      if (!isNaN(novoVencimento)) fichaLocal.dia_vencimento_padrao = novoVencimento;
+    }
+    fecharModal('modal-ajustar-saldo');
+    mostrarToast(`✅ Saldo ajustado localmente para ${formatarMoeda(novoSaldo)}!`, 'success');
+    renderizarFichas();
+    atualizarDashboardCobrancas();
+  }
+}
+
 function abrirModalAmortizacaoFicha() {
   fecharModal('modal-ficha-detalhes');
   const ficha = state.fichaAtualModal;

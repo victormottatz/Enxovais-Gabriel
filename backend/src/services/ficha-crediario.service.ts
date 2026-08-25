@@ -290,6 +290,89 @@ export class FichaCrediarioService {
   }
 
   /**
+   * Ajusta manualmente o saldo devedor da ficha (correção contábil/renegociação manual).
+   */
+  public static async ajustarSaldoManual(params: {
+    fichaId: string;
+    novoSaldo: number;
+    motivo: string;
+    novoValorParcela?: number;
+    novoDiaVencimento?: number;
+  }): Promise<{ ficha: FichaCrediarioDTO; parcelasGeradas: number }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const fichaRes = await client.query<FichaCrediarioDTO>(
+        'SELECT * FROM fichas_crediario WHERE id = $1 FOR UPDATE',
+        [params.fichaId]
+      );
+
+      if (fichaRes.rows.length === 0) {
+        throw new AppError('Ficha de crediário não encontrada.', 404, 'FICHA_NOT_FOUND');
+      }
+
+      const fichaAtual = fichaRes.rows[0];
+      const saldoAnterior = Number(fichaAtual.saldo_devedor_total);
+      const novoSaldo = Math.max(0, Number(params.novoSaldo));
+      const valorParcela = params.novoValorParcela ?? Number(fichaAtual.valor_parcela_padrao);
+      const diaVencimento = params.novoDiaVencimento ?? Number(fichaAtual.dia_vencimento_padrao);
+      const statusFicha = novoSaldo === 0 ? 'QUITADO' : 'ATIVO';
+
+      // 1. Atualiza ficha
+      const updatedFichaRes = await client.query<FichaCrediarioDTO>(
+        `UPDATE fichas_crediario
+         SET saldo_devedor_total = $1,
+             valor_parcela_padrao = $2,
+             dia_vencimento_padrao = $3,
+             status_ficha = $4,
+             updated_at = NOW()
+         WHERE id = $5
+         RETURNING *`,
+        [novoSaldo, valorParcela, diaVencimento, statusFicha, params.fichaId]
+      );
+
+      // 2. Registra a movimentação no extrato para auditoria
+      const diferenca = novoSaldo - saldoAnterior;
+      const tipoMovimentacao = diferenca >= 0 ? 'AJUSTE_PARCELA' : 'ESTORNO';
+      const descricaoAuditoria = `Ajuste manual de saldo: de R$ ${saldoAnterior.toFixed(2)} para R$ ${novoSaldo.toFixed(2)}. Motivo: ${params.motivo || 'Ajuste manual pelo operador'}`;
+
+      await client.query(
+        `INSERT INTO movimentacoes_ficha (
+          ficha_id, tipo_movimentacao, valor,
+          saldo_anterior, saldo_posterior, descricao
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          params.fichaId,
+          tipoMovimentacao,
+          Math.abs(diferenca),
+          saldoAnterior,
+          novoSaldo,
+          descricaoAuditoria,
+        ]
+      );
+
+      // 3. Recalcula o cronograma de parcelas
+      const parcelasGeradas = await this.sincronizarParcelas(
+        client,
+        params.fichaId,
+        novoSaldo,
+        valorParcela,
+        diaVencimento
+      );
+
+      await client.query('COMMIT');
+      return { ficha: updatedFichaRes.rows[0], parcelasGeradas };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Lista fichas de clientes filtrando por vencimento (dia do pagamento ou dia do vale).
    */
   public static async listFichas(filters?: {

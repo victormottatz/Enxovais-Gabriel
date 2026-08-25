@@ -9,6 +9,13 @@ const registrarPagamentoSchema = z.object({
   descricao: z.string().optional(),
 });
 
+const ajustarSaldoSchema = z.object({
+  novo_saldo: z.number().min(0, 'O saldo devedor não pode ser negativo'),
+  motivo: z.string().min(3, 'Informe o motivo do ajuste manual (mínimo 3 caracteres)'),
+  novo_valor_parcela: z.number().positive().optional(),
+  novo_dia_vencimento: z.number().int().min(1).max(31).optional(),
+});
+
 // GET /api/v1/fichas
 router.get('/', async (req, res, next) => {
   try {
@@ -42,6 +49,23 @@ router.post('/:id/pagamentos', async (req, res, next) => {
       fichaId: req.params.id,
       valorPago: validated.valor_pago,
       descricao: validated.descricao,
+    });
+    res.json(resultado);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/v1/fichas/:id/ajustar-saldo
+router.patch('/:id/ajustar-saldo', async (req, res, next) => {
+  try {
+    const validated = ajustarSaldoSchema.parse(req.body);
+    const resultado = await FichaCrediarioService.ajustarSaldoManual({
+      fichaId: req.params.id,
+      novoSaldo: validated.novo_saldo,
+      motivo: validated.motivo,
+      novoValorParcela: validated.novo_valor_parcela,
+      novoDiaVencimento: validated.novo_dia_vencimento,
     });
     res.json(resultado);
   } catch (err) {

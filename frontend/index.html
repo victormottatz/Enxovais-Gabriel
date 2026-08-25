@@ -671,9 +671,12 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           </div>
         </div>
 
-        <div class="modal-actions-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
-          <button class="btn btn-success btn-block" onclick="abrirModalAmortizacaoFicha()">
-            💵 Registrar Pagamento / Amortização
+        <div class="modal-actions-row" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+          <button class="btn btn-success" style="flex: 1; min-width: 160px;" onclick="abrirModalAmortizacaoFicha()">
+            💵 Registrar Pagamento
+          </button>
+          <button class="btn btn-primary" style="flex: 1; min-width: 140px;" onclick="abrirModalAjustarSaldoFicha()">
+            ✏️ Ajustar Saldo
           </button>
           <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
             📱 Cobrar no Zap
@@ -685,6 +688,66 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           <!-- Histórico cronológico de débitos e créditos -->
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: AJUSTAR SALDO MANUALMENTE -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-ajustar-saldo">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h3>✏️ Ajustar Saldo Devedor</h3>
+        <button class="btn-close" onclick="fecharModal('modal-ajustar-saldo')">✕</button>
+      </div>
+      <form id="form-ajustar-saldo" onsubmit="salvarAjusteSaldoManual(event)">
+        <div class="modal-body">
+          <input type="hidden" id="ajuste-ficha-id" />
+          
+          <div class="form-group">
+            <label>Cliente:</label>
+            <strong id="ajuste-cliente-nome" style="color: var(--wine-primary); display: block; margin-top: 4px;"></strong>
+          </div>
+
+          <div class="form-group">
+            <label>Saldo Atual Registrado:</label>
+            <span id="ajuste-saldo-atual" style="font-weight: 600; font-size: 1.1rem; color: var(--text-dark); display: block;">R$ 0,00</span>
+          </div>
+
+          <div class="form-group">
+            <label for="ajuste-novo-saldo">Novo Saldo Devedor Total (R$) *</label>
+            <input type="number" step="0.01" min="0" id="ajuste-novo-saldo" class="form-control" required placeholder="0,00" />
+            <small class="text-muted" style="display: block; margin-top: 4px;">Informe o saldo total real da ficha.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="ajuste-motivo">Motivo do Ajuste *</label>
+            <input type="text" id="ajuste-motivo" class="form-control" required placeholder="Ex: Correção de valor, renegociação, devolução" />
+          </div>
+
+          <div class="form-row" style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="ajuste-nova-parcela">Valor Parcela (R$):</label>
+              <input type="number" step="0.01" min="1" id="ajuste-nova-parcela" class="form-control" placeholder="100.00" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="ajuste-novo-vencimento">Dia Vencimento:</label>
+              <select id="ajuste-novo-vencimento" class="form-control">
+                <option value="5">Dia 05</option>
+                <option value="10">Dia 10</option>
+                <option value="15">Dia 15</option>
+                <option value="20">Dia 20 (Vale)</option>
+                <option value="25">Dia 25</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="fecharModal('modal-ajustar-saldo')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Novo Saldo</button>
+        </div>
+      </form>
     </div>
   </div>
 
