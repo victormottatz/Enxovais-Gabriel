@@ -143,24 +143,26 @@ export class VendaService {
         }
       }
 
-      await client.query('COMMIT');
-
-      // 3. Se houver valor financiado na ficha (Crediário), processa no FichaCrediarioService
+      // 3. Se houver valor financiado na ficha (Crediário), processa dentro da mesma transação
       let fichaAtualizada: unknown = null;
       if (valorFinanciado > 0) {
-        const ficha = await FichaCrediarioService.getOrCreateByClienteId(input.cliente_id);
+        const ficha = await FichaCrediarioService.getOrCreateByClienteId(input.cliente_id, { client });
         const descricaoCompra = `Venda ${venda.id.substring(0, 8)} - ${input.itens.map((i) => i.descricao_item).join(', ')}`;
-        
+
         const resultadoFicha = await FichaCrediarioService.adicionarCompraAoDividendo({
           fichaId: ficha.id,
           vendaId: venda.id,
           valorFinanciado,
           novoValorParcela: input.novo_valor_parcela_negociado,
           descricao: descricaoCompra,
+          client,
         });
 
         fichaAtualizada = resultadoFicha.ficha;
       }
+
+      // 4. Se todas as operações (venda, itens, estoque, encomendas e ficha) ocorreram com sucesso, efetua o COMMIT
+      await client.query('COMMIT');
 
       return {
         venda,

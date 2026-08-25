@@ -220,18 +220,93 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
   }
 
   // 4. Pedidos / Encomendas
+  if (qUpper.includes('INSERT INTO ENCOMENDAS')) {
+    const id = uuidv4();
+    const novaEncomenda = {
+      id,
+      item_venda_id: params[0],
+      fornecedor_nome: params[1] || 'Distribuidor Parceiro',
+      data_previsao_chegada: params[2] || null,
+      status_encomenda: 'SOLICITADA',
+      created_at: new Date().toISOString(),
+    };
+    memoryStore.encomendas.push(novaEncomenda);
+    return { rows: [novaEncomenda] };
+  }
+
+  if (qUpper.includes('SELECT') && qUpper.includes('FROM ENCOMENDAS')) {
+    return { rows: memoryStore.encomendas };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM PEDIDOS')) {
     return { rows: memoryStore.pedidos };
   }
 
   // 5. Vendas
+  if (qUpper.includes('INSERT INTO VENDAS')) {
+    const id = uuidv4();
+    const novaVenda = {
+      id,
+      cliente_id: params[0],
+      tipo_venda: params[1] || 'PRONTA_ENTREGA',
+      forma_pagamento: params[2],
+      valor_total: Number(params[3]) || 0,
+      valor_entrada: Number(params[4]) || 0,
+      valor_financiado_ficha: Number(params[5]) || 0,
+      status_venda: params[6] || 'CONCLUIDA',
+      observacoes: params[7] || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    memoryStore.vendas.push(novaVenda);
+    return { rows: [novaVenda] };
+  }
+
+  if (qUpper.includes('INSERT INTO ITENS_VENDA')) {
+    const id = uuidv4();
+    const novoItem = {
+      id,
+      venda_id: params[0],
+      produto_id: params[1] || null,
+      descricao_item: params[2] || '',
+      quantidade: Number(params[3]) || 1,
+      preco_unitario: Number(params[4]) || 0,
+      tipo_item: params[5] || 'ESTOQUE_LOCAL',
+      created_at: new Date().toISOString(),
+    };
+    memoryStore.itens_venda.push(novoItem);
+    return { rows: [novoItem] };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM VENDAS')) {
     return { rows: memoryStore.vendas };
   }
 
   // 6. Movimentações
+  if (qUpper.includes('INSERT INTO MOVIMENTACOES_FICHA')) {
+    const id = uuidv4();
+    const novaMov = {
+      id,
+      ficha_id: params[0],
+      venda_id: params[1] || null,
+      tipo_movimentacao: params[2],
+      valor: Number(params[3]) || 0,
+      saldo_anterior: Number(params[4]) || 0,
+      saldo_posterior: Number(params[5]) || 0,
+      descricao: params[6] || '',
+      created_at: new Date().toISOString(),
+    };
+    memoryStore.movimentacoes_ficha.push(novaMov);
+    return { rows: [novaMov] };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM MOVIMENTACOES_FICHA')) {
     return { rows: memoryStore.movimentacoes_ficha };
+  }
+
+  // Comandos de controle transacional no MemoryStore
+  if (qUpper === 'BEGIN' || qUpper === 'COMMIT' || qUpper === 'ROLLBACK') {
+    return { rows: [] };
   }
 
   return { rows: [] };
@@ -264,13 +339,29 @@ export const pool = {
     }
   },
   connect: async () => {
-    return await rawPool.connect();
+    try {
+      const client = await rawPool.connect();
+      isPostgresConnected = true;
+      return client;
+    } catch {
+      isPostgresConnected = false;
+      return {
+        query: async <T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> => {
+          return executeMemoryQuery(text, params) as any;
+        },
+        release: () => {},
+      };
+    }
   },
   on: (event: any, listener: (...args: any[]) => void) => {
     rawPool.on(event, listener);
   },
   end: async () => {
-    return await rawPool.end();
+    try {
+      return await rawPool.end();
+    } catch {
+      // Ignora erro de finalização de pool offline
+    }
   },
 };
 
@@ -281,7 +372,7 @@ export async function initDatabase(): Promise<void> {
     try {
       await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
 
-      // Criação de tabelas essenciais se não existirem
+      // Criação de todas as tabelas essenciais se não existirem
       await client.query(`
         CREATE TABLE IF NOT EXISTS clientes (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -324,6 +415,7 @@ export async function initDatabase(): Promise<void> {
           valor_parcela_padrao NUMERIC(10, 2) NOT NULL DEFAULT 100.00,
           dia_vencimento_padrao INT NOT NULL DEFAULT 5,
           tipo_ciclo VARCHAR(30) NOT NULL DEFAULT 'MENSAL_PAGAMENTO',
+          dia_vale_secundario INT,
           status_ficha VARCHAR(20) NOT NULL DEFAULT 'ATIVO',
           observacoes TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -355,6 +447,20 @@ export async function initDatabase(): Promise<void> {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS encomendas (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_venda_id UUID NOT NULL REFERENCES itens_venda(id) ON DELETE CASCADE,
+          fornecedor_nome VARCHAR(100),
+          data_pedido DATE NOT NULL DEFAULT CURRENT_DATE,
+          data_previsao_chegada DATE,
+          data_recebimento DATE,
+          status_encomenda VARCHAR(30) NOT NULL DEFAULT 'SOLICITADA',
+          codigo_rastreio_fornecedor VARCHAR(100),
+          observacoes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS movimentacoes_ficha (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           ficha_id UUID NOT NULL REFERENCES fichas_crediario(id) ON DELETE CASCADE,
@@ -367,21 +473,66 @@ export async function initDatabase(): Promise<void> {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS parcelas_crediario (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          ficha_id UUID NOT NULL REFERENCES fichas_crediario(id) ON DELETE CASCADE,
+          numero_parcela INT NOT NULL,
+          valor_parcela NUMERIC(10, 2) NOT NULL,
+          data_vencimento DATE NOT NULL,
+          data_pagamento DATE,
+          valor_pago NUMERIC(10, 2) DEFAULT 0.00,
+          status VARCHAR(30) NOT NULL DEFAULT 'PENDENTE',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS configuracoes (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           chave_pix VARCHAR(100) NOT NULL DEFAULT '12345678900',
           nome_titular_pix VARCHAR(150) NOT NULL DEFAULT 'Enxovais Gabriel',
           nome_loja VARCHAR(100) NOT NULL DEFAULT 'Enxovais Gabriel',
+          template_venda_crediario TEXT,
+          template_lembrete_pagamento TEXT,
+          template_recibo_pagamento TEXT,
+          template_encomenda_chegou TEXT,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS logs_mensagens (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
+          venda_id UUID REFERENCES vendas(id) ON DELETE SET NULL,
+          ficha_id UUID REFERENCES fichas_crediario(id) ON DELETE SET NULL,
+          telefone_destino VARCHAR(20) NOT NULL,
+          tipo_mensagem VARCHAR(50) NOT NULL,
+          status_envio VARCHAR(20) NOT NULL,
+          detalhes_erro TEXT,
+          payload_enviado TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        -- Inserção de configuração padrão somente se a tabela estiver vazia
+        INSERT INTO configuracoes (
+          chave_pix,
+          nome_titular_pix,
+          nome_loja,
+          template_venda_crediario,
+          template_lembrete_pagamento,
+          template_recibo_pagamento,
+          template_encomenda_chegou
+        )
+        SELECT
+          '12345678900',
+          'Enxovais Gabriel',
+          'Enxovais Gabriel',
+          'Olá, {nome_cliente}! Sua compra de R$ {valor_compra} foi registrada no crediário.',
+          'Olá, {nome_cliente}! Lembramos que hoje é dia de pagamento na Enxovais Gabriel.',
+          'Olá, {nome_cliente}! Recebemos seu pagamento de R$ {valor_pago}. Novo saldo: R$ {saldo_restante}.',
+          'Olá, {nome_cliente}! Sua encomenda chegou à loja!'
+        WHERE NOT EXISTS (SELECT 1 FROM configuracoes);
       `);
 
-      // Seed inicial se o banco estiver vazio
-      // Limpeza de tabelas para garantir base limpa para inserção de dados reais
-      await client.query(`
-        TRUNCATE TABLE movimentacoes_ficha, itens_venda, vendas, fichas_crediario, produtos, clientes RESTART IDENTITY CASCADE;
-      `);
-      console.log('✅ [PostgreSQL] Schema verificado e tabelas limpas com sucesso para novos cadastros.');
+      console.log('✅ [PostgreSQL] Schema verificado e pronto para operações.');
     } finally {
       client.release();
     }

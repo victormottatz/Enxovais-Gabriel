@@ -51,9 +51,11 @@ export class FichaCrediarioService {
       diaVencimentoPadrao?: number;
       tipoCiclo?: 'MENSAL_PAGAMENTO' | 'QUINZENAL_VALE';
       diaValeSecundario?: number;
+      client?: any;
     }
   ): Promise<FichaCrediarioDTO> {
-    const existing = await pool.query<FichaCrediarioDTO>(
+    const db = options?.client || pool;
+    const existing = await db.query(
       `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp
        FROM fichas_crediario f
        JOIN clientes c ON c.id = f.cliente_id
@@ -70,7 +72,7 @@ export class FichaCrediarioService {
     const tipoCiclo = options?.tipoCiclo ?? 'MENSAL_PAGAMENTO';
     const diaVale = options?.diaValeSecundario ?? null;
 
-    const inserted = await pool.query<FichaCrediarioDTO>(
+    const inserted = await db.query(
       `INSERT INTO fichas_crediario (
         cliente_id, saldo_devedor_total, valor_parcela_padrao, 
         dia_vencimento_padrao, tipo_ciclo, dia_vale_secundario, status_ficha
@@ -93,12 +95,17 @@ export class FichaCrediarioService {
     valorFinanciado: number;
     novoValorParcela?: number;
     descricao?: string;
+    client?: any;
   }): Promise<{ ficha: FichaCrediarioDTO; parcelasGeradas: number }> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    const isExternalClient = Boolean(params.client);
+    const client = params.client || (await pool.connect());
 
-      const fichaRes = await client.query<FichaCrediarioDTO>(
+    try {
+      if (!isExternalClient) {
+        await client.query('BEGIN');
+      }
+
+      const fichaRes = await client.query(
         'SELECT * FROM fichas_crediario WHERE id = $1 FOR UPDATE',
         [params.fichaId]
       );
@@ -113,7 +120,7 @@ export class FichaCrediarioService {
       const valorParcela = params.novoValorParcela ?? Number(fichaAtual.valor_parcela_padrao);
 
       // 1. Atualiza o saldo total e o valor da parcela se renegociado
-      const updatedFichaRes = await client.query<FichaCrediarioDTO>(
+      const updatedFichaRes = await client.query(
         `UPDATE fichas_crediario
          SET saldo_devedor_total = $1,
              valor_parcela_padrao = $2,
@@ -150,13 +157,20 @@ export class FichaCrediarioService {
         fichaAtual.dia_vencimento_padrao
       );
 
-      await client.query('COMMIT');
+      if (!isExternalClient) {
+        await client.query('COMMIT');
+      }
+
       return { ficha: updatedFichaRes.rows[0], parcelasGeradas };
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (!isExternalClient) {
+        await client.query('ROLLBACK');
+      }
       throw error;
     } finally {
-      client.release();
+      if (!isExternalClient) {
+        client.release();
+      }
     }
   }
 
