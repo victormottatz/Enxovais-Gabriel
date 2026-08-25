@@ -312,6 +312,11 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
   return { rows: [] };
 }
 
+export interface DbClient {
+  query: <T = any>(text: string, params?: any[]) => Promise<{ rows: T[] }>;
+  release: () => void;
+}
+
 // Pool interceptor com fallback automático
 export const pool = {
   query: async <T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> => {
@@ -338,7 +343,7 @@ export const pool = {
       return executeMemoryQuery(text, params) as any;
     }
   },
-  connect: async () => {
+  connect: async (): Promise<DbClient> => {
     try {
       const client = await rawPool.connect();
       isPostgresConnected = true;
