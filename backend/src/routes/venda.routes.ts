@@ -23,6 +23,7 @@ const createVendaSchema = z.object({
   itens: z.array(itemVendaSchema).min(1, 'A venda deve ter ao menos um item'),
   novo_valor_parcela_negociado: z.number().positive().optional(),
   observacoes: z.string().optional(),
+  autorizar_excecao_inadimplencia: z.boolean().optional(),
 });
 
 // GET /api/v1/vendas

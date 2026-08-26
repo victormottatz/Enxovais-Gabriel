@@ -1125,6 +1125,56 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- ========================================================================= -->
   <div id="toast-container" class="toast-container"></div>
 
+  <!-- ========================================================================= -->
+  <!-- COPILOTO INTELIGENTE: LIA (ASSISTENTE ENXOVAIS GABRIEL) -->
+  <!-- ========================================================================= -->
+  <button id="btn-lia-floating" class="lia-floating-btn" onclick="abrirModalLia()" aria-label="Abrir Assistente Lia">
+    <span class="lia-badge-avatar">🌸</span>
+    <span class="lia-floating-text">Falar com Lia</span>
+  </button>
+
+  <div class="modal-backdrop" id="modal-lia-copiloto">
+    <div class="modal-sheet modal-md lia-modal-container">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header lia-header">
+        <div class="lia-header-profile">
+          <span class="lia-avatar-large">🌸</span>
+          <div>
+            <h3>Lia • Copiloto da Loja</h3>
+            <small>Sua assistente inteligente na Enxovais Gabriel</small>
+          </div>
+        </div>
+        <button class="btn-close" onclick="fecharModal('modal-lia-copiloto')">✕</button>
+      </div>
+
+      <div class="modal-body lia-chat-body">
+        <div class="lia-quick-chips">
+          <button class="chip-btn" onclick="perguntarLiaRapido('Quem está com parcela atrasada hoje?')">⚠️ Inadimplentes</button>
+          <button class="chip-btn" onclick="perguntarLiaRapido('Quanto temos para receber este mês?')">💰 A Receber</button>
+          <button class="chip-btn" onclick="perguntarLiaRapido('Quais produtos estão com estoque baixo?')">📦 Estoque Baixo</button>
+          <button class="chip-btn" onclick="perguntarLiaRapido('Resumo geral da loja hoje')">📊 Panorama da Loja</button>
+        </div>
+
+        <div class="lia-messages-container" id="lia-messages-list">
+          <div class="lia-msg lia-msg-ai">
+            <div class="lia-bubble">
+              Olá, Lucélia! Sou a <strong>Lia</strong>. Estou conectada aos dados da loja. Como posso te ajudar hoje?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer lia-footer">
+        <form id="form-lia-chat" onsubmit="enviarMensagemLia(event)" style="display: flex; gap: 8px; width: 100%;">
+          <input type="text" id="lia-user-input" class="form-control" placeholder="Pergunte sobre clientes, parcelas, estoque..." autocomplete="off" required>
+          <button type="submit" class="btn btn-primary" id="btn-lia-send">
+            Enviar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts da Aplicação -->
   <script src="/app.js"></script>
 </body>

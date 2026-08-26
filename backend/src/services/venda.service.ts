@@ -22,6 +22,7 @@ export interface VendaInput {
   itens: ItemVendaInput[];
   novo_valor_parcela_negociado?: number;
   observacoes?: string;
+  autorizar_excecao_inadimplencia?: boolean;
 }
 
 export interface VendaDTO {
@@ -56,6 +57,27 @@ export class VendaService {
         : input.forma_pagamento === 'MISTO'
         ? Math.max(0, input.valor_total - valorEntrada)
         : 0.0;
+
+    // Regra Comercial do PRD: Bloqueio/Alerta de nova venda para clientes inadimplentes
+    if (valorFinanciado > 0 && !input.autorizar_excecao_inadimplencia) {
+      const atrasosRes = await pool.query(
+        `SELECT COUNT(p.id) as total_atrasadas, COALESCE(SUM(p.valor_parcela - p.valor_pago), 0) as valor_atrasado
+         FROM parcelas_crediario p
+         JOIN fichas_crediario f ON f.id = p.ficha_id
+         WHERE f.cliente_id = $1 AND (p.status = 'ATRASADO' OR (p.status = 'PENDENTE' AND p.data_vencimento < CURRENT_DATE))`,
+        [input.cliente_id]
+      );
+
+      const totalAtrasadas = Number(atrasosRes.rows[0]?.total_atrasadas || 0);
+      if (totalAtrasadas > 0) {
+        const valorAtrasado = Number(atrasosRes.rows[0]?.valor_atrasado || 0).toFixed(2);
+        throw new AppError(
+          `Alerta de Inadimplência: Este cliente possui ${totalAtrasadas} parcela(s) vencida(s) no total de R$ ${valorAtrasado}. Deseja que a Lucélia aprove esta exceção comercial?`,
+          400,
+          'CLIENTE_INADIMPLENTE_ALERTA'
+        );
+      }
+    }
 
     const temItensEncomenda = input.itens.some((it) => it.tipo_item === 'ENCOMENDA');
     const temItensEstoque = input.itens.some((it) => it.tipo_item === 'ESTOQUE_LOCAL');

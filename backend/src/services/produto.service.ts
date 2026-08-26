@@ -33,6 +33,11 @@ export class ProdutoService {
     permite_encomenda?: boolean;
     foto_url?: string | null;
   }): Promise<ProdutoDTO> {
+    const precoCusto = data.preco_custo ?? 0.0;
+    if (precoCusto > 0 && data.preco_venda_vista < precoCusto) {
+      throw new AppError('Regra Comercial: O preço de venda à vista não pode ser inferior ao preço de custo.', 400, 'PRECO_ABAIXO_DO_CUSTO');
+    }
+
     const result = await pool.query<ProdutoDTO>(
       `INSERT INTO produtos (
         codigo_sku, nome, descricao, categoria, preco_custo, 
@@ -87,6 +92,10 @@ export class ProdutoService {
     const estoque_minimo = data.estoque_minimo !== undefined ? data.estoque_minimo : atual.estoque_minimo;
     const permite_encomenda = data.permite_encomenda !== undefined ? data.permite_encomenda : atual.permite_encomenda;
     const foto_url = data.foto_url !== undefined ? (data.foto_url ? data.foto_url.trim() : null) : atual.foto_url;
+
+    if (preco_custo > 0 && preco_venda_vista < preco_custo) {
+      throw new AppError('Regra Comercial: O preço de venda à vista não pode ser inferior ao preço de custo.', 400, 'PRECO_ABAIXO_DO_CUSTO');
+    }
 
     const result = await pool.query<ProdutoDTO>(
       `UPDATE produtos

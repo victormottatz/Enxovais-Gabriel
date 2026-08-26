@@ -16,6 +16,7 @@ import { whatsappRouter } from './routes/whatsapp.routes.js';
 import { webhookRouter } from './routes/webhook.routes.js';
 import { pedidoRouter } from './routes/pedido.routes.js';
 import importacaoRouter from './routes/importacao.routes.js';
+import { liaRouter } from './routes/lia.routes.js';
 
 export const app = express();
 
@@ -83,6 +84,7 @@ app.use('/api/v1/importacao', importacaoRouter);
 app.use('/api/v1/configuracoes', configuracaoRouter);
 app.use('/api/v1/whatsapp', whatsappRouter);
 app.use('/api/v1/webhook', webhookRouter);
+app.use('/api/v1/lia', liaRouter);
 
 // Rota Principal e Fallback SPA para o Frontend
 app.get('*', (req, res, next) => {

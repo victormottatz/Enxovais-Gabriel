@@ -2394,4 +2394,86 @@ function imprimirRecibo() {
   window.print();
 }
 
+// =============================================================================
+// MÓDULO: COPILOTO INTELIGENTE LIA (ASSISTENTE ENXOVAIS GABRIEL)
+// =============================================================================
+function abrirModalLia() {
+  abrirModal('modal-lia-copiloto');
+  const input = document.getElementById('lia-user-input');
+  if (input) setTimeout(() => input.focus(), 200);
+}
+
+function adicionarMensagemLia(texto, tipo = 'ai') {
+  const container = document.getElementById('lia-messages-list');
+  if (!container) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `lia-msg lia-msg-${tipo}`;
+  
+  const bubbleDiv = document.createElement('div');
+  bubbleDiv.className = 'lia-bubble';
+  bubbleDiv.innerHTML = texto.replace(/\n/g, '<br>');
+  
+  msgDiv.appendChild(bubbleDiv);
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function enviarMensagemLia(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('lia-user-input');
+  if (!input) return;
+
+  const pergunta = input.value.trim();
+  if (!pergunta) return;
+
+  input.value = '';
+  adicionarMensagemLia(pergunta, 'user');
+
+  const btnSend = document.getElementById('btn-lia-send');
+  if (btnSend) btnSend.disabled = true;
+
+  // Placeholder de carregamento
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'lia-msg lia-msg-ai';
+  loadingDiv.id = 'lia-loading-msg';
+  loadingDiv.innerHTML = '<div class="lia-bubble">🌸 Consultando os dados da loja...</div>';
+  const container = document.getElementById('lia-messages-list');
+  if (container) container.appendChild(loadingDiv);
+
+  try {
+    const res = await fetch(`${API_BASE}/lia/consulta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pergunta }),
+    });
+
+    const loadingEl = document.getElementById('lia-loading-msg');
+    if (loadingEl) loadingEl.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+      adicionarMensagemLia(data.resposta, 'ai');
+    } else {
+      adicionarMensagemLia('Desculpe, tive uma dificuldade momentânea para acessar os dados. Pode perguntar novamente?', 'ai');
+    }
+  } catch (err) {
+    console.error('Erro ao consultar Lia:', err);
+    const loadingEl = document.getElementById('lia-loading-msg');
+    if (loadingEl) loadingEl.remove();
+    adicionarMensagemLia('Erro de comunicação com o servidor. Verifique sua conexão com a VPS.', 'ai');
+  } finally {
+    if (btnSend) btnSend.disabled = false;
+  }
+}
+
+function perguntarLiaRapido(pergunta) {
+  const input = document.getElementById('lia-user-input');
+  if (input) {
+    input.value = pergunta;
+    enviarMensagemLia(null);
+  }
+}
+
+
 

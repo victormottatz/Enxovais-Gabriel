@@ -2292,3 +2292,181 @@ input, select, textarea {
   background: rgba(255, 255, 255, 0.4);
 }
 
+/* =============================================================================
+   COPILOTO INTELIGENTE: LIA (ESTILOS UI/UX)
+============================================================================= */
+
+.lia-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #8C3A4B 0%, #B84D62 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 20px;
+  box-shadow: 0 8px 24px rgba(140, 58, 75, 0.35);
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lia-floating-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(140, 58, 75, 0.45);
+}
+
+.lia-floating-btn:active {
+  transform: scale(0.96);
+}
+
+.lia-badge-avatar {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.lia-modal-container {
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  max-height: 85vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lia-header {
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #8C3A4B 0%, #5E222F 100%);
+  color: #FFFFFF;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  margin-bottom: 0;
+}
+
+.lia-header h3 {
+  color: #FFFFFF;
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.lia-header small {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+.lia-header .btn-close {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  border: none;
+}
+
+.lia-header-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lia-avatar-large {
+  font-size: 1.8rem;
+  background: rgba(255, 255, 255, 0.2);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lia-chat-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+}
+
+.lia-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  color: var(--wine-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-btn:hover {
+  background: var(--wine-primary);
+  color: #FFFFFF;
+  border-color: var(--wine-primary);
+  transform: translateY(-1px);
+}
+
+.lia-messages-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.lia-msg {
+  display: flex;
+  max-width: 85%;
+}
+
+.lia-msg-ai {
+  align-self: flex-start;
+}
+
+.lia-msg-user {
+  align-self: flex-end;
+}
+
+.lia-msg-ai .lia-bubble {
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-radius: 4px 18px 18px 18px;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  box-shadow: var(--shadow-sm);
+  white-space: pre-line;
+}
+
+.lia-msg-user .lia-bubble {
+  background: var(--wine-primary);
+  color: #FFFFFF;
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  box-shadow: var(--shadow-sm);
+}
+
+.lia-footer {
+  padding: 14px 18px;
+  background: #FFFFFF;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+
