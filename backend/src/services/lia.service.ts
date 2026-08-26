@@ -48,7 +48,18 @@ export class LiaService {
       return await this.consultarEstoque(pergunta);
     }
 
-    // 4. Consulta: Histórico ou Avaliação de um Cliente específico
+    // 4. Consulta: Oportunidades de Recompra / Clientes inativos
+    if (
+      texto.includes('recompra') ||
+      texto.includes('inativo') ||
+      texto.includes('reativar') ||
+      texto.includes('novidade') ||
+      texto.includes('oportunidade')
+    ) {
+      return await this.consultarOportunidadesRecompra(pergunta);
+    }
+
+    // 5. Consulta: Histórico ou Avaliação de um Cliente específico
     const matchCliente = texto.match(/(?:cliente|da|do|para)\s+([a-zA-Zá-úÁ-Ú]+)/i);
     if (matchCliente && matchCliente[1] && matchCliente[1].length >= 3) {
       const nomeBuscado = matchCliente[1];
@@ -58,7 +69,7 @@ export class LiaService {
       }
     }
 
-    // 5. Resumo Geral Diário da Loja
+    // 6. Resumo Geral Diário da Loja
     return await this.consultarResumoGeral(pergunta);
   }
 
@@ -245,6 +256,56 @@ export class LiaService {
         'Quem está atrasado hoje?',
         'Quanto temos para receber este mês?',
         'Quais produtos estão com estoque baixo?',
+      ],
+    };
+  }
+
+  /**
+   * Identifica clientes com histórico positivo e sem compras recentes (oportunidades de recompra)
+   */
+  private static async consultarOportunidadesRecompra(pergunta: string): Promise<LiaConsultaResponse> {
+    const res = await pool.query(`
+      SELECT 
+        c.id, c.nome, c.whatsapp,
+        f.saldo_devedor_total,
+        MAX(v.created_at) as ultima_compra,
+        COUNT(v.id) as total_compras,
+        COALESCE(SUM(v.valor_total), 0) as total_gasto
+      FROM clientes c
+      JOIN fichas_crediario f ON f.cliente_id = c.id
+      JOIN vendas v ON v.cliente_id = c.id
+      WHERE c.ativo = true AND f.saldo_devedor_total = 0
+      GROUP BY c.id, c.nome, c.whatsapp, f.saldo_devedor_total
+      HAVING MAX(v.created_at) < NOW() - INTERVAL '30 days'
+      ORDER BY total_gasto DESC, ultima_compra ASC
+      LIMIT 5
+    `);
+
+    if (res.rows.length === 0) {
+      return {
+        pergunta,
+        resposta: '🌸 No momento não identifiquei clientes com crediário quitado e inativos há mais de 30 dias. A maioria dos clientes ativos está comprando ou pagando parcelas regularmente!',
+        tipo_consulta: 'OUTROS',
+        dados_apoio: [],
+        sugestoes_acao: ['Ver catálogo de produtos', 'Resumo da loja'],
+      };
+    }
+
+    const lista = res.rows
+      .map(
+        (c) =>
+          `• *${c.nome}*: Total já comprado de R$ ${Number(c.total_gasto).toFixed(2)} (${c.total_compras} compras). Ficha quitada e sem compras recentes!`
+      )
+      .join('\n');
+
+    return {
+      pergunta,
+      resposta: `🌸 **Oportunidades de Recompra Identificadas**:\nEncontrei **${res.rows.length} cliente(s)** com bom histórico e carnê 100% quitado que você pode convidar para conhecer as novidades da loja:\n\n${lista}\n\n💡 *Sugestão da Lia*: Envie uma mensagem carinhosa pelo WhatsApp avisando que chegaram novas peças de enxovais e utilidades.`,
+      tipo_consulta: 'OUTROS',
+      dados_apoio: res.rows,
+      sugestoes_acao: [
+        'Abrir lista de clientes',
+        'Ver catálogo de produtos para enviar fotos',
       ],
     };
   }

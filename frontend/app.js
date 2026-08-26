@@ -2475,5 +2475,47 @@ function perguntarLiaRapido(pergunta) {
   }
 }
 
+// =============================================================================
+// MÓDULO: EXPORTAÇÃO & BACKUP COMPLETO DA LOJA
+// =============================================================================
+async function baixarBackupCompleto() {
+  mostrarToast('💾 Gerando backup completo da base de dados...', 'info');
+  try {
+    const res = await fetch(`${API_BASE}/backup/download`);
+    if (!res.ok) throw new Error('Falha ao gerar arquivo de backup.');
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dataHoje = new Date().toISOString().split('T')[0];
+    a.download = `backup-enxovais-gabriel-${dataHoje}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+    mostrarToast('✅ Backup baixado com sucesso! Guarde o arquivo com segurança.', 'success');
+  } catch (err) {
+    console.error('Erro no download do backup:', err);
+    mostrarToast('Erro ao baixar backup. Tente novamente.', 'error');
+  }
+}
+
+// =============================================================================
+// MÓDULO: COMPARTILHAMENTO DE CARNÊ DIGITAL DO CLIENTE
+// =============================================================================
+function compartilharCarneWhatsApp(fichaId, clienteTelefone, clienteNome) {
+  if (!fichaId || !clienteTelefone) {
+    mostrarToast('Dados do cliente incompletos para envio.', 'error');
+    return;
+  }
+
+  const urlCarne = `${window.location.origin}/carne/${fichaId}`;
+  const msg = `Olá, ${clienteNome}! 🏠✨\n\nAqui está o link do seu *Carnê Digital* na *Enxovais Gabriel*:\n👉 ${urlCarne}\n\nPor este link você pode acompanhar suas parcelas e realizar o pagamento com facilidade via Pix.\n\nQualquer dúvida, estamos sempre à disposição! 💖`;
+
+  abrirLinkWhatsApp(clienteTelefone, msg);
+}
+
+
 
 
