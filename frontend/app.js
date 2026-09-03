@@ -3,9 +3,10 @@
 // Versão 2.1 - Simulador de Crediário, Importador CSV, Encomendas & Cobrança
 // =============================================================================
 
-const API_BASE = (typeof window !== 'undefined' && window.location && window.location.port !== '3000')
-  ? `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname || 'localhost'}:3000/api/v1`
-  : '/api/v1';
+const isLocalDevStatic = typeof window !== 'undefined' && 
+  (window.location.protocol === 'file:' || window.location.port === '5500' || window.location.port === '5173');
+
+const API_BASE = isLocalDevStatic ? 'http://localhost:3000/api/v1' : '/api/v1';
 
 // Estado Global da Aplicação
 const state = {
@@ -1257,7 +1258,8 @@ function processarArquivoCSV(file) {
         alert(`Erro na validação da planilha: ${err.message || 'Formato inválido'}`);
       }
     } catch (err) {
-      alert('Erro de conexão ao validar o arquivo CSV.');
+      console.error('Erro ao validar CSV:', err);
+      alert(`Erro de conexão ao validar o arquivo CSV: ${err.message || 'Falha de rede'}`);
     }
   };
   reader.readAsArrayBuffer(file);
