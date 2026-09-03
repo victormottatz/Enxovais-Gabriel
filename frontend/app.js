@@ -27,17 +27,22 @@ const state = {
   itensImportacaoValidados: [],
 };
 
-// Catálogo padrão de utilidades para demonstração inicial
+// Catálogo padrão de utilidades e artigos da planilha da mãe e do ateliê
 const PRODUTOS_PADRAO = [
-  { id: '1', nome: 'Edredom Casal Dupla Face Soft', categoria: 'CAMA', preco_venda: 180.0, estoque: 8, emoji: '🛏️' },
-  { id: '2', nome: 'Jogo de Cama Queen 4 Peças 400 Fios', categoria: 'CAMA', preco_venda: 140.0, estoque: 12, emoji: '✨' },
-  { id: '3', nome: 'Jogo de Panelas Antiaderente 5 Peças', categoria: 'COZINHA', preco_venda: 220.0, estoque: 5, emoji: '🍳' },
-  { id: '4', nome: 'Conjunto Toalhas Banhão 4 Peças', categoria: 'CAMA', preco_venda: 110.0, estoque: 15, emoji: '🧖‍♀️' },
-  { id: '5', nome: 'Kit Potes Herméticos Cozinha (6 un)', categoria: 'ORGANIZACAO', preco_venda: 85.0, estoque: 20, emoji: '📦' },
-  { id: '6', nome: 'Manta Microfibra Casal Aveludada', categoria: 'CAMA', preco_venda: 75.0, estoque: 14, emoji: '🧶' },
-  { id: '7', nome: 'Cobre-Leito Solteiro Estampado', categoria: 'CAMA', preco_venda: 95.0, estoque: 7, emoji: '🛌' },
-  { id: '8', nome: 'Escorredor de Louça Inox 2 Andares', categoria: 'COZINHA', preco_venda: 130.0, estoque: 6, emoji: '🍽️' },
-  { id: '9', nome: 'Cortina Corta Luz Blackout 2,80 x 1,80', categoria: 'DECORACAO', preco_venda: 160.0, estoque: 9, emoji: '🪟' },
+  { id: '1', nome: 'Churrasqueira Portátil Inox', categoria: 'COZINHA', preco_venda: 340.0, preco_vista: 300.0, estoque: 8, emoji: '🥩' },
+  { id: '2', nome: 'Cobre-Leito Queen Estampado', categoria: 'CAMA', preco_venda: 360.0, preco_vista: 320.0, estoque: 10, emoji: '🛏️' },
+  { id: '3', nome: 'Jogo de Lençol Casal 4 Peças (Algodão)', categoria: 'CAMA', preco_venda: 170.0, preco_vista: 150.0, estoque: 15, emoji: '✨' },
+  { id: '4', nome: 'Fritadeira Elétrica Air Fryer 4L', categoria: 'COZINHA', preco_venda: 536.0, preco_vista: 480.0, estoque: 6, emoji: '🍟' },
+  { id: '5', nome: 'Cama Box / Colchão Casal Ortopédico', categoria: 'CAMA', preco_venda: 850.0, preco_vista: 750.0, estoque: 4, emoji: '🛌' },
+  { id: '6', nome: 'Jogo de Panelas Cava Antiaderente (5 Peças)', categoria: 'COZINHA', preco_venda: 600.0, preco_vista: 540.0, estoque: 5, emoji: '🍳' },
+  { id: '7', nome: 'Frigideira Grande Antiaderente Profissional', categoria: 'COZINHA', preco_venda: 255.0, preco_vista: 220.0, estoque: 8, emoji: '🍳' },
+  { id: '8', nome: 'Cobredon Aveludado Casal Dupla Face', categoria: 'CAMA', preco_venda: 320.0, preco_vista: 280.0, estoque: 12, emoji: '🧶' },
+  { id: '9', nome: 'Panela de Pressão 10 Litros Reforçada', categoria: 'COZINHA', preco_venda: 280.0, preco_vista: 240.0, estoque: 7, emoji: '🍲' },
+  { id: '10', nome: 'Conjunto Toalhas Banhão 4 Peças', categoria: 'CAMA', preco_venda: 160.0, preco_vista: 140.0, estoque: 20, emoji: '🧖‍♀️' },
+  { id: '11', nome: 'Conjunto Cadeiras Dobráveis Reforçadas (Par)', categoria: 'ORGANIZACAO', preco_venda: 280.0, preco_vista: 240.0, estoque: 8, emoji: '🪑' },
+  { id: '12', nome: 'Kit Potes Herméticos Cozinha (6 un)', categoria: 'ORGANIZACAO', preco_venda: 95.0, preco_vista: 85.0, estoque: 20, emoji: '📦' },
+  { id: '13', nome: 'Escorredor de Louça Inox 2 Andares', categoria: 'COZINHA', preco_venda: 145.0, preco_vista: 130.0, estoque: 8, emoji: '🍽️' },
+  { id: '14', nome: 'Cortina Corta Luz Blackout 2,80 x 1,80', categoria: 'DECORACAO', preco_venda: 180.0, preco_vista: 160.0, estoque: 9, emoji: '🪟' },
 ];
 
 // Função utilitária para gerar avatar circular com iniciais e paleta harmônica

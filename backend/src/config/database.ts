@@ -36,7 +36,22 @@ export interface MemoryStore {
 
 export const memoryStore: MemoryStore = {
   clientes: [],
-  produtos: [],
+  produtos: [
+    { id: '1', codigo_sku: 'UTIL-001', nome: 'Churrasqueira Portátil Inox', categoria: 'OUTROS', preco_custo: 180.0, preco_venda_vista: 300.0, preco_venda_crediario: 340.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '2', codigo_sku: 'CAMA-001', nome: 'Cobre-Leito Queen Estampado', categoria: 'CAMA_MESA_BANHO', preco_custo: 190.0, preco_venda_vista: 320.0, preco_venda_crediario: 360.0, estoque_atual: 10, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '3', codigo_sku: 'CAMA-002', nome: 'Jogo de Lençol Casal 4 Peças (Algodão)', categoria: 'CAMA_MESA_BANHO', preco_custo: 90.0, preco_venda_vista: 150.0, preco_venda_crediario: 170.0, estoque_atual: 15, estoque_minimo: 3, permite_encomenda: true, ativo: true },
+    { id: '4', codigo_sku: 'ELET-001', nome: 'Fritadeira Elétrica Air Fryer 4L', categoria: 'COZINHA', preco_custo: 280.0, preco_venda_vista: 480.0, preco_venda_crediario: 536.0, estoque_atual: 6, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '5', codigo_sku: 'CAMA-003', nome: 'Cama Box / Colchão Casal Ortopédico', categoria: 'CAMA_MESA_BANHO', preco_custo: 450.0, preco_venda_vista: 750.0, preco_venda_crediario: 850.0, estoque_atual: 4, estoque_minimo: 1, permite_encomenda: true, ativo: true },
+    { id: '6', codigo_sku: 'COZ-001', nome: 'Jogo de Panelas Cava Antiaderente (5 Peças)', categoria: 'COZINHA', preco_custo: 320.0, preco_venda_vista: 540.0, preco_venda_crediario: 600.0, estoque_atual: 5, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '7', codigo_sku: 'COZ-002', nome: 'Frigideira Grande Antiaderente Profissional', categoria: 'COZINHA', preco_custo: 130.0, preco_venda_vista: 220.0, preco_venda_crediario: 255.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '8', codigo_sku: 'CAMA-004', nome: 'Cobredon Aveludado Casal Dupla Face', categoria: 'CAMA_MESA_BANHO', preco_custo: 160.0, preco_venda_vista: 280.0, preco_venda_crediario: 320.0, estoque_atual: 12, estoque_minimo: 3, permite_encomenda: true, ativo: true },
+    { id: '9', codigo_sku: 'COZ-003', nome: 'Panela de Pressão 10 Litros Reforçada', categoria: 'COZINHA', preco_custo: 150.0, preco_venda_vista: 240.0, preco_venda_crediario: 280.0, estoque_atual: 7, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '10', codigo_sku: 'BANHO-001', nome: 'Conjunto Toalhas Banhão 4 Peças', categoria: 'CAMA_MESA_BANHO', preco_custo: 85.0, preco_venda_vista: 140.0, preco_venda_crediario: 160.0, estoque_atual: 20, estoque_minimo: 4, permite_encomenda: true, ativo: true },
+    { id: '11', codigo_sku: 'ORG-001', nome: 'Conjunto Cadeiras Dobráveis Reforçadas (Par)', categoria: 'ORGANIZACAO', preco_custo: 140.0, preco_venda_vista: 240.0, preco_venda_crediario: 280.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '12', codigo_sku: 'ORG-002', nome: 'Kit Potes Herméticos Cozinha (6 un)', categoria: 'ORGANIZACAO', preco_custo: 45.0, preco_venda_vista: 85.0, preco_venda_crediario: 95.0, estoque_atual: 20, estoque_minimo: 5, permite_encomenda: true, ativo: true },
+    { id: '13', codigo_sku: 'COZ-004', nome: 'Escorredor de Louça Inox 2 Andares', categoria: 'COZINHA', preco_custo: 75.0, preco_venda_vista: 130.0, preco_venda_crediario: 145.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+    { id: '14', codigo_sku: 'DEC-001', nome: 'Cortina Corta Luz Blackout 2,80 x 1,80', categoria: 'DECORACAO', preco_custo: 90.0, preco_venda_vista: 160.0, preco_venda_crediario: 180.0, estoque_atual: 9, estoque_minimo: 2, permite_encomenda: true, ativo: true },
+  ],
   fichas_crediario: [],
   vendas: [],
   itens_venda: [],
@@ -515,6 +530,63 @@ export async function initDatabase(): Promise<void> {
           payload_enviado TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        -- Inserção de produtos padrão do catálogo e da planilha da mãe
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Churrasqueira Portátil Inox', 'OUTROS', 180.00, 300.00, 340.00, 8, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Churrasqueira Portátil Inox');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Cobre-Leito Queen Estampado', 'CAMA_MESA_BANHO', 190.00, 320.00, 360.00, 10, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Cobre-Leito Queen Estampado');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Jogo de Lençol Casal 4 Peças (Algodão)', 'CAMA_MESA_BANHO', 90.00, 150.00, 170.00, 15, 3, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Jogo de Lençol Casal 4 Peças (Algodão)');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Fritadeira Elétrica Air Fryer 4L', 'COZINHA', 280.00, 480.00, 536.00, 6, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Fritadeira Elétrica Air Fryer 4L');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Cama Box / Colchão Casal Ortopédico', 'CAMA_MESA_BANHO', 450.00, 750.00, 850.00, 4, 1, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Cama Box / Colchão Casal Ortopédico');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Jogo de Panelas Cava Antiaderente (5 Peças)', 'COZINHA', 320.00, 540.00, 600.00, 5, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Jogo de Panelas Cava Antiaderente (5 Peças)');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Frigideira Grande Antiaderente Profissional', 'COZINHA', 130.00, 220.00, 255.00, 8, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Frigideira Grande Antiaderente Profissional');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Cobredon Aveludado Casal Dupla Face', 'CAMA_MESA_BANHO', 160.00, 280.00, 320.00, 12, 3, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Cobredon Aveludado Casal Dupla Face');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Panela de Pressão 10 Litros Reforçada', 'COZINHA', 150.00, 240.00, 280.00, 7, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Panela de Pressão 10 Litros Reforçada');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Conjunto Toalhas Banhão 4 Peças', 'CAMA_MESA_BANHO', 85.00, 140.00, 160.00, 20, 4, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Conjunto Toalhas Banhão 4 Peças');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Conjunto Cadeiras Dobráveis Reforçadas (Par)', 'ORGANIZACAO', 140.00, 240.00, 280.00, 8, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Conjunto Cadeiras Dobráveis Reforçadas (Par)');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Kit Potes Herméticos Cozinha (6 un)', 'ORGANIZACAO', 45.00, 85.00, 95.00, 20, 5, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Kit Potes Herméticos Cozinha (6 un)');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Escorredor de Louça Inox 2 Andares', 'COZINHA', 75.00, 130.00, 145.00, 8, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Escorredor de Louça Inox 2 Andares');
+
+        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda_vista, preco_venda_crediario, estoque_atual, estoque_minimo, permite_encomenda)
+        SELECT 'Cortina Corta Luz Blackout 2,80 x 1,80', 'DECORACAO', 90.00, 160.00, 180.00, 9, 2, true
+        WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Cortina Corta Luz Blackout 2,80 x 1,80');
 
         -- Inserção de configuração padrão somente se a tabela estiver vazia
         INSERT INTO configuracoes (
