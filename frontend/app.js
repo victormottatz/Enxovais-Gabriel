@@ -3,7 +3,9 @@
 // Versão 2.1 - Simulador de Crediário, Importador CSV, Encomendas & Cobrança
 // =============================================================================
 
-const API_BASE = '/api/v1';
+const API_BASE = (typeof window !== 'undefined' && window.location && window.location.port !== '3000')
+  ? `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname || 'localhost'}:3000/api/v1`
+  : '/api/v1';
 
 // Estado Global da Aplicação
 const state = {
@@ -471,6 +473,19 @@ async function abrirDetalhesFicha(fichaId) {
   document.getElementById('modal-ficha-saldo-total').textContent = formatarMoeda(saldoTotal);
   document.getElementById('modal-ficha-valor-parcela').textContent = formatarMoeda(valorParcela);
   document.getElementById('modal-ficha-dia-vencimento').textContent = `Vencimento todo Dia 0${diaVenc}`;
+
+  // Exibe anotações/produtos/histórico se houver
+  const obs = fichaObj.observacoes || cli.observacoes || '';
+  const anotacoesBox = document.getElementById('modal-ficha-anotacoes-box');
+  const anotacoesTexto = document.getElementById('modal-ficha-anotacoes-texto');
+  if (anotacoesBox && anotacoesTexto) {
+    if (obs.trim()) {
+      anotacoesTexto.textContent = obs;
+      anotacoesBox.style.display = 'block';
+    } else {
+      anotacoesBox.style.display = 'none';
+    }
+  }
 
   // Configura ID no form de amortização
   const hiddenId = document.getElementById('amortizacao-ficha-id');
@@ -1215,7 +1230,18 @@ function aoSelecionarArquivoCSV(event) {
 function processarArquivoCSV(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const csvContent = e.target.result;
+    let csvContent = '';
+    const arrayBuffer = e.target.result;
+
+    // Detecta automaticamente codificação UTF-8 ou ANSI/Windows-1252 (padrão do Excel no Brasil)
+    try {
+      const decoderUtf8 = new TextDecoder('utf-8', { fatal: true });
+      csvContent = decoderUtf8.decode(arrayBuffer);
+    } catch {
+      const decoderAnsi = new TextDecoder('windows-1252');
+      csvContent = decoderAnsi.decode(arrayBuffer);
+    }
+
     try {
       const res = await fetch(`${API_BASE}/importacao/validar`, {
         method: 'POST',
@@ -1234,7 +1260,7 @@ function processarArquivoCSV(file) {
       alert('Erro de conexão ao validar o arquivo CSV.');
     }
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 }
 
 function renderizarPreviaImportacao(resultado) {
@@ -1264,7 +1290,8 @@ function renderizarPreviaImportacao(resultado) {
         <td>Dia 0${it.dados.dia_vencimento}</td>
         <td><strong>${formatarMoeda(it.dados.saldo_devedor_atual)}</strong></td>
         <td>${formatarMoeda(it.dados.valor_parcela)}</td>
-        <td><small style="color: ${it.valido ? 'var(--text-muted)' : 'var(--danger)'};">${it.erros.join(', ') || it.dados.observacoes || 'OK'}</small></td>
+        <td><small style="color: var(--primary); font-weight: 500;">${it.dados.produtos || '-'}</small></td>
+        <td><small style="color: ${it.valido ? 'var(--text-muted)' : 'var(--danger)'};">${it.erros.join(', ') || [it.dados.observacoes, it.dados.data_venda ? 'Data: ' + it.dados.data_venda : '', it.dados.pagamento_parcelas ? 'Pgto: ' + it.dados.pagamento_parcelas : ''].filter(Boolean).join(' | ') || 'OK'}</small></td>
       </tr>
     `
       )
@@ -1298,6 +1325,7 @@ async function executarImportacaoFinal() {
 
     if (res.ok) {
       const data = await res.json();
+      mostrarToast(`🎉 Sucesso! ${data.importados} fichas foram digitalizadas no crediário!`, 'success');
       alert(`🎉 Sucesso! ${data.importados} fichas foram digitalizadas e já estão prontas no crediário!`);
       cancelarImportacao();
       await carregarClientes();
@@ -1305,11 +1333,19 @@ async function executarImportacaoFinal() {
       atualizarDashboardCobrancas();
       navegarAba('fichas');
     } else {
-      const err = await res.json();
-      alert(`Erro na importação: ${err.message}`);
+      let errMsg = 'Erro desconhecido';
+      try {
+        const err = await res.json();
+        errMsg = err.message || (err.errors ? JSON.stringify(err.errors) : JSON.stringify(err));
+      } catch {
+        errMsg = await res.text();
+      }
+      console.error('Erro na importação backend:', errMsg);
+      alert(`Erro na importação: ${errMsg}`);
     }
   } catch (err) {
-    alert('Erro de conexão ao processar importação.');
+    console.error('Erro de conexão ao processar importação:', err);
+    alert('Erro de conexão ao processar importação. Verifique se o servidor backend está rodando.');
   }
 }
 

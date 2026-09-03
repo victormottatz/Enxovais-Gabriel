@@ -11,19 +11,23 @@ const validarCsvSchema = z.object({
 const executarImportacaoSchema = z.object({
   itens: z.array(
     z.object({
-      nome: z.string().min(2),
-      whatsapp: z.string().min(10),
-      cpf: z.string().optional(),
-      endereco: z.string().optional(),
-      ponto_referencia: z.string().optional(),
-      limite_credito: z.number().optional(),
+      nome: z.string().min(2, 'Nome é obrigatório'),
+      whatsapp: z.string().min(10, 'WhatsApp inválido'),
+      cpf: z.string().optional().nullable(),
+      endereco: z.string().optional().nullable(),
+      ponto_referencia: z.string().optional().nullable(),
+      valor_total_compra: z.string().optional().nullable(),
+      limite_credito: z.number().optional().nullable(),
       dia_vencimento: z.number().min(1).max(31),
       tipo_ciclo: z.enum(['MENSAL_PAGAMENTO', 'QUINZENAL_VALE']),
-      dia_vale_secundario: z.number().min(1).max(31).optional(),
+      dia_vale_secundario: z.number().min(1).max(31).optional().nullable(),
       saldo_devedor_atual: z.number().min(0),
       valor_parcela: z.number().positive(),
-      observacoes: z.string().optional(),
-    })
+      observacoes: z.string().optional().nullable(),
+      produtos: z.string().optional().nullable(),
+      data_venda: z.string().optional().nullable(),
+      pagamento_parcelas: z.string().optional().nullable(),
+    }).passthrough()
   ).min(1, 'Envie ao menos um item para importar'),
 });
 
@@ -42,7 +46,7 @@ router.post('/validar', (req, res, next) => {
 router.post('/executar', async (req, res, next) => {
   try {
     const validated = executarImportacaoSchema.parse(req.body);
-    const resultado = await ImportacaoService.executarImportacao(validated.itens);
+    const resultado = await ImportacaoService.executarImportacao(validated.itens as any);
     res.status(201).json(resultado);
   } catch (err) {
     next(err);
@@ -50,3 +54,4 @@ router.post('/executar', async (req, res, next) => {
 });
 
 export default router;
+

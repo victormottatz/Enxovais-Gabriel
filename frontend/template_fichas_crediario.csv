@@ -1,6 +1,6 @@
-nome;whatsapp;cpf;endereco;ponto_referencia;limite_credito;dia_vencimento;tipo_ciclo;dia_vale_secundario;saldo_devedor_atual;valor_parcela;observacoes
-Maria das Gracas Silva;11987654321;123.456.789-00;Rua das Flores, 120, Centro;Proximo a Padaria Estrela;1000,00;5;MENSAL_PAGAMENTO;;450,00;100,00;Cliente antiga, paga certinho no dia 05
-Ana Paula Oliveira;11976543210;;Av. Brasil, 450, Apt 32;Em frente a Praca Central;800,00;20;QUINZENAL_VALE;5;300,00;150,00;Recebe adiantamento dia 20 e salario dia 05
-Francisca de Souza;11965432109;987.654.321-11;Rua Sao Joao, 88, Bairro Alto;Casa amarela de portao branco;1200,00;10;MENSAL_PAGAMENTO;;600,00;100,00;Comprou jogo de edredom e jogo de toalhas
-Juliana Santos;11954321098;;Rua Amazonas, 310;Portao de grade preta;1000,00;5;MENSAL_PAGAMENTO;;0,00;100,00;Ficha quitada recente - cliente ativa
-Carlos Eduardo Lima;11943210987;456.789.012-34;Rua Minas Gerais, 75;Ao lado do Mercado Bom Preco;1500,00;15;MENSAL_PAGAMENTO;;850,00;150,00;Parcela negociada em 150 reais
+nome;whatsapp;cpf;endereco;valor total da compra;ponto_referencia;limite_credito;dia_vencimento;tipo_ciclo;saldo_devedor_atual;valor_parcela;observacoes;produtos;data da venda;pagamento de parcelas
+Edson Anderson;16993394464;;Ruth Castanheira 40, Balbo;340;perto do Heldi Supermercado;1000;15;MENSAL_PAGAMENTO;340;85;4 parcelas de 85;churrasqueira;26/08/2026;
+Cacau amiga;16992261228;;Baldoino de souza Barros;360;Parque dos servidores;5000;10;MENSAL_PAGAMENTO;270;90;;1 cobre leito queen;28/07/2026;10/08/26pg
+Cida amiga mirlene;16988266008;;Mogi das Cruzes 792;706;Casa amarela de portao branco;1500;10;MENSAL_PAGAMENTO;706;106;106 + 3 parcelas de 200;lençol + air fryer;14/03/2026;
+Daniela Crist. Siq.;16991011983;;Izalta Dos Santos Couto 35;858;dutra 1;2000;10;MENSAL_PAGAMENTO;858;143;6 parcelas de 143;1 jogo de panelas + 1 frigideira grande;05/08/2026;
+Nilva amiga Inaura;16994208299;;Rua Quintino Bocaiuva;1860;Quintino;5000;10;MENSAL_PAGAMENTO;1860;200;10 parcelas;coberdron, toalhas, cadeiras;26/08/2026;

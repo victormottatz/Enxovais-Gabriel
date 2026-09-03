@@ -163,6 +163,11 @@ export class ProdutoService {
   }
 
   public static async getById(id: string): Promise<ProdutoDTO> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      throw new AppError('Produto não encontrado.', 404, 'PRODUTO_NOT_FOUND');
+    }
+
     const result = await pool.query<ProdutoDTO>(
       'SELECT * FROM produtos WHERE id = $1',
       [id]

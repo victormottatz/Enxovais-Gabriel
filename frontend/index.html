@@ -6,6 +6,7 @@
   <title>Enxovais Gabriel - Gestão Comercial & Crediário</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#8C3A4B">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -484,7 +485,8 @@
                     <th>Dia Vencimento</th>
                     <th>Saldo Inicial</th>
                     <th>Parcela Padrão</th>
-                    <th>Observações / Erros</th>
+                    <th>Produtos Comprados</th>
+                    <th>Observações / Detalhes</th>
                   </tr>
                 </thead>
                 <tbody id="import-preview-tbody">
@@ -685,6 +687,9 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
             📱 Cobrar no Zap
           </button>
+        <div id="modal-ficha-anotacoes-box" style="display: none; background: #FFF8F0; border-left: 4px solid var(--wine-primary); padding: 10px 14px; border-radius: var(--radius-sm); margin: 15px 0; font-size: 0.9rem;">
+          <strong style="color: var(--wine-primary);">📌 Anotações & Histórico de Compras:</strong>
+          <p id="modal-ficha-anotacoes-texto" style="margin: 5px 0 0; color: var(--text-dark); line-height: 1.4;"></p>
         </div>
 
         <h4 style="margin: 20px 0 10px; color: var(--text-dark);">📜 Extrato de Movimentações da Ficha</h4>

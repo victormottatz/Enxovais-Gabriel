@@ -46,7 +46,9 @@ export function errorMiddleware(
   return res.status(500).json({
     success: false,
     code: 'INTERNAL_SERVER_ERROR',
-    message: 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.',
+    message: err.message || 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.',
+    details: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
     request_id: requestId,
   });
 }
+
