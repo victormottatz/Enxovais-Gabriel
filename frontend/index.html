@@ -29,7 +29,12 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button class="nav-item active" onclick="navegarAba('cobrancas')">
+      <button class="nav-item active" onclick="navegarAba('inicio')">
+        <span class="nav-icon">📰</span>
+        <span class="nav-label">Início & Novidades</span>
+        <span class="badge-count" style="background: var(--primary); color: #fff;">Novo</span>
+      </button>
+      <button class="nav-item" onclick="navegarAba('cobrancas')">
         <span class="nav-icon">📅</span>
         <span class="nav-label">Cobranças do Dia</span>
         <span class="badge-count" id="badge-cobrancas-count">0</span>
@@ -99,8 +104,8 @@
           <span>☰</span>
         </button>
         <div class="header-title-box">
-          <h1 id="page-current-title">Cobranças do Dia</h1>
-          <span class="header-subtitle" id="page-current-subtitle">Lembretes no dia do vale e pagamento</span>
+          <h1 id="page-current-title">Início & Novidades</h1>
+          <span class="header-subtitle" id="page-current-subtitle">Blog do sistema, tutoriais e demonstrações interativas</span>
         </div>
       </div>
 
@@ -120,9 +125,395 @@
     <main class="content-area">
 
       <!-- ===================================================================== -->
+      <!-- ABA 0: INÍCIO / BLOG INTERATIVO COM DEMONSTRAÇÕES VISUAIS -->
+      <!-- ===================================================================== -->
+      <section id="tab-inicio" class="tab-pane active">
+        
+        <!-- Hero Banner de Boas-Vindas & Acolhimento -->
+        <div class="blog-hero-banner">
+          <div class="blog-hero-content">
+            <div class="blog-hero-badge">✨ Central de Novidades • Enxovais Gabriel v2.0</div>
+            <h2>Boas-vindas ao seu Espaço de Gestão e Aprendizado! 🏠</h2>
+            <p>Conheça as novas ferramentas criadas para facilitar o seu dia a dia no ateliê e nas vendas de rua. Leia os tutoriais e experimente as <strong>demonstrações visuais interativas</strong> abaixo em tempo real.</p>
+            <div class="blog-hero-stats">
+              <div class="hero-stat-pill">
+                <span class="stat-icon">📑</span>
+                <span>Crediário sem Juros Abusivos</span>
+              </div>
+              <div class="hero-stat-pill">
+                <span class="stat-icon">📅</span>
+                <span>Vencimento Casado (Dia 05 / 20)</span>
+              </div>
+              <div class="hero-stat-pill">
+                <span class="stat-icon">💬</span>
+                <span>Cobrança Humanizada no WhatsApp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Busca & Filtro de Categorias do Blog -->
+        <div class="blog-filter-section">
+          <div class="filter-chips">
+            <button class="chip active" onclick="filtrarBlogDemo('todos', this)">🌟 Todas as Matérias</button>
+            <button class="chip" onclick="filtrarBlogDemo('crediario', this)">📑 Crediário & Fichas</button>
+            <button class="chip" onclick="filtrarBlogDemo('whatsapp', this)">📱 WhatsApp & Pix</button>
+            <button class="chip" onclick="filtrarBlogDemo('encomendas', this)">🚚 Encomendas</button>
+            <button class="chip" onclick="filtrarBlogDemo('digitalizacao', this)">📥 Digitalização & Dicas</button>
+          </div>
+          <div class="filter-search">
+            <input type="text" id="search-blog" placeholder="Buscar novidade, dica ou tutorial..." oninput="filtrarBlogTexto(this.value)">
+          </div>
+        </div>
+
+        <!-- Grid de Artigos do Blog com Demonstrações Interativas -->
+        <div class="blog-posts-grid">
+
+          <!-- ARTIGO 1: NOVO SIMULADOR DE CREDIÁRIO (INTERATIVO) -->
+          <article class="blog-card" data-category="crediario">
+            <div class="blog-card-header">
+              <div class="blog-category-tag tag-gold">📑 Crediário & Fichas</div>
+              <span class="blog-read-time">⏱️ 3 min de leitura • Demonstração Prática</span>
+            </div>
+
+            <div class="blog-card-body">
+              <h3 class="blog-post-title">Como Funciona o Crediário Contínuo & Casamento de Vencimentos</h3>
+              <p class="blog-post-desc">
+                No <strong>Enxovais Gabriel</strong>, quando uma cliente já tem um dividendo e compra um novo produto, nós <em>não abrimos um crediário separado</em>. O novo valor soma-se ao saldo anterior e ajustamos o número de parcelas mantendo o valor que cabe no bolso dela, vencendo sempre no <strong>dia do pagamento (05)</strong> ou no <strong>dia do vale (20)</strong>.
+              </p>
+
+              <!-- Widget Interativo: Simulador de Ficha Viva -->
+              <div class="interactive-demo-box">
+                <div class="demo-box-header">
+                  <div class="demo-badge">🎮 Playground Interativo</div>
+                  <h4>Simulador de Ficha em Tempo Real</h4>
+                  <small>Clique nos produtos para simular a compra da cliente e veja as parcelas se calcularem sozinhas:</small>
+                </div>
+
+                <!-- Adicionar Produtos Rápidos de Demonstração -->
+                <div class="demo-product-pills">
+                  <button type="button" class="demo-prod-btn" onclick="adicionarItemDemo('Jogo de Lençol Casal', 170.0)">
+                    <span>🛏️ Lençol Casal (+R$ 170)</span>
+                  </button>
+                  <button type="button" class="demo-prod-btn" onclick="adicionarItemDemo('Jogo Panelas 5 Peças', 600.0)">
+                    <span>🍳 Jogo de Panelas (+R$ 600)</span>
+                  </button>
+                  <button type="button" class="demo-prod-btn" onclick="adicionarItemDemo('Churrasqueira Inox', 340.0)">
+                    <span>🥩 Churrasqueira (+R$ 340)</span>
+                  </button>
+                  <button type="button" class="demo-prod-btn btn-clear-demo" onclick="limparSimuladorDemo()" title="Limpar Simulação">
+                    <span>🔄 Limpar</span>
+                  </button>
+                </div>
+
+                <!-- Configurações da Simulação (Dia do Vencimento & Valor da Parcela) -->
+                <div class="demo-controls-grid">
+                  <div class="demo-control-group">
+                    <label>Dia Combinado do Vencimento:</label>
+                    <div class="demo-radio-buttons">
+                      <label class="demo-radio-btn active" id="lbl-demo-dia-20" onclick="definirDiaDemo(20)">
+                        <input type="radio" name="demo-dia" value="20" checked>
+                        <span>🎟️ Dia 20 (Vale)</span>
+                      </label>
+                      <label class="demo-radio-btn" id="lbl-demo-dia-05" onclick="definirDiaDemo(5)">
+                        <input type="radio" name="demo-dia" value="5">
+                        <span>💵 Dia 05 (Salário)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="demo-control-group">
+                    <label>Valor da Parcela Fixa Combinada:</label>
+                    <div class="demo-parcela-chips">
+                      <button type="button" class="demo-chip-val active" onclick="definirParcelaDemo(50, this)">R$ 50/mês</button>
+                      <button type="button" class="demo-chip-val" onclick="definirParcelaDemo(80, this)">R$ 80/mês</button>
+                      <button type="button" class="demo-chip-val" onclick="definirParcelaDemo(100, this)">R$ 100/mês</button>
+                      <button type="button" class="demo-chip-val" onclick="definirParcelaDemo(150, this)">R$ 150/mês</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Painel de Resultados do Simulador -->
+                <div class="demo-result-card">
+                  <div class="demo-stat-row">
+                    <div class="demo-stat-item">
+                      <span>Saldo no Dividendo:</span>
+                      <strong id="demo-saldo-total" class="text-bordeaux">R$ 510,00</strong>
+                    </div>
+                    <div class="demo-stat-item">
+                      <span>Parcela Fixa:</span>
+                      <strong id="demo-parcela-valor" class="text-green">R$ 50,00</strong>
+                    </div>
+                    <div class="demo-stat-item">
+                      <span>Previsão de Quitação:</span>
+                      <strong id="demo-meses-qtd">11 meses</strong>
+                    </div>
+                    <div class="demo-stat-item">
+                      <span>Próximo Lembrete:</span>
+                      <strong id="demo-proximo-vencimento">Dia 20 deste mês</strong>
+                    </div>
+                  </div>
+
+                  <!-- Visualizador de Carnê Simulado -->
+                  <div class="demo-carne-preview">
+                    <div class="demo-carne-header">
+                      <span>📄 Carnê Digital Gerado Automaticamente</span>
+                      <span class="badge-status-pill green">Sem Juros</span>
+                    </div>
+                    <div class="demo-carne-items" id="demo-lista-parcelas">
+                      <!-- Preenchido via JS -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="blog-card-footer">
+              <button class="btn btn-primary btn-block" onclick="navegarAba('fichas')">
+                <span>📑 Acessar Fichas & Crediário do Sistema</span>
+                <span>→</span>
+              </button>
+            </div>
+          </article>
+
+          <!-- ARTIGO 2: COBRANÇAS HUMANIZADAS & SMARTPHONE WHATSAPP INTERATIVO -->
+          <article class="blog-card" data-category="whatsapp">
+            <div class="blog-card-header">
+              <div class="blog-category-tag tag-green">📱 WhatsApp & Automações</div>
+              <span class="blog-read-time">⏱️ 2 min de leitura • Demonstração Prática</span>
+            </div>
+
+            <div class="blog-card-body">
+              <h3 class="blog-post-title">Cobrança com Afeto: Lembretes Automáticos e Recibos com Pix Instantâneo</h3>
+              <p class="blog-post-desc">
+                Cuidamos do relacionamento com cada cliente. Nossas mensagens no WhatsApp são transparentes, amigáveis e contam com <strong>chave Pix Copia-e-Cola destacada</strong> e link direto para o carnê digital.
+              </p>
+
+              <!-- Widget Interativo: Smartphone Preview Realista -->
+              <div class="interactive-demo-box">
+                <div class="demo-box-header">
+                  <div class="demo-badge">🎮 Playground Interativo</div>
+                  <h4>Simulador de Tela do WhatsApp do Cliente</h4>
+                  <small>Escolha uma situação para ver como a mensagem e o Pix chegam no celular da cliente:</small>
+                </div>
+
+                <!-- Botões para trocar modelo de mensagem -->
+                <div class="demo-zap-selectors">
+                  <button type="button" class="btn-zap-scenario active" onclick="trocarCenarioWhatsAppDemo('vale', this)">
+                    <span>🎟️ Lembrete Dia 20 (Vale)</span>
+                  </button>
+                  <button type="button" class="btn-zap-scenario" onclick="trocarCenarioWhatsAppDemo('salario', this)">
+                    <span>💵 Lembrete Dia 05 (Salário)</span>
+                  </button>
+                  <button type="button" class="btn-zap-scenario" onclick="trocarCenarioWhatsAppDemo('recibo', this)">
+                    <span>🧾 Recibo de Pagamento</span>
+                  </button>
+                  <button type="button" class="btn-zap-scenario" onclick="trocarCenarioWhatsAppDemo('encomenda', this)">
+                    <span>🚚 Chegada de Encomenda</span>
+                  </button>
+                </div>
+
+                <!-- Mockup de Smartphone -->
+                <div class="smartphone-mockup">
+                  <div class="phone-notch"></div>
+                  <div class="phone-screen">
+                    <div class="phone-zap-header">
+                      <div class="zap-contact-avatar">🏠</div>
+                      <div class="zap-contact-info">
+                        <strong>Enxovais Gabriel</strong>
+                        <small>Online • Atendimento Oficial</small>
+                      </div>
+                    </div>
+
+                    <div class="phone-zap-chat" id="demo-phone-chat">
+                      <div class="zap-message-bubble in" id="demo-zap-bubble">
+                        <p id="demo-zap-text">
+                          Olá, Maria da Silva! Tudo bem? 🏠✨<br><br>
+                          Passando com carinho para lembrar que hoje é <strong>dia 20 (Dia do Vale)</strong>, data combinada da sua parcela na <strong>Enxovais Gabriel</strong>.<br><br>
+                          💰 <strong>Valor da Parcela:</strong> R$ 50,00<br>
+                          📑 <strong>Saldo Restante:</strong> R$ 460,00<br><br>
+                          🔑 <strong>Chave Pix Copia-e-Cola:</strong><br>
+                          <code>11999998888@pix.enxovaisgabriel.com</code><br><br>
+                          Você também pode acompanhar seu carnê completo pelo link:<br>
+                          👉 <em>https://enxovaisgabriel.com/carne/f72a</em><br><br>
+                          Agradecemos muito por sua preferência! 💖
+                        </p>
+                        <span class="zap-time" id="demo-zap-clock">10:30 • ✓✓</span>
+                      </div>
+                    </div>
+
+                    <div class="phone-zap-actions">
+                      <button type="button" class="btn-copy-pix-demo" onclick="copiarPixSimuladoDemo()">
+                        <span>📋 Testar Copiar Pix (Simulação)</span>
+                      </button>
+                      <span id="demo-pix-feedback" class="pix-copied-alert">✅ Chave Pix Copiada para Área de Transferência!</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="blog-card-footer">
+              <button class="btn btn-primary btn-block" onclick="navegarAba('cobrancas')">
+                <span>📅 Ver Cobranças do Dia no Sistema</span>
+                <span>→</span>
+              </button>
+            </div>
+          </article>
+
+          <!-- ARTIGO 3: RASTREIO VISUAL DE ENCOMENDAS (INTERATIVO) -->
+          <article class="blog-card" data-category="encomendas">
+            <div class="blog-card-header">
+              <div class="blog-category-tag tag-blue">🚚 Gestão de Encomendas</div>
+              <span class="blog-read-time">⏱️ 2 min de leitura • Linha do Tempo</span>
+            </div>
+
+            <div class="blog-card-body">
+              <h3 class="blog-post-title">Rastreio Visual de Encomendas: Do Distribuidor até a Cliente</h3>
+              <p class="blog-post-desc">
+                Quando a cliente pede um item do catálogo que não temos em pronta entrega, abrimos uma <strong>encomenda</strong>. O sistema permite acompanhar o status e avisa no WhatsApp assim que a mercadoria chega ao estoque.
+              </p>
+
+              <!-- Widget Interativo: Linha do Tempo da Encomenda -->
+              <div class="interactive-demo-box">
+                <div class="demo-box-header">
+                  <div class="demo-badge">🎮 Playground Interativo</div>
+                  <h4>Linha do Tempo da Encomenda</h4>
+                  <small>Clique nos passos abaixo para acompanhar a evolução de um pedido:</small>
+                </div>
+
+                <!-- Passos Interativos -->
+                <div class="demo-timeline-stepper">
+                  <button type="button" class="timeline-step-btn active" id="step-btn-1" onclick="definirPassoEncomendaDemo(1)">
+                    <span class="step-num">1</span>
+                    <span class="step-text">Solicitada</span>
+                  </button>
+                  <div class="timeline-connector active" id="step-conn-1"></div>
+                  <button type="button" class="timeline-step-btn" id="step-btn-2" onclick="definirPassoEncomendaDemo(2)">
+                    <span class="step-num">2</span>
+                    <span class="step-text">A Caminho</span>
+                  </button>
+                  <div class="timeline-connector" id="step-conn-2"></div>
+                  <button type="button" class="timeline-step-btn" id="step-btn-3" onclick="definirPassoEncomendaDemo(3)">
+                    <span class="step-num">3</span>
+                    <span class="step-text">No Estoque</span>
+                  </button>
+                  <div class="timeline-connector" id="step-conn-3"></div>
+                  <button type="button" class="timeline-step-btn" id="step-btn-4" onclick="definirPassoEncomendaDemo(4)">
+                    <span class="step-num">4</span>
+                    <span class="step-text">Entregue</span>
+                  </button>
+                </div>
+
+                <!-- Detalhe do Status Selecionado -->
+                <div class="demo-step-details-card" id="demo-encomenda-info-card">
+                  <div class="step-card-header">
+                    <span class="item-icon">🛏️</span>
+                    <div>
+                      <strong>Cobre-Leito Queen Aveludado</strong>
+                      <small>Cliente: Dona Francisca (R$ 360,00)</small>
+                    </div>
+                    <span class="badge-status-pill yellow" id="demo-encomenda-badge">Solicitada</span>
+                  </div>
+                  <p id="demo-encomenda-desc">
+                    📦 <strong>Situação Atual:</strong> O pedido foi enviado ao fornecedor e aguarda despacho.
+                  </p>
+                  <div class="demo-msg-preview-box" id="demo-encomenda-msg-box">
+                    <small>💬 Mensagem sugerida para o WhatsApp:</small>
+                    <p id="demo-encomenda-zap">"Olá, Dona Francisca! Registramos seu pedido do Cobre-Leito Queen e já solicitamos ao fornecedor. Te avisamos assim que estiver a caminho!"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="blog-card-footer">
+              <button class="btn btn-primary btn-block" onclick="navegarAba('encomendas')">
+                <span>🚚 Abrir Painel de Encomendas</span>
+                <span>→</span>
+              </button>
+            </div>
+          </article>
+
+          <!-- ARTIGO 4: DIGITALIZAÇÃO RÁPIDA & BACKUP SEGURO -->
+          <article class="blog-card" data-category="digitalizacao">
+            <div class="blog-card-header">
+              <div class="blog-category-tag tag-terracota">📥 Digitalização & Segurança</div>
+              <span class="blog-read-time">⏱️ 3 min de leitura • Praticidade</span>
+            </div>
+
+            <div class="blog-card-body">
+              <h3 class="blog-post-title">Adeus Caderno de Papel: Como Importar Fichas e Manter Backup Seguro</h3>
+              <p class="blog-post-desc">
+                Se você tem clientes anotadas em cadernos antigos ou planilhas Excel, nossa ferramenta de <strong>Importação em Lote</strong> reconhece automaticamente nomes, telefones, saldos e dias de vencimento. E com um clique, você baixa o backup completo da sua loja!
+              </p>
+
+              <!-- Widget Interativo: Demonstração de Reconhecimento -->
+              <div class="interactive-demo-box">
+                <div class="demo-box-header">
+                  <div class="demo-badge">💡 Como a Importação Funciona</div>
+                  <h4>Reconhecimento Automático de Colunas</h4>
+                </div>
+
+                <div class="demo-import-table-wrapper">
+                  <table class="demo-import-table">
+                    <thead>
+                      <tr>
+                        <th>Nome da Cliente</th>
+                        <th>WhatsApp</th>
+                        <th>Saldo Atual</th>
+                        <th>Parcela</th>
+                        <th>Vencimento</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Maria Aparecida</strong></td>
+                        <td>(11) 98765-4321</td>
+                        <td>R$ 480,00</td>
+                        <td>R$ 50,00</td>
+                        <td><span class="badge-status-pill yellow">Dia 20 (Vale)</span></td>
+                        <td><span class="badge-status-pill green">✓ Pronto</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Cleide Souza</strong></td>
+                        <td>(11) 97123-9988</td>
+                        <td>R$ 250,00</td>
+                        <td>R$ 80,00</td>
+                        <td><span class="badge-status-pill green">Dia 05 (Salário)</span></td>
+                        <td><span class="badge-status-pill green">✓ Pronto</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="demo-quick-actions-row">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="navegarAba('importacao')">
+                    <span>📥 Importar Planilha Real</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="baixarBackupCompleto()">
+                    <span>💾 Baixar Backup da Loja</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="blog-card-footer">
+              <button class="btn btn-primary btn-block" onclick="navegarAba('importacao')">
+                <span>📥 Ir para Importador de Fichas</span>
+                <span>→</span>
+              </button>
+            </div>
+          </article>
+
+        </div>
+
+      </section>
+
+      <!-- ===================================================================== -->
       <!-- ABA 1: COBRANÇAS DO DIA (VALE / PAGAMENTO) -->
       <!-- ===================================================================== -->
-      <section id="tab-cobrancas" class="tab-pane active">
+      <section id="tab-cobrancas" class="tab-pane">
         
         <!-- Cards de Estatísticas / KPIs -->
         <div class="kpi-grid">
@@ -625,7 +1016,11 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
     <!-- BOTTOM NAVIGATION BAR (FIXA NO MOBILE) -->
     <!-- ======================================================================= -->
     <nav class="bottom-nav">
-      <button class="bottom-nav-item active" onclick="navegarAba('cobrancas')">
+      <button class="bottom-nav-item active" onclick="navegarAba('inicio')">
+        <span class="bnav-icon">📰</span>
+        <span class="bnav-label">Início</span>
+      </button>
+      <button class="bottom-nav-item" onclick="navegarAba('cobrancas')">
         <span class="bnav-icon">📅</span>
         <span class="bnav-label">Hoje</span>
         <span class="bnav-badge" id="bnav-badge-count">0</span>
@@ -641,10 +1036,6 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
       <button class="bottom-nav-item" onclick="navegarAba('catalogo')">
         <span class="bnav-icon">📦</span>
         <span class="bnav-label">Estoque</span>
-      </button>
-      <button class="bottom-nav-item" onclick="navegarAba('clientes')">
-        <span class="bnav-icon">👥</span>
-        <span class="bnav-label">Clientes</span>
       </button>
     </nav>
 

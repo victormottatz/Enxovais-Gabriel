@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarDadosIniciais();
   verificarStatusWhatsApp();
   configurarDragAndDrop();
+  renderizarSimuladorDemo();
 });
 
 function registrarServiceWorker() {
@@ -178,6 +179,7 @@ function navegarAba(abaId) {
 
   // Atualiza títulos do header
   const titulos = {
+    inicio: { titulo: 'Início & Novidades', sub: 'Blog do sistema, tutoriais e demonstrações interativas' },
     cobrancas: { titulo: 'Cobranças do Dia', sub: 'Lembretes no dia do vale e pagamento' },
     fichas: { titulo: 'Fichas & Crediário', sub: 'Saldo acumulado e extrato de compras' },
     vendas: { titulo: 'Nova Venda / PDV', sub: 'Pronta entrega, crediário e simulador' },
@@ -2558,6 +2560,250 @@ function compartilharCarneWhatsApp(fichaId, clienteTelefone, clienteNome) {
 
   abrirLinkWhatsApp(clienteTelefone, msg);
 }
+
+// =============================================================================
+// MÓDULO: BLOG & DEMONSTRAÇÕES VISUAIS INTERATIVAS (PLAYGROUNDS)
+// =============================================================================
+
+const demoState = {
+  itensFicha: [
+    { nome: 'Jogo de Lençol Casal', valor: 170.0 },
+    { nome: 'Churrasqueira Inox', valor: 340.0 },
+  ],
+  diaVencimento: 20,
+  valorParcela: 50.0,
+  passoEncomenda: 1,
+};
+
+// 1. FILTROS DO BLOG
+function filtrarBlogDemo(categoria, botao) {
+  document.querySelectorAll('.blog-filter-section .chip').forEach((c) => c.classList.remove('active'));
+  if (botao) botao.classList.add('active');
+
+  const cards = document.querySelectorAll('.blog-card');
+  cards.forEach((card) => {
+    const catCard = card.getAttribute('data-category');
+    if (categoria === 'todos' || catCard === categoria) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function filtrarBlogTexto(query) {
+  const q = (query || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('.blog-card');
+
+  cards.forEach((card) => {
+    const textoCard = card.innerText.toLowerCase();
+    if (!q || textoCard.includes(q)) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// 2. SIMULADOR DE FICHA VIVA (CREDIÁRIO)
+function adicionarItemDemo(nome, valor) {
+  demoState.itensFicha.push({ nome, valor: Number(valor) });
+  renderizarSimuladorDemo();
+  mostrarToast(`➕ Item "${nome}" adicionado à simulação!`, 'info');
+}
+
+function limparSimuladorDemo() {
+  demoState.itensFicha = [];
+  renderizarSimuladorDemo();
+  mostrarToast('🔄 Simulação limpa com sucesso.', 'info');
+}
+
+function definirDiaDemo(dia) {
+  demoState.diaVencimento = Number(dia);
+  const lbl20 = document.getElementById('lbl-demo-dia-20');
+  const lbl05 = document.getElementById('lbl-demo-dia-05');
+
+  if (dia === 20) {
+    if (lbl20) lbl20.classList.add('active');
+    if (lbl05) lbl05.classList.remove('active');
+  } else {
+    if (lbl05) lbl05.classList.add('active');
+    if (lbl20) lbl20.classList.remove('active');
+  }
+  renderizarSimuladorDemo();
+}
+
+function definirParcelaDemo(valor, botao) {
+  demoState.valorParcela = Number(valor);
+  document.querySelectorAll('.demo-parcela-chips .demo-chip-val').forEach((b) => b.classList.remove('active'));
+  if (botao) botao.classList.add('active');
+  renderizarSimuladorDemo();
+}
+
+function renderizarSimuladorDemo() {
+  const elSaldo = document.getElementById('demo-saldo-total');
+  const elParcela = document.getElementById('demo-parcela-valor');
+  const elMeses = document.getElementById('demo-meses-qtd');
+  const elVencimento = document.getElementById('demo-proximo-vencimento');
+  const elLista = document.getElementById('demo-lista-parcelas');
+
+  if (!elSaldo || !elParcela || !elMeses || !elVencimento || !elLista) return;
+
+  const total = demoState.itensFicha.reduce((acc, item) => acc + item.valor, 0);
+  const parcela = demoState.valorParcela > 0 ? demoState.valorParcela : 50;
+  const meses = total > 0 ? Math.ceil(total / parcela) : 0;
+
+  elSaldo.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  elParcela.textContent = parcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  elMeses.textContent = meses > 0 ? `${meses} parcelas (${meses} meses)` : 'Quitado / R$ 0';
+  elVencimento.textContent = `Todo Dia ${demoState.diaVencimento.toString().padStart(2, '0')} (${demoState.diaVencimento === 20 ? 'Vale' : 'Salário'})`;
+
+  // Renderizar carnê simulado
+  if (total === 0) {
+    elLista.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:6px;">Nenhum produto adicionado. Clique nos botões acima para simular!</div>';
+    return;
+  }
+
+  let htmlParcelas = '';
+  let saldoRestante = total;
+  const hoje = new Date();
+
+  for (let i = 1; i <= Math.min(meses, 12); i++) {
+    const valorDestaParcela = Math.min(parcela, saldoRestante);
+    saldoRestante -= valorDestaParcela;
+
+    const dataVenc = new Date(hoje.getFullYear(), hoje.getMonth() + (i - 1), demoState.diaVencimento);
+    const dataStr = dataVenc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+    htmlParcelas += `
+      <div class="demo-parcela-item">
+        <span>${i}ª Parc • ${dataStr}</span>
+        <strong>R$ ${valorDestaParcela.toFixed(2).replace('.', ',')}</strong>
+      </div>
+    `;
+  }
+
+  if (meses > 12) {
+    htmlParcelas += `
+      <div class="demo-parcela-item" style="background:#FDF2F4;">
+        <span>... mais</span>
+        <strong style="color:var(--wine-primary);">${meses - 12} meses</strong>
+      </div>
+    `;
+  }
+
+  elLista.innerHTML = htmlParcelas;
+}
+
+// 3. MOCKUP INTERATIVO DE WHATSAPP
+const MODELOS_WHATSAPP_DEMO = {
+  vale: {
+    texto: `Olá, Maria da Silva! Tudo bem? 🏠✨\n\nPassando com carinho para lembrar que hoje é *dia 20 (Dia do Vale)*, data combinada da sua parcela na *Enxovais Gabriel*.\n\n💰 *Valor da Parcela:* R$ 50,00\n📑 *Saldo Restante:* R$ 460,00\n\n🔑 *Chave Pix Copia-e-Cola:*\n<code>11999998888@pix.enxovaisgabriel.com</code>\n\nVocê também pode acompanhar seu carnê completo pelo link:\n👉 <em>https://enxovaisgabriel.com/carne/f72a</em>\n\nAgradecemos muito por sua preferência! 💖`,
+    hora: '09:15',
+  },
+  salario: {
+    texto: `Olá, Francisca! Bom dia! ☀️\n\nLembramos que hoje é *dia 05 (Dia do Pagamento)*, vencimento da sua parcela do crediário na *Enxovais Gabriel*.\n\n💰 *Valor da Parcela:* R$ 100,00\n📑 *Saldo no Dividendo:* R$ 350,00\n\n🔑 *Chave Pix:*\n<code>11999998888@pix.enxovaisgabriel.com</code>\n\nQualquer dúvida sobre os itens na ficha, estamos à disposição! 🌸`,
+    hora: '10:00',
+  },
+  recibo: {
+    texto: `Recebemos o seu pagamento de *R$ 50,00*! ✅🎉\n\nSeu saldo restante no crediário agora é de *R$ 410,00*.\n\nMuito obrigado pela confiança e preferência de sempre na *Enxovais Gabriel*! 🏠❤️`,
+    hora: '14:22',
+  },
+  encomenda: {
+    texto: `Oba, Francisca! Sua encomenda de *Cobre-Leito Queen Aveludado* acaba de chegar no estoque da *Enxovais Gabriel*! 📦✨\n\nJá separamos com todo cuidado. Você prefere que a gente entregue ou quer passar para retirar?\n\nAguardamos seu retorno! 💖`,
+    hora: '16:45',
+  },
+};
+
+function trocarCenarioWhatsAppDemo(cenario, botao) {
+  document.querySelectorAll('.demo-zap-selectors .btn-zap-scenario').forEach((b) => b.classList.remove('active'));
+  if (botao) botao.classList.add('active');
+
+  const modelo = MODELOS_WHATSAPP_DEMO[cenario] || MODELOS_WHATSAPP_DEMO.vale;
+  const elTexto = document.getElementById('demo-zap-text');
+  const elHora = document.getElementById('demo-zap-clock');
+
+  if (elTexto) {
+    elTexto.innerHTML = modelo.texto.replace(/\n/g, '<br>');
+  }
+  if (elHora) {
+    elHora.textContent = `${modelo.hora} • ✓✓`;
+  }
+}
+
+function copiarPixSimuladoDemo() {
+  const chave = '11999998888@pix.enxovaisgabriel.com';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(chave).catch(() => {});
+  }
+
+  const elFeedback = document.getElementById('demo-pix-feedback');
+  if (elFeedback) {
+    elFeedback.style.display = 'block';
+    setTimeout(() => {
+      elFeedback.style.display = 'none';
+    }, 3000);
+  }
+  mostrarToast('📋 Chave Pix simulada copiada!', 'success');
+}
+
+// 4. LINHA DO TEMPO DE ENCOMENDAS
+const PASSOS_ENCOMENDA_DEMO = {
+  1: {
+    badge: 'Solicitada',
+    badgeClass: 'yellow',
+    desc: '📦 <strong>Situação Atual:</strong> O pedido foi anotado e enviado ao fornecedor parceiro. Aguardando separação e despacho na fábrica.',
+    zap: '"Olá, Dona Francisca! Registramos seu pedido do Cobre-Leito Queen e já solicitamos ao fornecedor. Te avisamos assim que estiver a caminho!"',
+  },
+  2: {
+    badge: 'A Caminho',
+    badgeClass: 'blue',
+    desc: '🚚 <strong>Situação Atual:</strong> A mercadoria foi despachada pelo distribuidor e está em rota de transporte para o nosso ateliê.',
+    zap: '"Olá, Dona Francisca! Boa notícia: seu Cobre-Leito Queen já saiu da fábrica e está a caminho da nossa loja!"',
+  },
+  3: {
+    badge: 'No Estoque',
+    badgeClass: 'green',
+    desc: '✨ <strong>Situação Atual:</strong> A mercadoria chegou ao ateliê, foi conferida com etiqueta de qualidade e está pronta para entrega!',
+    zap: '"Oba, Dona Francisca! Sua encomenda do Cobre-Leito Queen chegou! Podemos entregar hoje ou prefere retirar no ateliê?"',
+  },
+  4: {
+    badge: 'Entregue',
+    badgeClass: 'green',
+    desc: '🎉 <strong>Situação Atual:</strong> O produto foi entregue à cliente e lançado automaticamente na ficha de crediário.',
+    zap: '"Muito obrigado pela compra, Dona Francisca! Esperamos que aproveite muito o seu novo Cobre-Leito! 🏠💖"',
+  },
+};
+
+function definirPassoEncomendaDemo(passo) {
+  demoState.passoEncomenda = passo;
+
+  for (let i = 1; i <= 4; i++) {
+    const btn = document.getElementById(`step-btn-${i}`);
+    if (btn) {
+      if (i <= passo) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+    const conn = document.getElementById(`step-conn-${i}`);
+    if (conn) {
+      if (i < passo) conn.classList.add('active');
+      else conn.classList.remove('active');
+    }
+  }
+
+  const info = PASSOS_ENCOMENDA_DEMO[passo] || PASSOS_ENCOMENDA_DEMO[1];
+  const elBadge = document.getElementById('demo-encomenda-badge');
+  const elDesc = document.getElementById('demo-encomenda-desc');
+  const elZap = document.getElementById('demo-encomenda-zap');
+
+  if (elBadge) {
+    elBadge.textContent = info.badge;
+    elBadge.className = `badge-status-pill ${info.badgeClass}`;
+  }
+  if (elDesc) elDesc.innerHTML = info.desc;
+  if (elZap) elZap.textContent = info.zap;
+}
+
 
 
 
