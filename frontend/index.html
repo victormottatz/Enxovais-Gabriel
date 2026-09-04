@@ -570,17 +570,81 @@
       <!-- ABA 2: FICHAS DE CREDIÁRIO (DIVIDENDO CONTÍNUO) -->
       <!-- ===================================================================== -->
       <section id="tab-fichas" class="tab-pane">
-        <div class="section-toolbar">
-          <div class="search-box-large">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="search-fichas" placeholder="Buscar cliente por nome, telefone ou CPF..." oninput="buscarFichas(this.value)">
+        
+        <!-- KPIs Rápidos do Crediário -->
+        <div class="kpi-grid">
+          <div class="kpi-card highlight-terracota">
+            <div class="kpi-icon">📑</div>
+            <div class="kpi-details">
+              <span>Total no Crediário</span>
+              <h3 id="fichas-kpi-total-saldo">R$ 0,00</h3>
+              <small id="fichas-kpi-count">0 fichas ativas</small>
+            </div>
           </div>
-          <button class="btn btn-secondary" onclick="abrirModalNovoCliente()">
-            <span>+ Nova Cliente</span>
+          <div class="kpi-card highlight-gold">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-details">
+              <span>Vencem Este Mês</span>
+              <h3 id="fichas-kpi-vence-mes">R$ 0,00</h3>
+              <small id="fichas-kpi-vence-count">0 clientes</small>
+            </div>
+          </div>
+          <div class="kpi-card highlight-green">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-details">
+              <span>Fichas Quitadas</span>
+              <h3 id="fichas-kpi-quitadas-count">0</h3>
+              <small>Oportunidades de recompra</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros Rápidos por Vencimento / Ciclo -->
+        <div class="filter-bar">
+          <div class="filter-chips">
+            <button class="chip active" onclick="filtrarFichasPorCiclo('TODOS', this)">🌟 Todas as Fichas</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('HOJE', this)">📅 Vence Hoje</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('5', this)">💵 Dia 05 (Salário)</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('20', this)">🎟️ Dia 20 (Vale)</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('ATRASADOS', this)">⚠️ Em Atraso</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('QUITADOS', this)">✨ Quitadas (Saldo R$ 0)</button>
+          </div>
+          <div class="filter-search">
+            <input type="text" id="search-fichas" placeholder="Buscar por nome, WhatsApp, endereço ou bairro..." oninput="buscarFichas(this.value)">
+          </div>
+        </div>
+
+        <div class="section-toolbar" style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div class="table-view-toggle">
+            <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;" id="fichas-lista-info">Exibindo fichas</span>
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalNovoCliente()">
+            <span>+ Nova Ficha / Cliente</span>
           </button>
         </div>
 
-        <div id="fichas-container" class="cards-grid">
+        <!-- Tabela Completa (Desktop & Tablets) -->
+        <div class="table-responsive desktop-only" style="margin-top: 15px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Cliente & Contato</th>
+                <th>Vencimento</th>
+                <th>Saldo Devedor</th>
+                <th>Parcela Fixa</th>
+                <th>Histórico Recente</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="fichas-table-body">
+              <!-- Linhas geradas dinamicamente via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cards de Fichas (Mobile & Visão em Grid) -->
+        <div id="fichas-container" class="cards-grid mobile-only" style="margin-top: 15px;">
           <!-- Cards de Fichas gerados dinamicamente -->
         </div>
       </section>
@@ -1042,53 +1106,281 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: DETALHES DA FICHA & EXTRATO DE CREDIÁRIO -->
+  <!-- MODAL: PRONTUÁRIO 360° DA FICHA & CLIENTE (ENXOVAIS GABRIEL) -->
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-ficha-detalhes">
-    <div class="modal-sheet">
+    <div class="modal-sheet modal-lg prontuario-modal-sheet">
       <div class="modal-drag-handle"></div>
-      <div class="modal-header">
-        <div>
-          <h3 id="modal-ficha-nome-cliente">Ficha de Crediário</h3>
-          <span class="text-muted" id="modal-ficha-telefone"></span>
+      
+      <!-- Cabeçalho do Prontuário -->
+      <div class="modal-header prontuario-header">
+        <div class="prontuario-client-meta">
+          <div id="modal-ficha-avatar-container"></div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 id="modal-ficha-nome-cliente" style="margin: 0; font-size: 1.3rem;">Ficha de Crediário</h3>
+              <span id="modal-ficha-status-badge" class="badge-status-pill">Ativa</span>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 4px; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap;">
+              <span id="modal-ficha-telefone"></span>
+              <span id="modal-ficha-endereco-badge"></span>
+            </div>
+          </div>
         </div>
         <button class="btn-close" onclick="fecharModal('modal-ficha-detalhes')">✕</button>
       </div>
 
-      <div class="modal-body">
-        <div class="ficha-summary-cards">
-          <div class="fcard highlight-red">
-            <span>Saldo Devedor Total</span>
-            <h2 id="modal-ficha-saldo-total">R$ 0,00</h2>
+      <!-- Barra de Navegação em Abas do Prontuário -->
+      <div class="ficha-tabs-nav">
+        <button type="button" class="ficha-tab-btn active" id="btn-tab-pront-resumo" onclick="trocarAbaProntuario('resumo')">
+          <span>📊</span> Resumo & Ações
+        </button>
+        <button type="button" class="ficha-tab-btn" id="btn-tab-pront-compras" onclick="trocarAbaProntuario('compras')">
+          <span>🛒</span> Compras (<span id="badge-count-compras">0</span>)
+        </button>
+        <button type="button" class="ficha-tab-btn" id="btn-tab-pront-pagamentos" onclick="trocarAbaProntuario('pagamentos')">
+          <span>💳</span> Extrato Pgto (<span id="badge-count-pagamentos">0</span>)
+        </button>
+        <button type="button" class="ficha-tab-btn" id="btn-tab-pront-cadastro" onclick="trocarAbaProntuario('cadastro')">
+          <span>👤</span> Cadastro & Notas
+        </button>
+        <button type="button" class="ficha-tab-btn" id="btn-tab-pront-carne" onclick="trocarAbaProntuario('carne')">
+          <span>📱</span> Carnê & Pix
+        </button>
+      </div>
+
+      <div class="modal-body prontuario-body">
+        
+        <!-- =================================================================== -->
+        <!-- ABA 1: RESUMO FINANCEIRO & AÇÕES DE 1 CLIQUE -->
+        <!-- =================================================================== -->
+        <div class="prontuario-pane active" id="pront-pane-resumo">
+          
+          <!-- Cards de Indicadores Principais -->
+          <div class="ficha-summary-cards">
+            <div class="fcard highlight-red">
+              <span>Saldo no Dividendo</span>
+              <h2 id="modal-ficha-saldo-total">R$ 0,00</h2>
+              <small id="modal-ficha-projecao-meses">Calculando quitação...</small>
+            </div>
+            <div class="fcard highlight-blue">
+              <span>Parcela Fixa Combinada</span>
+              <h3 id="modal-ficha-valor-parcela">R$ 0,00</h3>
+              <small id="modal-ficha-dia-vencimento">Dia 05 de cada mês</small>
+            </div>
+            <div class="fcard highlight-gold">
+              <span>Total Comprado (Histórico)</span>
+              <h3 id="modal-ficha-total-comprado">R$ 0,00</h3>
+              <small id="modal-ficha-qtd-compras">0 compras registradas</small>
+            </div>
           </div>
-          <div class="fcard highlight-blue">
-            <span>Parcela Fixa Combinada</span>
-            <h3 id="modal-ficha-valor-parcela">R$ 0,00</h3>
-            <small id="modal-ficha-dia-vencimento">Dia 05 de cada mês</small>
+
+          <!-- Barra de Ações Rápidas -->
+          <div class="prontuario-quick-actions">
+            <button class="btn btn-success btn-lg" onclick="abrirModalAmortizacaoFicha()">
+              <span>💵 Registrar Pagamento</span>
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="enviarLembreteWhatsAppFichaAtual()">
+              <span>📱 Cobrar no Zap c/ Pix</span>
+            </button>
+            <button class="btn btn-primary" onclick="iniciarVendaParaClienteAtual()">
+              <span>🛒 Nova Compra a Prazo</span>
+            </button>
+            <button class="btn btn-secondary" onclick="abrirModalAjustarSaldoFicha()">
+              <span>✏️ Ajustar Saldo Manual</span>
+            </button>
+          </div>
+
+          <!-- Bloco de Alertas de Vencimento -->
+          <div id="modal-ficha-alerta-vencimento" class="prontuario-alert-box" style="margin-top: 15px;">
+            <!-- Renderizado via JS -->
+          </div>
+
+          <!-- Bloco de Anotações Rápidas / Histórico Antigo -->
+          <div id="modal-ficha-anotacoes-box" style="display: none; background: #FFF8F0; border-left: 4px solid var(--wine-primary); padding: 12px 16px; border-radius: var(--radius-md); margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: var(--wine-primary);">📌 Anotações da Cliente & Caderno da Mãe:</strong>
+              <button type="button" class="btn-link" onclick="trocarAbaProntuario('cadastro')" style="font-size: 0.8rem; color: var(--wine-primary); text-decoration: underline; background: none; border: none; cursor: pointer;">Editar notas</button>
+            </div>
+            <p id="modal-ficha-anotacoes-texto" style="margin: 6px 0 0; color: var(--text-dark); line-height: 1.5; font-size: 0.92rem;"></p>
+          </div>
+
+          <!-- Mini Resumo Recente: Últimas Compras & Pagamentos -->
+          <div class="prontuario-split-grid" style="margin-top: 20px;">
+            <div class="split-col">
+              <div class="split-header">
+                <h4>🛒 Últimas Compras</h4>
+                <button type="button" class="btn-link" onclick="trocarAbaProntuario('compras')">Ver todas</button>
+              </div>
+              <div id="modal-resumo-ultimas-compras" class="mini-timeline-list"></div>
+            </div>
+            <div class="split-col">
+              <div class="split-header">
+                <h4>💳 Últimos Pagamentos</h4>
+                <button type="button" class="btn-link" onclick="trocarAbaProntuario('pagamentos')">Ver todos</button>
+              </div>
+              <div id="modal-resumo-ultimos-pagamentos" class="mini-timeline-list"></div>
+            </div>
           </div>
         </div>
 
-        <div class="modal-actions-row" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-          <button class="btn btn-success" style="flex: 1; min-width: 160px;" onclick="abrirModalAmortizacaoFicha()">
-            💵 Registrar Pagamento
-          </button>
-          <button class="btn btn-primary" style="flex: 1; min-width: 140px;" onclick="abrirModalAjustarSaldoFicha()">
-            ✏️ Ajustar Saldo
-          </button>
-          <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
-            📱 Cobrar no Zap
-          </button>
+        <!-- =================================================================== -->
+        <!-- ABA 2: HISTÓRICO DE COMPRAS (ITENS, VALORES E ENCOMENDAS) -->
+        <!-- =================================================================== -->
+        <div class="prontuario-pane" id="pront-pane-compras">
+          <div class="pane-header-toolbar">
+            <div>
+              <h4 style="margin: 0;">📦 Todas as Compras Registradas</h4>
+              <small class="text-muted">Histórico detalhado de utilidades, enxovais e encomendas adquiridas.</small>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="iniciarVendaParaClienteAtual()">
+              + Nova Compra
+            </button>
+          </div>
+
+          <div id="modal-ficha-compras-lista" style="margin-top: 15px;">
+            <!-- Lista de compras preenchida via JS -->
+          </div>
         </div>
 
-        <div id="modal-ficha-anotacoes-box" style="display: none; background: #FFF8F0; border-left: 4px solid var(--wine-primary); padding: 10px 14px; border-radius: var(--radius-sm); margin: 15px 0; font-size: 0.9rem;">
-          <strong style="color: var(--wine-primary);">📌 Anotações & Histórico de Compras:</strong>
-          <p id="modal-ficha-anotacoes-texto" style="margin: 5px 0 0; color: var(--text-dark); line-height: 1.4;"></p>
+        <!-- =================================================================== -->
+        <!-- ABA 3: EXTRATO COMPLETO DE PAGAMENTOS & AMORTIZAÇÕES -->
+        <!-- =================================================================== -->
+        <div class="prontuario-pane" id="pront-pane-pagamentos">
+          <div class="pane-header-toolbar">
+            <div>
+              <h4 style="margin: 0;">📜 Extrato Auditável de Pagamentos</h4>
+              <small class="text-muted">Registro de cada valor abatido, meio de pagamento e recibos emitidos.</small>
+            </div>
+            <button class="btn btn-success btn-sm" onclick="abrirModalAmortizacaoFicha()">
+              💵 Registrar Pagamento
+            </button>
+          </div>
+
+          <div class="extrato-timeline" id="modal-ficha-extrato" style="margin-top: 15px;">
+            <!-- Histórico cronológico de débitos e créditos -->
+          </div>
         </div>
 
-        <h4 style="margin: 20px 0 10px; color: var(--text-dark);">📜 Extrato de Movimentações da Ficha</h4>
-        <div class="extrato-timeline" id="modal-ficha-extrato">
-          <!-- Histórico cronológico de débitos e créditos -->
+        <!-- =================================================================== -->
+        <!-- ABA 4: CADASTRO & ANOTAÇÕES COMPLETAS -->
+        <!-- =================================================================== -->
+        <div class="prontuario-pane" id="pront-pane-cadastro">
+          <form id="form-editar-prontuario-cadastro" onsubmit="salvarEdicaoCadastroFicha(event)">
+            <input type="hidden" id="edit-pront-cliente-id">
+            <input type="hidden" id="edit-pront-ficha-id">
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label>Nome Completo da Cliente:</label>
+                <input type="text" id="edit-pront-nome" class="form-control" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Apelido / Como Chamar:</label>
+                <input type="text" id="edit-pront-apelido" class="form-control" placeholder="Ex: Dona Maria">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>WhatsApp (com DDD):</label>
+                <input type="tel" id="edit-pront-whatsapp" class="form-control" required oninput="mascararTelefoneInput(this)">
+              </div>
+              <div class="form-group">
+                <label>CPF (Opcional):</label>
+                <input type="text" id="edit-pront-cpf" class="form-control" placeholder="000.000.000-00">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label>Endereço Residencial:</label>
+                <input type="text" id="edit-pront-endereco" class="form-control" placeholder="Rua, número e bairro">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Ponto de Referência:</label>
+                <input type="text" id="edit-pront-referencia" class="form-control" placeholder="Ex: Próximo à igreja">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Dia Combinado de Vencimento:</label>
+                <select id="edit-pront-dia-vencimento" class="form-control">
+                  <option value="5">Dia 05 (Salário / Pagamento)</option>
+                  <option value="20">Dia 20 (Vale / Adiantamento)</option>
+                  <option value="10">Dia 10</option>
+                  <option value="15">Dia 15</option>
+                  <option value="1">Dia 01</option>
+                  <option value="25">Dia 25</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Valor da Parcela Fixa (R$):</label>
+                <input type="number" id="edit-pront-valor-parcela" class="form-control" step="1.00" min="5.00" required>
+              </div>
+              <div class="form-group">
+                <label>Limite de Crédito (R$):</label>
+                <input type="number" id="edit-pront-limite-credito" class="form-control" step="50.00" min="0">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
+              <label>📝 Anotações Ricas, Preferências & Histórico Antigo (Caderno da Mãe):</label>
+              <textarea id="edit-pront-observacoes" class="form-control" rows="4" placeholder="Ex: Comprou edredom em Out/2025. Prefere estampas florais. Paga pontualmente no dia 20 pelo Pix do filho."></textarea>
+              <small class="text-muted">Guarde aqui detalhes importantes da cliente para consultas rápidas e atendimento acolhedor.</small>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+              <button type="submit" class="btn btn-primary btn-lg">
+                💾 Salvar Alterações no Cadastro
+              </button>
+            </div>
+          </form>
         </div>
+
+        <!-- =================================================================== -->
+        <!-- ABA 5: CARNÊ DIGITAL & PIX -->
+        <!-- =================================================================== -->
+        <div class="prontuario-pane" id="pront-pane-carne">
+          <div class="carne-preview-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+              <div>
+                <h4 style="margin: 0; color: var(--wine-primary);">📱 Carnê Digital da Cliente</h4>
+                <small class="text-muted">Link exclusivo que a cliente abre no celular para ver parcelas e pagar por Pix.</small>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="copiarLinkCarneAtual()">
+                  📋 Copiar Link
+                </button>
+                <button type="button" class="btn btn-success btn-sm" onclick="enviarLinkCarneWhatsAppAtual()">
+                  📱 Enviar Carnê no Zap
+                </button>
+              </div>
+            </div>
+
+            <div class="carne-link-box" style="background: var(--bg-main); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+              <span id="carne-link-text" style="font-family: monospace; font-size: 0.88rem; color: var(--text-dark); word-break: break-all;">--</span>
+            </div>
+
+            <!-- Chave Pix do Ateliê -->
+            <div class="pix-copia-cola-box" style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-md); padding: 14px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #15803D;">⚡ Chave Pix para Pagamento:</strong>
+                <button type="button" class="btn btn-sm" style="background: #15803D; color: #fff; padding: 4px 10px;" onclick="copiarChavePixLoja()">Copiar Chave</button>
+              </div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: #166534;" id="carne-chave-pix-val">18991234567</div>
+              <small style="color: #15803D;" id="carne-titular-pix-val">Titular: Enxovais Gabriel</small>
+            </div>
+
+            <!-- Parcelas Estimadas do Carnê -->
+            <h4 style="margin: 15px 0 10px;">📅 Parcelas Programadas</h4>
+            <div id="carne-parcelas-preview-list" class="carne-parcelas-grid">
+              <!-- Parcelas simuladas renderizadas via JS -->
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1376,53 +1668,76 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
   <!-- MODAL: CADASTRAR CLIENTE -->
   <!-- ========================================================================= -->
   <div class="modal-backdrop" id="modal-novo-cliente">
-    <div class="modal-sheet modal-sm">
+    <div class="modal-sheet modal-md">
       <div class="modal-drag-handle"></div>
       <div class="modal-header">
-        <h3>👥 Cadastrar Nova Cliente</h3>
+        <h3>👥 Cadastrar Nova Cliente & Abrir Ficha</h3>
         <button class="btn-close" onclick="fecharModal('modal-novo-cliente')">✕</button>
       </div>
       <form id="form-novo-cliente" onsubmit="salvarNovoCliente(event)">
-        <div class="form-group">
-          <label>Nome Completo da Cliente:</label>
-          <input type="text" id="cli-nome" class="form-control" placeholder="Nome da cliente" required>
+        <div class="form-row">
+          <div class="form-group" style="flex: 2;">
+            <label>Nome Completo da Cliente: *</label>
+            <input type="text" id="cli-nome" class="form-control" placeholder="Ex: Maria Aparecida da Silva" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Apelido / Como Chamar:</label>
+            <input type="text" id="cli-apelido" class="form-control" placeholder="Ex: Dona Cida">
+          </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>WhatsApp (com DDD):</label>
-            <input type="tel" id="cli-telefone" class="form-control" placeholder="Ex: (11) 98765-4321" inputmode="tel" required oninput="mascararTelefoneInput(this)">
+            <label>WhatsApp (com DDD): *</label>
+            <input type="tel" id="cli-telefone" class="form-control" placeholder="Ex: (18) 99123-4567" inputmode="tel" required oninput="mascararTelefoneInput(this)">
           </div>
           <div class="form-group">
-            <label>Dia Combinado:</label>
+            <label>CPF (Opcional):</label>
+            <input type="text" id="cli-cpf" class="form-control" placeholder="000.000.000-00">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 2;">
+            <label>Endereço Residencial e Bairro:</label>
+            <input type="text" id="cli-endereco" class="form-control" placeholder="Rua, número e bairro para entregas">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Ponto de Referência:</label>
+            <input type="text" id="cli-referencia" class="form-control" placeholder="Ex: Próximo à padaria central">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dia Combinado de Vencimento:</label>
             <select id="cli-dia-vencimento" class="form-control">
               <option value="5">Dia 05 (Pagamento / Salário)</option>
               <option value="20">Dia 20 (Vale / Adiantamento)</option>
               <option value="10">Dia 10</option>
               <option value="15">Dia 15</option>
               <option value="1">Dia 01</option>
+              <option value="25">Dia 25</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>Valor da Parcela Fixa (R$):</label>
+            <input type="number" id="cli-parcela-padrao" class="form-control input-lg" placeholder="Ex: 50.00 ou 100.00" value="50.00" step="1.00" min="10.00" inputmode="decimal" required>
+          </div>
+          <div class="form-group">
+            <label>Saldo Inicial Devedor (R$):</label>
+            <input type="number" id="cli-saldo-inicial" class="form-control" placeholder="0.00 (de papel)" value="0.00" step="0.50" min="0" inputmode="decimal">
+            <small class="text-muted">Se já tiver saldo no caderno.</small>
           </div>
         </div>
 
         <div class="form-group">
-          <label>Endereço e Bairro:</label>
-          <input type="text" id="cli-endereco" class="form-control" placeholder="Rua, número e bairro para entregas">
+          <label>📝 Anotações Ricas & Histórico Antigo (Caderno da Mãe / Planilha):</label>
+          <textarea id="cli-observacoes" class="form-control" rows="3" placeholder="Ex: Cliente antiga da rua de cima. Já comprou jogo de toalhas e edredom. Paga todo dia 20 certinho."></textarea>
         </div>
 
-        <div class="form-group">
-          <label>Ponto de Referência:</label>
-          <input type="text" id="cli-referencia" class="form-control" placeholder="Ex: Próximo à padaria central">
-        </div>
-
-        <div class="form-group">
-          <label>Valor da Parcela Padrão Combinada (R$):</label>
-          <input type="number" id="cli-parcela-padrao" class="form-control input-lg" placeholder="Ex: 50.00 ou 100.00" value="50.00" step="1.00" min="10.00" inputmode="decimal">
-          <small class="text-muted">Valor base fixo que a cliente paga mensalmente no crediário.</small>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block btn-lg">
-          Criar Cadastro & Ficha
+        <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 15px;">
+          Criar Cadastro & Ficha de Crediário
         </button>
       </form>
     </div>

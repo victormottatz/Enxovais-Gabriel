@@ -117,4 +117,65 @@ export class ClienteService {
       vendas: vendasResult.rows,
     };
   }
+
+  public static async update(
+    id: string,
+    data: {
+      nome?: string;
+      whatsapp?: string;
+      cpf?: string | null;
+      endereco?: string | null;
+      ponto_referencia?: string | null;
+      limite_credito?: number;
+      observacoes?: string | null;
+      dia_vencimento?: number;
+      valor_parcela_padrao?: number;
+    }
+  ): Promise<ClienteDTO> {
+    const existing = await pool.query<ClienteDTO>('SELECT * FROM clientes WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      throw new AppError('Cliente não encontrado.', 404, 'CLIENTE_NOT_FOUND');
+    }
+
+    const current = existing.rows[0];
+    const formattedPhone = data.whatsapp ? WhatsAppService.sanitizePhone(data.whatsapp) : current.whatsapp;
+
+    const result = await pool.query<ClienteDTO>(
+      `UPDATE clientes
+       SET nome = $1,
+           whatsapp = $2,
+           cpf = $3,
+           endereco = $4,
+           ponto_referencia = $5,
+           limite_credito = $6,
+           observacoes = $7,
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        data.nome !== undefined ? data.nome.trim() : current.nome,
+        formattedPhone,
+        data.cpf !== undefined ? (data.cpf?.trim() || null) : current.cpf,
+        data.endereco !== undefined ? (data.endereco?.trim() || null) : current.endereco,
+        data.ponto_referencia !== undefined ? (data.ponto_referencia?.trim() || null) : current.ponto_referencia,
+        data.limite_credito !== undefined ? data.limite_credito : current.limite_credito,
+        data.observacoes !== undefined ? (data.observacoes?.trim() || null) : current.observacoes,
+        id,
+      ]
+    );
+
+    if (data.dia_vencimento !== undefined || data.valor_parcela_padrao !== undefined) {
+      await pool.query(
+        `UPDATE fichas_crediario
+         SET dia_vencimento_padrao = COALESCE($1, dia_vencimento_padrao),
+             valor_parcela_padrao = COALESCE($2, valor_parcela_padrao),
+             updated_at = NOW()
+         WHERE cliente_id = $3`,
+        [data.dia_vencimento ?? null, data.valor_parcela_padrao ?? null, id]
+      );
+    }
+
+    return result.rows[0];
+  }
 }
+

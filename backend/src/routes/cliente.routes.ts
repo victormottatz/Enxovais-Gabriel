@@ -16,6 +16,18 @@ const createClienteSchema = z.object({
   valor_parcela_padrao: z.number().min(0).optional(),
 });
 
+const updateClienteSchema = z.object({
+  nome: z.string().min(2, 'Nome do cliente deve ter ao menos 2 caracteres').optional(),
+  whatsapp: z.string().min(8, 'Número de WhatsApp inválido').optional(),
+  cpf: z.string().nullable().optional(),
+  endereco: z.string().nullable().optional(),
+  ponto_referencia: z.string().nullable().optional(),
+  limite_credito: z.number().min(0).optional(),
+  observacoes: z.string().nullable().optional(),
+  dia_vencimento: z.number().int().min(1).max(31).optional(),
+  valor_parcela_padrao: z.number().min(0).optional(),
+});
+
 // GET /api/v1/clientes
 router.get('/', async (req, res, next) => {
   try {
@@ -43,6 +55,17 @@ router.post('/', async (req, res, next) => {
     const validated = createClienteSchema.parse(req.body);
     const cliente = await ClienteService.create(validated);
     res.status(201).json(cliente);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/v1/clientes/:id
+router.patch('/:id', async (req, res, next) => {
+  try {
+    const validated = updateClienteSchema.parse(req.body);
+    const cliente = await ClienteService.update(req.params.id, validated);
+    res.json(cliente);
   } catch (err) {
     next(err);
   }

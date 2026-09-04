@@ -18,8 +18,10 @@ const state = {
   carrinho: [],
   movimentacoesCaixa: [],
   filtroCaixaAtual: 'TODOS',
+  filtroCicloFichaAtual: 'TODOS',
   clienteSelecionadoVenda: null,
   fichaAtualModal: null,
+  fichaAtualVendas: [],
   reciboAtualModal: null,
   filtroCobrancaAtual: 'todos',
   filtroEncomendaAtual: 'TODAS',
@@ -358,7 +360,7 @@ function filtrarListaCobrancasInput(texto) {
 }
 
 // =============================================================================
-// MÓDULO 2: FICHAS & CREDIÁRIO
+// MÓDULO 2: FICHAS & CREDIÁRIO - TABELA RICA & PRONTUÁRIO 360°
 // =============================================================================
 async function carregarFichas() {
   try {
@@ -370,85 +372,264 @@ async function carregarFichas() {
   } catch (err) {
     console.log('Fichas offline fallback:', err);
   }
+  atualizarKpisFichas();
   renderizarFichas();
 }
 
-function renderizarFichas() {
-  const container = document.getElementById('fichas-container');
-  if (!container) return;
+function atualizarKpisFichas() {
+  let totalDevedor = 0;
+  let somaParcelas = 0;
+  let ativasCount = 0;
+  let quitadasCount = 0;
 
-  if (state.fichas.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <span style="font-size: 2.5rem;">📑</span>
-        <h3>Nenhuma ficha de crediário ativa</h3>
-        <p>Cadastre clientes ou importe uma planilha para visualizar o dividendo acumulado.</p>
-      </div>
-    `;
-    return;
-  }
+  state.fichas.forEach((f) => {
+    const saldo = Number(f.saldo_devedor_total) || 0;
+    const parcela = Number(f.valor_parcela_padrao) || 0;
+    totalDevedor += saldo;
+    somaParcelas += parcela;
+    if (saldo > 0) {
+      ativasCount++;
+    } else {
+      quitadasCount++;
+    }
+  });
 
-  container.innerHTML = state.fichas
-    .map((ficha) => {
-      const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
-      const nome = cli.nome || ficha.cliente_nome || 'Cliente';
-      const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
-      const diaVenc = ficha.dia_vencimento_padrao || 5;
+  const elTotal = document.getElementById('fichas-kpi-total-saldo');
+  const elCount = document.getElementById('fichas-kpi-count');
+  const elVenceMes = document.getElementById('fichas-kpi-vence-mes');
+  const elQuitadas = document.getElementById('fichas-kpi-quitadas-count');
 
-      return `
-      <div class="client-card">
-        <div class="client-card-header">
-          <div class="client-header-info">
-            ${obterAvatarHTML(nome)}
-            <div>
-              <h4>${nome}</h4>
-              <span>📱 ${fone || 'Sem contato'}</span>
-            </div>
-          </div>
-          <span class="badge-tag ${diaVenc === 20 ? 'vale' : 'pagamento'}">
-            Dia 0${diaVenc}
-          </span>
-        </div>
-
-        <div class="client-card-body">
-          <div class="val-group">
-            <span>Saldo Devedor</span>
-            <strong style="color: ${Number(ficha.saldo_devedor_total) > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.15rem;">
-              ${formatarMoeda(ficha.saldo_devedor_total)}
-            </strong>
-          </div>
-          <div class="val-group">
-            <span>Parcela Fixa</span>
-            <strong>${formatarMoeda(ficha.valor_parcela_padrao)} / mês</strong>
-          </div>
-        </div>
-
-        <div class="client-card-actions">
-          <button class="btn btn-outline btn-sm btn-block" onclick="abrirDetalhesFicha('${ficha.id}')">
-            🔍 Extrato & Amortização
-          </button>
-        </div>
-      </div>
-    `;
-    })
-    .join('');
+  if (elTotal) elTotal.textContent = formatarMoeda(totalDevedor);
+  if (elCount) elCount.textContent = `${ativasCount} fichas ativas`;
+  if (elVenceMes) elVenceMes.textContent = formatarMoeda(somaParcelas);
+  if (elQuitadas) elQuitadas.textContent = quitadasCount;
 }
 
-function buscarFichas(texto) {
-  const q = texto.toLowerCase();
-  document.querySelectorAll('#fichas-container .client-card').forEach((card) => {
-    const nome = card.querySelector('h4')?.textContent.toLowerCase() || '';
-    if (nome.includes(q)) {
-      card.style.display = 'flex';
-    } else {
-      card.style.display = 'none';
+function filtrarFichasPorCiclo(ciclo, btn) {
+  state.filtroCicloFichaAtual = ciclo;
+  document.querySelectorAll('#tab-fichas .filter-chips .chip').forEach((c) => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderizarFichas();
+}
+
+function obterFichasFiltradas() {
+  const hoje = new Date();
+  const diaHoje = hoje.getDate();
+
+  return state.fichas.filter((ficha) => {
+    const saldo = Number(ficha.saldo_devedor_total) || 0;
+    const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
+
+    if (state.filtroCicloFichaAtual === 'TODOS') return true;
+    if (state.filtroCicloFichaAtual === 'HOJE') return diaVenc === diaHoje;
+    if (String(state.filtroCicloFichaAtual) === '5') return diaVenc === 5;
+    if (String(state.filtroCicloFichaAtual) === '20') return diaVenc === 20;
+    if (state.filtroCicloFichaAtual === 'QUITADOS' || state.filtroCicloFichaAtual === 'QUITADAS') return saldo <= 0;
+    if (state.filtroCicloFichaAtual === 'ATRASADOS') {
+      return saldo > 0 && diaVenc < diaHoje;
     }
+    return true;
   });
 }
 
+function calcularProjecaoFichaTexto(saldo, parcela) {
+  if (saldo <= 0) return '<span style="color: var(--success); font-weight: 600;">Quitado 🎉</span>';
+  if (parcela <= 0) return '<span style="color: var(--text-muted);">A definir</span>';
+  const meses = Math.ceil(saldo / parcela);
+  const data = new Date();
+  data.setMonth(data.getMonth() + meses);
+  const mesFmt = data.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+  return `<strong>~${meses}x</strong> <small style="color:var(--text-muted);">(${mesFmt})</small>`;
+}
+
+function renderizarFichas() {
+  const containerMobile = document.getElementById('fichas-container');
+  const tbodyDesktop = document.getElementById('fichas-table-body');
+  const lista = obterFichasFiltradas();
+
+  const infoEl = document.getElementById('fichas-lista-info');
+  if (infoEl) infoEl.textContent = `Exibindo ${lista.length} ${lista.length === 1 ? 'ficha' : 'fichas'}`;
+
+  // Renderizar Tabela Desktop
+  if (tbodyDesktop) {
+    if (lista.length === 0) {
+      tbodyDesktop.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">Nenhuma ficha encontrada para o filtro selecionado.</td></tr>`;
+    } else {
+      tbodyDesktop.innerHTML = lista
+        .map((ficha) => {
+          const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+          const nome = cli.nome || ficha.cliente_nome || 'Cliente';
+          const apelido = cli.apelido ? ` <span style="font-size:0.8rem; color:var(--wine-primary); font-weight:normal;">(${cli.apelido})</span>` : '';
+          const cpf = cli.cpf ? `<br><small style="color: var(--text-muted); font-size: 0.76rem;">CPF: ${cli.cpf}</small>` : '';
+          const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
+          const foneFmt = fone ? `<a href="javascript:void(0)" onclick="abrirLinkWhatsApp('${fone}', 'Olá, ${nome}! Tudo bem?')" style="color: var(--success); font-weight: 600; text-decoration: none;">📱 ${fone}</a>` : '<span style="color: var(--text-muted);">Sem contato</span>';
+          const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
+          const isVale = diaVenc === 20;
+          const saldo = Number(ficha.saldo_devedor_total) || 0;
+          const parcela = Number(ficha.valor_parcela_padrao) || 50;
+          const obs = ficha.observacoes || cli.observacoes || '';
+
+          return `
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="abrirDetalhesFicha('${ficha.id}')" title="Clique para abrir o Prontuário 360°">
+                  ${obterAvatarHTML(nome)}
+                  <div>
+                    <strong style="color: var(--text-dark); font-size: 0.95rem;">${nome}</strong>${apelido}
+                    ${cpf}
+                    <br><small style="color: var(--text-muted); font-size: 0.8rem;">${foneFmt}</small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
+                  ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${diaVenc}`}
+                </span>
+              </td>
+              <td>
+                <strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.05rem;">
+                  ${formatarMoeda(saldo)}
+                </strong>
+              </td>
+              <td>
+                <strong>${formatarMoeda(parcela)}</strong> <small style="color:var(--text-muted);">/ mês</small>
+              </td>
+              <td style="max-width: 180px; font-size: 0.82rem; color: var(--text-muted);">
+                ${obs ? obs.substring(0, 45) + (obs.length > 45 ? '...' : '') : '<span style="color:var(--border-color);">Sem notas</span>'}
+              </td>
+              <td>
+                ${saldo <= 0 ? '<span class="badge-status valido">Quitada</span>' : '<span class="badge-status aviso">Em Aberto</span>'}
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${ficha.id}')" title="Abrir Prontuário Completo com 5 Abas">
+                    📑 Prontuário
+                  </button>
+                  ${fone ? `
+                  <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${parcela}, ${saldo})" title="Cobrar no WhatsApp">
+                    💬 Zap
+                  </button>` : ''}
+                  <button class="btn btn-primary btn-sm" onclick="iniciarVendaRapidaCliente('${ficha.cliente_id || cli.id}')" title="Nova Venda / Compra a Prazo">
+                    🛒 Vender
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
+  }
+
+  // Renderizar Cards Mobile
+  if (containerMobile) {
+    if (lista.length === 0) {
+      containerMobile.innerHTML = `
+        <div class="empty-state">
+          <span style="font-size: 2.5rem;">📑</span>
+          <h3>Nenhuma ficha encontrada</h3>
+          <p>Nenhuma cliente corresponde ao filtro de ciclo selecionado.</p>
+        </div>
+      `;
+      return;
+    }
+
+    containerMobile.innerHTML = lista
+      .map((ficha) => {
+        const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+        const nome = cli.nome || ficha.cliente_nome || 'Cliente';
+        const apelido = cli.apelido ? ` (${cli.apelido})` : '';
+        const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
+        const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
+        const isVale = diaVenc === 20;
+        const saldo = Number(ficha.saldo_devedor_total) || 0;
+        const parcela = Number(ficha.valor_parcela_padrao) || 50;
+
+        return `
+        <div class="client-card">
+          <div class="client-card-header">
+            <div class="client-header-info" onclick="abrirDetalhesFicha('${ficha.id}')" style="cursor: pointer;">
+              ${obterAvatarHTML(nome)}
+              <div>
+                <h4>${nome}${apelido}</h4>
+                <span>📱 ${fone || 'Sem contato'}</span>
+              </div>
+            </div>
+            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
+              ${isVale ? '🎟️ Dia 20' : `💵 Dia 0${diaVenc}`}
+            </span>
+          </div>
+
+          <div class="client-card-body">
+            <div class="val-group">
+              <span>Saldo Devedor</span>
+              <strong style="color: ${saldo > 0 ? 'var(--wine-primary)' : 'var(--success)'}; font-size: 1.15rem;">
+                ${formatarMoeda(saldo)}
+              </strong>
+            </div>
+            <div class="val-group">
+              <span>Parcela Combinada</span>
+              <strong>${formatarMoeda(parcela)} / mês</strong>
+            </div>
+          </div>
+
+          <div class="client-card-actions" style="display: flex; gap: 6px;">
+            <button class="btn btn-outline btn-sm btn-block" onclick="abrirDetalhesFicha('${ficha.id}')">
+              📑 Prontuário 360°
+            </button>
+            ${fone ? `
+            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${parcela}, ${saldo})" title="Cobrar WhatsApp">
+              💬
+            </button>` : ''}
+          </div>
+        </div>
+      `;
+      })
+      .join('');
+  }
+}
+
+function buscarFichas(texto) {
+  const q = (texto || '').toLowerCase().trim();
+  
+  // Filtra linhas da tabela desktop
+  document.querySelectorAll('#fichas-table-body tr').forEach((row) => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(q) ? '' : 'none';
+  });
+
+  // Filtra cards mobile
+  document.querySelectorAll('#fichas-container .client-card').forEach((card) => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(q) ? 'flex' : 'none';
+  });
+}
+
+// -----------------------------------------------------------------------------
+// NAVEGAÇÃO DE ABAS DENTRO DO PRONTUÁRIO 360°
+// -----------------------------------------------------------------------------
+function trocarAbaProntuario(abaNome, btn) {
+  document.querySelectorAll('.ficha-tabs-nav .ficha-tab-btn').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('.prontuario-modal-sheet .prontuario-pane').forEach((p) => p.classList.remove('active'));
+
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    const targetBtn = document.querySelector(`.ficha-tabs-nav .ficha-tab-btn[onclick*="${abaNome}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
+  }
+
+  const targetPane = document.getElementById(`pront-pane-${abaNome}`);
+  if (targetPane) targetPane.classList.add('active');
+}
+
+// -----------------------------------------------------------------------------
+// ABERTURA E PREENCHIMENTO DO PRONTUÁRIO 360°
+// -----------------------------------------------------------------------------
 async function abrirDetalhesFicha(fichaId) {
   let fichaObj = state.fichas.find((f) => f.id === fichaId || f.cliente_id === fichaId);
   let movs = [];
+  let vendas = [];
 
   try {
     const res = await fetch(`${API_BASE}/fichas/${fichaId}`);
@@ -470,28 +651,306 @@ async function abrirDetalhesFicha(fichaId) {
   state.fichaAtualModal = fichaObj;
 
   const cli = state.clientes.find((c) => c.id === fichaObj.cliente_id) || {};
+  const clienteId = fichaObj.cliente_id || cli.id;
+
+  // Busca histórico de compras / vendas desta cliente
+  try {
+    const resVendas = await fetch(`${API_BASE}/vendas?cliente_id=${clienteId}`);
+    if (resVendas.ok) {
+      const dataVendas = await resVendas.json();
+      vendas = Array.isArray(dataVendas) ? dataVendas : (dataVendas.data || []);
+    }
+  } catch (err) {
+    console.log('Aviso vendas cliente:', err);
+  }
+  state.fichaAtualVendas = vendas;
+
   const nome = cli.nome || fichaObj.cliente_nome || 'Cliente';
-  const fone = cli.whatsapp || cli.telefone || fichaObj.cliente_whatsapp || 'Não informado';
+  const apelido = cli.apelido || '';
+  const fone = cli.whatsapp || cli.telefone || fichaObj.cliente_whatsapp || '';
+  const endereco = cli.endereco || '';
+  const referencia = cli.ponto_referencia || '';
+  const cpf = cli.cpf || '';
   const saldoTotal = Number(fichaObj.saldo_devedor_total) || 0;
-  const valorParcela = Number(fichaObj.valor_parcela_padrao) || 100;
-  const diaVenc = fichaObj.dia_vencimento_padrao || 5;
+  const valorParcela = Number(fichaObj.valor_parcela_padrao) || 50;
+  const diaVenc = Number(fichaObj.dia_vencimento_padrao) || 5;
+  const isVale = diaVenc === 20;
+  const observacoes = fichaObj.observacoes || cli.observacoes || '';
 
-  document.getElementById('modal-ficha-nome-cliente').textContent = nome;
-  document.getElementById('modal-ficha-telefone').textContent = `WhatsApp: ${fone}`;
-  document.getElementById('modal-ficha-saldo-total').textContent = formatarMoeda(saldoTotal);
-  document.getElementById('modal-ficha-valor-parcela').textContent = formatarMoeda(valorParcela);
-  document.getElementById('modal-ficha-dia-vencimento').textContent = `Vencimento todo Dia 0${diaVenc}`;
+  // 1. Preenche o Header do Modal
+  const elAvatar = document.getElementById('modal-ficha-avatar-container');
+  const elNome = document.getElementById('modal-ficha-nome-cliente');
+  const elStatusBadge = document.getElementById('modal-ficha-status-badge');
+  const elTelefone = document.getElementById('modal-ficha-telefone');
+  const elEndereco = document.getElementById('modal-ficha-endereco-badge');
 
-  // Exibe anotações/produtos/histórico se houver
-  const obs = fichaObj.observacoes || cli.observacoes || '';
+  if (elAvatar) elAvatar.innerHTML = obterAvatarHTML(nome);
+  if (elNome) elNome.innerHTML = `${nome} ${apelido ? `<span style="font-size:0.95rem; font-weight:normal; color:var(--wine-primary);">(${apelido})</span>` : ''}`;
+  if (elStatusBadge) {
+    if (saldoTotal <= 0) {
+      elStatusBadge.textContent = '✨ Quitada';
+      elStatusBadge.className = 'badge-status-pill green';
+    } else if (isVale) {
+      elStatusBadge.textContent = '🎟️ Vale Dia 20';
+      elStatusBadge.className = 'badge-status-pill yellow';
+    } else {
+      elStatusBadge.textContent = `💵 Pagto Dia 0${diaVenc}`;
+      elStatusBadge.className = 'badge-status-pill blue';
+    }
+  }
+  if (elTelefone) elTelefone.textContent = fone ? `📱 WhatsApp: ${fone}` : '📱 Sem WhatsApp';
+  if (elEndereco) elEndereco.textContent = endereco ? `📍 ${endereco}${referencia ? ` (${referencia})` : ''}` : '📍 Endereço não informado';
+
+  // Atualiza Badges de contagem das abas
+  const badgeCompras = document.getElementById('badge-count-compras');
+  const badgePagtos = document.getElementById('badge-count-pagamentos');
+  if (badgeCompras) badgeCompras.textContent = vendas.length;
+  if (badgePagtos) badgePagtos.textContent = movs.filter((m) => m.tipo_movimentacao !== 'DEBITO_COMPRA').length;
+
+  // 2. Preenche Aba 1: Resumo Executivo
+  const elSaldo = document.getElementById('modal-ficha-saldo-total');
+  const elParcela = document.getElementById('modal-ficha-valor-parcela');
+  const elVenc = document.getElementById('modal-ficha-dia-vencimento');
+  const elProjecao = document.getElementById('modal-ficha-projecao-meses');
+  const elTotalComprado = document.getElementById('modal-ficha-total-comprado');
+  const elQtdCompras = document.getElementById('modal-ficha-qtd-compras');
+  const elResumoCompras = document.getElementById('modal-resumo-ultimas-compras');
+  const elResumoPagtos = document.getElementById('modal-resumo-ultimos-pagamentos');
   const anotacoesBox = document.getElementById('modal-ficha-anotacoes-box');
   const anotacoesTexto = document.getElementById('modal-ficha-anotacoes-texto');
+
+  if (elSaldo) {
+    elSaldo.textContent = formatarMoeda(saldoTotal);
+    elSaldo.style.color = saldoTotal > 0 ? 'var(--wine-primary)' : 'var(--success)';
+  }
+  if (elParcela) elParcela.textContent = `${formatarMoeda(valorParcela)} / mês`;
+  if (elVenc) elVenc.textContent = `Todo Dia 0${diaVenc} (${isVale ? 'Vale' : 'Salário'})`;
+
+  let totalCompradoSoma = 0;
+  vendas.forEach((v) => { totalCompradoSoma += Number(v.valor_total || v.total || 0); });
+  if (elTotalComprado) elTotalComprado.textContent = formatarMoeda(totalCompradoSoma);
+  if (elQtdCompras) elQtdCompras.textContent = `${vendas.length} ${vendas.length === 1 ? 'compra registrada' : 'compras registradas'}`;
+
+  if (elProjecao) {
+    if (saldoTotal <= 0) {
+      elProjecao.textContent = 'Quitado 🎉';
+    } else {
+      const meses = Math.ceil(saldoTotal / valorParcela);
+      const dataEst = new Date();
+      dataEst.setMonth(dataEst.getMonth() + meses);
+      const mesNome = dataEst.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      elProjecao.textContent = `~${meses} parcelas (estimativa: ${mesNome})`;
+    }
+  }
+
+  // Preview das últimas compras na aba resumo
+  if (elResumoCompras) {
+    if (vendas.length === 0) {
+      elResumoCompras.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:6px 0;">Nenhuma compra registrada no sistema ainda.</p>';
+    } else {
+      elResumoCompras.innerHTML = vendas.slice(0, 3).map((v) => {
+        const dataFmt = new Date(v.created_at || Date.now()).toLocaleDateString('pt-BR');
+        const descItens = (v.itens || []).map((it) => `${it.quantidade}x ${it.nome || it.produto_nome || 'Produto'}`).join(', ') || 'Produtos diversos';
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--border-color); font-size:0.88rem;">
+            <div>
+              <strong style="color:var(--text-dark);">🛍️ ${descItens}</strong>
+              <div style="color:var(--text-muted); font-size:0.78rem;">${dataFmt} • ${v.tipo_entrega === 'ENCOMENDA' ? '📦 Encomenda' : '✨ Pronta Entrega'}</div>
+            </div>
+            <strong style="color:var(--wine-primary);">${formatarMoeda(v.valor_total || v.total || 0)}</strong>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Preview dos últimos pagamentos na aba resumo
+  if (elResumoPagtos) {
+    const amortizacoes = movs.filter((m) => m.tipo_movimentacao !== 'DEBITO_COMPRA');
+    if (amortizacoes.length === 0) {
+      elResumoPagtos.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:6px 0;">Nenhum pagamento registrado nesta ficha ainda.</p>';
+    } else {
+      elResumoPagtos.innerHTML = amortizacoes.slice(0, 3).map((m) => {
+        const dataFmt = new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR');
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--border-color); font-size:0.88rem;">
+            <div>
+              <strong style="color:var(--success);">💵 ${m.descricao || 'Amortização de Crediário'}</strong>
+              <div style="color:var(--text-muted); font-size:0.78rem;">${dataFmt} • Saldo restante: ${formatarMoeda(m.saldo_posterior)}</div>
+            </div>
+            <strong style="color:var(--success);">- ${formatarMoeda(m.valor)}</strong>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Bloco de anotações da mãe
   if (anotacoesBox && anotacoesTexto) {
-    if (obs.trim()) {
-      anotacoesTexto.textContent = obs;
+    if (observacoes.trim()) {
+      anotacoesTexto.textContent = observacoes.trim();
       anotacoesBox.style.display = 'block';
     } else {
       anotacoesBox.style.display = 'none';
+    }
+  }
+
+  // 3. Preenche Aba 2: Histórico Completo de Compras
+  const elComprasLista = document.getElementById('modal-ficha-compras-lista');
+  if (elComprasLista) {
+    if (vendas.length === 0) {
+      elComprasLista.innerHTML = `
+        <div class="empty-state" style="padding: 24px;">
+          <span style="font-size: 2rem;">🛒</span>
+          <h4>Nenhuma compra a prazo registrada</h4>
+          <p>Quando você lançar uma venda no crediário para esta cliente, os detalhes aparecerão aqui.</p>
+          <button class="btn btn-primary btn-sm" onclick="iniciarVendaParaClienteAtual()" style="margin-top: 10px;">+ Lançar Nova Compra</button>
+        </div>
+      `;
+    } else {
+      elComprasLista.innerHTML = vendas.map((v, idx) => {
+        const dataFmt = new Date(v.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const itensList = (v.itens || []).map((it) => `
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted rgba(0,0,0,0.06); font-size: 0.86rem;">
+            <span><strong>${it.quantidade || 1}x</strong> ${it.nome || it.produto_nome || 'Item do Ateliê'}</span>
+            <span>${formatarMoeda((it.preco_unitario || it.preco || 0) * (it.quantidade || 1))}</span>
+          </div>
+        `).join('') || '<div style="font-size:0.85rem; color:var(--text-muted);">Produtos diversos</div>';
+
+        return `
+          <div class="purchase-card">
+            <div class="purchase-card-header">
+              <div>
+                <strong style="font-size: 0.95rem; color: var(--text-dark);">Compra #${vendas.length - idx}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${dataFmt}</div>
+              </div>
+              <div style="text-align: right;">
+                <span class="badge-status ${v.tipo_entrega === 'ENCOMENDA' ? 'erro' : 'valido'}">${v.tipo_entrega === 'ENCOMENDA' ? '📦 Encomenda' : '✨ Pronta Entrega'}</span>
+                <div style="font-size: 1.05rem; font-weight: 700; color: var(--wine-primary); margin-top: 4px;">${formatarMoeda(v.valor_total || v.total || 0)}</div>
+              </div>
+            </div>
+            <div class="purchase-card-items" style="padding: 10px 0;">
+              ${itensList}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 4. Preenche Aba 3: Histórico de Pagamentos (Extrato)
+  const extratoContainer = document.getElementById('modal-ficha-extrato');
+  if (extratoContainer) {
+    if (movs.length === 0) {
+      extratoContainer.innerHTML = `
+        <div class="empty-state" style="padding: 24px;">
+          <span style="font-size: 2rem;">💵</span>
+          <h4>Nenhum lançamento no extrato</h4>
+          <p>Os pagamentos e amortizações registrados para esta ficha serão listados aqui.</p>
+          <button class="btn btn-success btn-sm" onclick="abrirModalAmortizacaoFicha()" style="margin-top: 10px;">💵 Registrar Pagamento Agora</button>
+        </div>
+      `;
+    } else {
+      extratoContainer.innerHTML = movs.map((m) => {
+        const isDebito = m.tipo_movimentacao === 'DEBITO_COMPRA';
+        const dataFmt = new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `
+          <div class="extrato-item">
+            <div class="extrato-icon ${isDebito ? 'debito' : 'credito'}">
+              ${isDebito ? '🛒' : '💵'}
+            </div>
+            <div class="extrato-details">
+              <strong>${m.descricao || (isDebito ? 'Compra a Prazo' : 'Pagamento / Amortização')}</strong>
+              <small>${dataFmt} • Saldo após operação: ${formatarMoeda(m.saldo_posterior)}</small>
+            </div>
+            <div class="extrato-valor ${isDebito ? 'debito' : 'credito'}">
+              ${isDebito ? '+ ' : '- '}${formatarMoeda(m.valor)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 5. Preenche Aba 4: Dados Cadastrais & Anotações do Caderno da Mãe
+  const editCliId = document.getElementById('edit-pront-cliente-id');
+  const editFichaId = document.getElementById('edit-pront-ficha-id');
+  const editNome = document.getElementById('edit-pront-nome');
+  const editApelido = document.getElementById('edit-pront-apelido');
+  const editCpf = document.getElementById('edit-pront-cpf');
+  const editTelefone = document.getElementById('edit-pront-whatsapp');
+  const editVencimento = document.getElementById('edit-pront-dia-vencimento');
+  const editParcela = document.getElementById('edit-pront-valor-parcela');
+  const editEndereco = document.getElementById('edit-pront-endereco');
+  const editReferencia = document.getElementById('edit-pront-referencia');
+  const editObservacoes = document.getElementById('edit-pront-observacoes');
+
+  if (editCliId) editCliId.value = cli.id || fichaObj.cliente_id || '';
+  if (editFichaId) editFichaId.value = fichaObj.id || '';
+  if (editNome) editNome.value = nome;
+  if (editApelido) editApelido.value = apelido;
+  if (editCpf) editCpf.value = cpf;
+  if (editTelefone) editTelefone.value = fone;
+  if (editVencimento) editVencimento.value = String(diaVenc);
+  if (editParcela) editParcela.value = valorParcela.toFixed(2);
+  if (editEndereco) editEndereco.value = endereco;
+  if (editReferencia) editReferencia.value = referencia;
+  if (editObservacoes) editObservacoes.value = observacoes;
+
+  // 6. Preenche Aba 5: Carnê Digital & Pix
+  const carneLink = document.getElementById('carne-link-text');
+  const carneGrid = document.getElementById('carne-parcelas-preview-list');
+
+  const hostUrl = window.location.origin;
+  const linkPublico = `${hostUrl}/carne/${fichaObj.id || clienteId}`;
+  if (carneLink) carneLink.textContent = linkPublico;
+
+  if (carneGrid) {
+    if (saldoTotal <= 0) {
+      carneGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 20px; background: #EDFDF2; border-radius: 8px; border: 1px solid #BBF7D0; color: #15803D;">
+          <strong>🎉 Parabéns! Esta cliente está 100% quitada no crediário.</strong>
+        </div>
+      `;
+    } else {
+      const numParcelas = Math.ceil(saldoTotal / valorParcela);
+      let saldoRestante = saldoTotal;
+      let htmlParcelas = '';
+      const hoje = new Date();
+
+      for (let i = 1; i <= Math.min(numParcelas, 12); i++) {
+        const valorDestaParcela = Math.min(valorParcela, saldoRestante);
+        saldoRestante -= valorDestaParcela;
+
+        const dataVencParcela = new Date(hoje.getFullYear(), hoje.getMonth() + i, diaVenc);
+        const dataStr = dataVencParcela.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        htmlParcelas += `
+          <div class="carne-parcela-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="badge-status valido">${i}ª Parcela</span>
+              <small style="color: var(--text-muted); font-weight: 600;">Venc: ${dataStr}</small>
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--wine-primary); margin-bottom: 4px;">
+              ${formatarMoeda(valorDestaParcela)}
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              Saldo posterior: ${formatarMoeda(Math.max(0, saldoRestante))}
+            </div>
+          </div>
+        `;
+      }
+
+      if (numParcelas > 12) {
+        htmlParcelas += `
+          <div class="carne-parcela-card" style="background: #FFFBEB; border-color: #FDE68A; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+            <strong style="color: #B45309;">+ ${numParcelas - 12} Parcelas Seguintes</strong>
+            <small style="color: #92400E;">Quitação prevista em ~${numParcelas} meses</small>
+          </div>
+        `;
+      }
+
+      carneGrid.innerHTML = htmlParcelas;
     }
   }
 
@@ -499,40 +958,162 @@ async function abrirDetalhesFicha(fichaId) {
   const hiddenId = document.getElementById('amortizacao-ficha-id');
   if (hiddenId) hiddenId.value = fichaObj.id;
 
-  // Renderiza timeline do extrato
-  const extratoContainer = document.getElementById('modal-ficha-extrato');
-  if (movs.length === 0) {
-    extratoContainer.innerHTML = `
-      <p style="color: var(--text-muted); font-size: 0.85rem; padding: 10px 0;">
-        Nenhuma movimentação registrada nesta ficha ainda.
-      </p>
-    `;
-  } else {
-    extratoContainer.innerHTML = movs
-      .map((m) => {
-        const isDebito = m.tipo_movimentacao === 'DEBITO_COMPRA';
-        const dataFmt = new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR');
-        return `
-        <div class="extrato-item">
-          <div class="extrato-icon ${isDebito ? 'debito' : 'credito'}">
-            ${isDebito ? '🛒' : '💵'}
-          </div>
-          <div class="extrato-details">
-            <strong>${m.descricao || (isDebito ? 'Compra a Prazo' : 'Pagamento / Amortização')}</strong>
-            <small>${dataFmt} • Saldo após operação: ${formatarMoeda(m.saldo_posterior)}</small>
-          </div>
-          <div class="extrato-valor ${isDebito ? 'debito' : 'credito'}">
-            ${isDebito ? '+ ' : '- '}${formatarMoeda(m.valor)}
-          </div>
-        </div>
-      `;
-      })
-      .join('');
-  }
+  // Define a aba inicial ativa como Resumo
+  trocarAbaProntuario('resumo');
 
+  // Abre o modal
   abrirModal('modal-ficha-detalhes');
 }
 
+// -----------------------------------------------------------------------------
+// SALVAR EDIÇÃO DE CADASTRO E ANOTAÇÕES DA FICHA (ABA 4)
+// -----------------------------------------------------------------------------
+async function salvarEdicaoCadastroFicha(e) {
+  e.preventDefault();
+  const clienteId = document.getElementById('edit-pront-cliente-id').value;
+  const fichaId = document.getElementById('edit-pront-ficha-id').value;
+  const nome = document.getElementById('edit-pront-nome').value.trim();
+  const apelido = document.getElementById('edit-pront-apelido').value.trim();
+  const cpf = document.getElementById('edit-pront-cpf').value.trim();
+  const whatsapp = document.getElementById('edit-pront-whatsapp').value.trim();
+  const diaVenc = Number(document.getElementById('edit-pront-dia-vencimento').value) || 5;
+  const parcela = Number(document.getElementById('edit-pront-valor-parcela').value) || 50.0;
+  const endereco = document.getElementById('edit-pront-endereco').value.trim();
+  const referencia = document.getElementById('edit-pront-referencia').value.trim();
+  const observacoes = document.getElementById('edit-pront-observacoes').value.trim();
+
+  if (!nome) {
+    mostrarToast('O nome da cliente é obrigatório.', 'warning');
+    return;
+  }
+
+  try {
+    // 1. Atualiza dados do Cliente
+    await fetch(`${API_BASE}/clientes/${clienteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome,
+        apelido: apelido || null,
+        cpf: cpf || null,
+        whatsapp: whatsapp.replace(/\D/g, '') || null,
+        endereco: endereco || null,
+        ponto_referencia: referencia || null,
+        dia_vencimento: diaVenc,
+        valor_parcela_padrao: parcela,
+        observacoes: observacoes || null,
+      }),
+    });
+
+    // 2. Atualiza dados da Ficha
+    if (fichaId) {
+      await fetch(`${API_BASE}/fichas/${fichaId}/ajustar-saldo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          novo_valor_parcela: parcela,
+          novo_dia_vencimento: diaVenc,
+          motivo: 'Atualização de cadastro e regras de crediário',
+        }),
+      }).catch(() => {});
+    }
+
+    mostrarToast(`✅ Cadastro e anotações de ${nome} atualizados com sucesso!`, 'success');
+    await carregarClientes();
+    await carregarFichas();
+    atualizarDashboardCobrancas();
+    await abrirDetalhesFicha(fichaId || clienteId);
+  } catch (err) {
+    console.error('Erro ao atualizar cadastro da ficha:', err);
+    // Fallback local
+    const cli = state.clientes.find((c) => c.id === clienteId);
+    if (cli) {
+      cli.nome = nome;
+      cli.apelido = apelido;
+      cli.cpf = cpf;
+      cli.whatsapp = whatsapp;
+      cli.endereco = endereco;
+      cli.ponto_referencia = referencia;
+      cli.dia_vencimento_padrao = diaVenc;
+      cli.valor_parcela_padrao = parcela;
+      cli.observacoes = observacoes;
+    }
+    const ficha = state.fichas.find((f) => f.id === fichaId || f.cliente_id === clienteId);
+    if (ficha) {
+      ficha.valor_parcela_padrao = parcela;
+      ficha.dia_vencimento_padrao = diaVenc;
+      ficha.observacoes = observacoes;
+    }
+    mostrarToast(`✅ Cadastro atualizado localmente!`, 'success');
+    renderizarFichas();
+    renderizarTabelaClientes();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// AÇÕES RÁPIDAS 1-CLIQUE DO PRONTUÁRIO 360°
+// -----------------------------------------------------------------------------
+function iniciarVendaParaClienteAtual() {
+  const ficha = state.fichaAtualModal;
+  if (!ficha) return;
+  const clienteId = ficha.cliente_id;
+  fecharModal('modal-ficha-detalhes');
+  iniciarVendaRapidaCliente(clienteId);
+}
+
+function iniciarVendaRapidaCliente(clienteId) {
+  navegarAba('vendas');
+  const select = document.getElementById('venda-cliente-select');
+  if (select && clienteId) {
+    select.value = clienteId;
+    aoSelecionarCliente(clienteId);
+  }
+  const formaSelect = document.getElementById('venda-forma-pagamento');
+  if (formaSelect) {
+    formaSelect.value = 'CREDIARIO';
+    aoMudarFormaPagamento('CREDIARIO');
+  }
+  mostrarToast('🛒 Selecione os produtos do ateliê para lançar na ficha.', 'info');
+}
+
+function copiarLinkCarneAtual() {
+  const ficha = state.fichaAtualModal;
+  if (!ficha) return;
+  const hostUrl = window.location.origin;
+  const link = `${hostUrl}/carne/${ficha.id || ficha.cliente_id}`;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).catch(() => {});
+  }
+  mostrarToast('📋 Link do Carnê Digital copiado com sucesso!', 'success');
+}
+
+function enviarLinkCarneWhatsAppAtual() {
+  const ficha = state.fichaAtualModal;
+  if (!ficha) return;
+  const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+  const nome = cli.nome || ficha.cliente_nome || 'Cliente';
+  const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
+  const saldo = Number(ficha.saldo_devedor_total) || 0;
+  const parcela = Number(ficha.valor_parcela_padrao) || 50;
+  const hostUrl = window.location.origin;
+  const link = `${hostUrl}/carne/${ficha.id || ficha.cliente_id}`;
+
+  const msg = `Olá, ${nome}! Tudo bem? 🏠✨\n\nAqui está o link do seu *Carnê Digital* na *Enxovais Gabriel*:\n👉 ${link}\n\n💰 *Saldo Atual:* ${formatarMoeda(saldo)}\n💵 *Parcela Combinada:* ${formatarMoeda(parcela)} / mês\n\n🔑 *Chave Pix da Loja:* 12345678900\n\nQualquer dúvida, estamos sempre à sua disposição! 💖`;
+  abrirLinkWhatsApp(fone, msg);
+}
+
+function copiarChavePixLoja() {
+  const chave = '12345678900';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(chave).catch(() => {});
+  }
+  mostrarToast('🔑 Chave Pix da loja copiada!', 'success');
+}
+
+// -----------------------------------------------------------------------------
+// MODAIS DE AJUSTE DE SALDO E AMORTIZAÇÃO
+// -----------------------------------------------------------------------------
 function abrirModalAjustarSaldoFicha() {
   fecharModal('modal-ficha-detalhes');
   const ficha = state.fichaAtualModal;
@@ -541,8 +1122,8 @@ function abrirModalAjustarSaldoFicha() {
   const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
   const nome = cli.nome || ficha.cliente_nome || 'Cliente';
   const saldo = Number(ficha.saldo_devedor_total) || 0;
-  const parcela = Number(ficha.valor_parcela_padrao) || 100;
-  const diaVenc = ficha.dia_vencimento_padrao || 5;
+  const parcela = Number(ficha.valor_parcela_padrao) || 50;
+  const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
 
   const hiddenId = document.getElementById('ajuste-ficha-id');
   if (hiddenId) hiddenId.value = ficha.id;
@@ -624,7 +1205,7 @@ function abrirModalAmortizacaoFicha() {
   if (!ficha) return;
 
   const saldo = Number(ficha.saldo_devedor_total) || 0;
-  const parcela = Number(ficha.valor_parcela_padrao) || 100;
+  const parcela = Number(ficha.valor_parcela_padrao) || 50;
 
   // Gera chips de atalhos rápidos
   const chipsContainer = document.getElementById('quick-amort-chips');
@@ -648,11 +1229,10 @@ async function salvarAmortizacao(e) {
   e.preventDefault();
   const fichaId = document.getElementById('amortizacao-ficha-id').value;
   const valorPago = Number(document.getElementById('amortizacao-valor').value);
-  const novaParcela = document.getElementById('amortizacao-nova-parcela').value;
   const enviarZap = document.getElementById('amortizacao-enviar-zap') ? document.getElementById('amortizacao-enviar-zap').checked : false;
 
   if (isNaN(valorPago) || valorPago <= 0) {
-    alert('Informe um valor de pagamento válido.');
+    mostrarToast('Informe um valor de pagamento válido.', 'warning');
     return;
   }
 
@@ -680,7 +1260,7 @@ async function salvarAmortizacao(e) {
 
     fecharModal('modal-amortizacao');
     fecharModal('modal-ficha-detalhes');
-    alert(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado com sucesso!\nNovo Saldo: ${formatarMoeda(novoSaldo)}`);
+    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado! Novo Saldo: ${formatarMoeda(novoSaldo)}`, 'success');
 
     if (enviarZap && fone) {
       enviarReciboPagamentoWhatsApp(fone, nome, valorPago, novoSaldo);
@@ -692,7 +1272,7 @@ async function salvarAmortizacao(e) {
     const novoSaldo = Math.max(0, (Number(ficha.saldo_devedor_total) || 0) - valorPago);
     fecharModal('modal-amortizacao');
     fecharModal('modal-ficha-detalhes');
-    alert(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado!`);
+    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado!`, 'success');
     if (enviarZap && fone) {
       enviarReciboPagamentoWhatsApp(fone, nome, valorPago, novoSaldo);
     }
@@ -1672,28 +2252,62 @@ async function salvarNovoCliente(e) {
   e.preventDefault();
   const form = e.target;
   const nome = document.getElementById('cli-nome').value.trim();
+  const apelido = document.getElementById('cli-apelido') ? document.getElementById('cli-apelido').value.trim() : '';
+  const cpf = document.getElementById('cli-cpf') ? document.getElementById('cli-cpf').value.trim() : '';
   const whatsapp = document.getElementById('cli-telefone').value.trim();
   const diaVenc = Number(document.getElementById('cli-dia-vencimento').value) || 5;
+  const parcela = Number(document.getElementById('cli-parcela-padrao').value) || 50.0;
+  const saldoInicial = Number(document.getElementById('cli-saldo-inicial') ? document.getElementById('cli-saldo-inicial').value : 0) || 0;
   const endereco = document.getElementById('cli-endereco').value.trim();
   const referencia = document.getElementById('cli-referencia') ? document.getElementById('cli-referencia').value.trim() : '';
-  const parcela = Number(document.getElementById('cli-parcela-padrao').value) || 50.0;
+  const observacoes = document.getElementById('cli-observacoes') ? document.getElementById('cli-observacoes').value.trim() : '';
 
   try {
     const res = await fetch(`${API_BASE}/clientes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nome,
+        nome: apelido ? `${nome} (${apelido})` : nome,
         whatsapp: whatsapp.replace(/\D/g, ''),
+        cpf: cpf || undefined,
         endereco: endereco || undefined,
         ponto_referencia: referencia || undefined,
         limite_credito: 1000.0,
         dia_vencimento: diaVenc,
         valor_parcela_padrao: parcela,
+        observacoes: observacoes || undefined,
       }),
     });
 
     if (res.ok) {
+      const novoCli = await res.json();
+      
+      // Se houver saldo inicial de caderno/dívida antiga, atualiza a ficha imediatamente
+      if (saldoInicial > 0 && novoCli && novoCli.id) {
+        try {
+          const resFichas = await fetch(`${API_BASE}/fichas`);
+          if (resFichas.ok) {
+            const todasFichas = await resFichas.json();
+            const lista = Array.isArray(todasFichas) ? todasFichas : (todasFichas.data || []);
+            const ficha = lista.find((f) => f.cliente_id === novoCli.id);
+            if (ficha) {
+              await fetch(`${API_BASE}/fichas/${ficha.id}/ajustar-saldo`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  novo_saldo: saldoInicial,
+                  motivo: 'Saldo inicial migrado de anotações antigas do caderno',
+                  novo_valor_parcela: parcela,
+                  novo_dia_vencimento: diaVenc,
+                }),
+              });
+            }
+          }
+        } catch (errFicha) {
+          console.log('Aviso ao lançar saldo inicial:', errFicha);
+        }
+      }
+
       fecharModal('modal-novo-cliente');
       if (form) form.reset();
       mostrarToast(`🎉 Cliente ${nome} cadastrada com sucesso!`, 'success');

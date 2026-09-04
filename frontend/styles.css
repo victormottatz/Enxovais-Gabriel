@@ -3260,5 +3260,226 @@ input, select, textarea {
   flex-wrap: wrap;
 }
 
+/* =============================================================================
+   ESTILOS: PRONTUÁRIO 360° DA FICHA & CLIENTE (ENXOVAIS GABRIEL)
+   ============================================================================= */
 
+.prontuario-modal-sheet {
+  max-width: 840px;
+  width: 100%;
+  padding: 24px;
+}
 
+.prontuario-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.prontuario-client-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ficha-tabs-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+
+.ficha-tabs-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.ficha-tab-btn {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ficha-tab-btn:hover {
+  background: rgba(140, 45, 64, 0.08);
+  color: var(--wine-primary);
+  border-color: rgba(140, 45, 64, 0.3);
+}
+
+.ficha-tab-btn.active {
+  background: var(--wine-primary);
+  color: #FFFFFF;
+  border-color: var(--wine-primary);
+  box-shadow: 0 4px 12px rgba(140, 45, 64, 0.25);
+}
+
+.prontuario-body {
+  padding: 0;
+}
+
+.prontuario-pane {
+  display: none;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.prontuario-pane.active {
+  display: block;
+}
+
+.prontuario-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.prontuario-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .prontuario-split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.split-col {
+  background: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.split-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: 8px;
+}
+
+.split-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+}
+
+.mini-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-timeline-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.pane-header-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+}
+
+/* Histórico de Compras Cards */
+.purchase-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all var(--transition-fast);
+}
+
+.purchase-card:hover {
+  border-color: var(--wine-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.purchase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.purchase-items-box {
+  background: var(--bg-main);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.carne-parcelas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.carne-parcela-item {
+  background: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.carne-parcela-item.paga {
+  background: #F0FDF4;
+  border-color: #BBF7D0;
+}
+
+.carne-parcela-item.vencida {
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+
+.badge-tipo-venda {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+
+.badge-tipo-venda.pronta {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.badge-tipo-venda.encomenda {
+  background: #FAF5FF;
+  color: #7E22CE;
+}
