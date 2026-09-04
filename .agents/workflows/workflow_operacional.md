@@ -14,7 +14,7 @@ Este documento mapeia os fluxos operacionais de ponta a ponta do **Enxovais Gabr
           ▼                   ▼                     ▼                  ▼
   [1. Venda Balcão/Rota] [2. Encomenda Fornec.] [3. Cobrança/Vale]  [4. Amortização/Pix]
   - Pronta-entrega       - Solicitação ao distr. - Lembrete Dia 05  - Baixa no sistema
-  - Baixa imediata       - Chegada no ateliê     - Lembrete Dia 20  - Recibo WhatsApp
+  - Baixa imediata       - Chegada na loja/estoque - Lembrete Dia 20 - Recibo WhatsApp
   - À vista ou Ficha     - Notificação cliente   - Pix Copia e Cola - Saldo atualizado
 ```
 
@@ -56,7 +56,7 @@ Este documento mapeia os fluxos operacionais de ponta a ponta do **Enxovais Gabr
 [2. Registro da Encomenda] ──► Sistema registra: Produto + Fornecedor + Previsão
          │                     └─► Status: "SOLICITADO_AO_FORNECEDOR"
          ▼
-[3. Chegada do Produto] ──► Mercadoria recebida e conferida no ateliê
+[3. Chegada do Produto] ──► Mercadoria recebida e conferida na loja/estoque
          │                  └─► Vendedora altera status para: "RECEBIDO_ESTOQUE"
          ▼
 [4. Notificação Automática] ──► Disparo WhatsApp para a cliente:

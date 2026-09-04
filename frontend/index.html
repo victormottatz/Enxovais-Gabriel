@@ -1078,6 +1078,8 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           <button class="btn btn-outline" onclick="enviarLembreteWhatsAppFichaAtual()">
             📱 Cobrar no Zap
           </button>
+        </div>
+
         <div id="modal-ficha-anotacoes-box" style="display: none; background: #FFF8F0; border-left: 4px solid var(--wine-primary); padding: 10px 14px; border-radius: var(--radius-sm); margin: 15px 0; font-size: 0.9rem;">
           <strong style="color: var(--wine-primary);">📌 Anotações & Histórico de Compras:</strong>
           <p id="modal-ficha-anotacoes-texto" style="margin: 5px 0 0; color: var(--text-dark); line-height: 1.4;"></p>
@@ -1572,6 +1574,30 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
             Enviar
           </button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CONEXÃO WHATSAPP / QR CODE -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-conexao-zap">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h3>📱 Conexão WhatsApp</h3>
+        <button class="btn-close" onclick="fecharModal('modal-conexao-zap')">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center; padding: 20px 10px;">
+        <p style="color: var(--text-muted); margin-bottom: 16px;">
+          Escaneie o QR Code abaixo com seu WhatsApp para conectar a instância do ateliê:
+        </p>
+        <div id="qrcode-container" style="display: flex; justify-content: center; align-items: center; min-height: 200px; margin: 15px 0;">
+          <!-- QR code inserido via JS -->
+        </div>
+        <button class="btn btn-outline btn-block" onclick="carregarQRCodeModal()" style="margin-top: 15px;">
+          🔄 Atualizar QR Code
+        </button>
       </div>
     </div>
   </div>

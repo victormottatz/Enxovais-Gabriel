@@ -32,3 +32,7 @@ backend/coverage/
 playwright-report/
 test-results/
 
+# Uploads temporários
+uploads/
+backend/uploads/
+

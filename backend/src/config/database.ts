@@ -58,7 +58,21 @@ export const memoryStore: MemoryStore = {
   encomendas: [],
   pedidos: [],
   movimentacoes_ficha: [],
-  configuracoes: [],
+  configuracoes: [
+    {
+      id: '1',
+      chave_pix: '18991234567',
+      nome_titular_pix: 'Enxovais Gabriel',
+      nome_loja: 'Enxovais Gabriel',
+      nome_atelie: 'Enxovais Gabriel',
+      template_boas_vindas: 'Olá, {nome_cliente}! Seu pedido de {descricao_itens} foi registrado na {nome_atelie}. Previsão de entrega: {data_previsao_entrega}.',
+      template_cobranca_pix: 'Olá, {nome_cliente}! Seu pedido de {descricao_itens} está pronto! O saldo restante é R$ {valor_restante}. Chave Pix: {chave_pix} ({nome_titular_pix}).',
+      template_venda_crediario: 'Olá, {nome_cliente}! Sua compra de R$ {valor_compra} foi registrada no crediário.',
+      template_lembrete_pagamento: 'Olá, {nome_cliente}! Lembramos que hoje é dia de pagamento na Enxovais Gabriel.',
+      template_recibo_pagamento: 'Olá, {nome_cliente}! Recebemos seu pagamento de R$ {valor_pago}. Novo saldo: R$ {saldo_restante}.',
+      template_encomenda_chegou: 'Olá, {nome_cliente}! Sua encomenda chegou à loja!',
+    },
+  ],
 };
 
 // Mock query executor para quando PostgreSQL não estiver acessível
@@ -253,8 +267,71 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     return { rows: memoryStore.encomendas };
   }
 
+  if (qUpper.includes('INSERT INTO PEDIDOS')) {
+    const id = uuidv4();
+    const valorTotal = Number(params[3]) || 0;
+    const valorSinal = Number(params[4]) || 0;
+    const novoPedido = {
+      id,
+      cliente_id: params[0],
+      descricao_itens: params[1] || '',
+      data_previsao_entrega: params[2] || new Date().toISOString().split('T')[0],
+      valor_total: valorTotal,
+      valor_sinal: valorSinal,
+      valor_restante: Math.max(0, valorTotal - valorSinal),
+      status_pagamento: params[5] || (valorSinal > 0 ? 'SINAL_PAGO' : 'AGUARDANDO_SINAL'),
+      foto_referencia_url: params[6] || null,
+      status_producao: 'FILA',
+      notificacao_boas_vindas_enviada: false,
+      notificacao_pronto_enviada: false,
+      data_pedido: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    memoryStore.pedidos.push(novoPedido);
+    return { rows: [novoPedido] };
+  }
+
+  if (qUpper.includes('UPDATE PEDIDOS')) {
+    const id = params[params.length - 1];
+    const ped = memoryStore.pedidos.find((p) => p.id === id);
+    if (ped) {
+      if (qUpper.includes('NOTIFICACAO_BOAS_VINDAS_ENVIADA')) {
+        ped.notificacao_boas_vindas_enviada = true;
+      } else if (qUpper.includes('NOTIFICACAO_PRONTO_ENVIADA')) {
+        ped.notificacao_pronto_enviada = true;
+      } else {
+        ped.status_producao = params[0] || ped.status_producao;
+        ped.status_pagamento = params[1] || ped.status_pagamento;
+      }
+      ped.updated_at = new Date().toISOString();
+      return { rows: [ped] };
+    }
+    return { rows: [] };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM PEDIDOS')) {
-    return { rows: memoryStore.pedidos };
+    const rows = memoryStore.pedidos.map((p) => {
+      const cli = memoryStore.clientes.find((c) => c.id === p.cliente_id) || {};
+      return {
+        ...p,
+        cliente_nome: cli.nome || 'Cliente',
+        cliente_whatsapp: cli.whatsapp || cli.telefone || '',
+      };
+    });
+
+    if (qUpper.includes('WHERE P.ID =') || qUpper.includes('WHERE ID =')) {
+      const id = params[0];
+      const found = rows.find((p) => p.id === id);
+      return { rows: found ? [found] : [] };
+    }
+
+    if (qUpper.includes('WHERE CLIENTE_ID =')) {
+      const cliId = params[0];
+      return { rows: rows.filter((p) => p.cliente_id === cliId) };
+    }
+
+    return { rows };
   }
 
   // 5. Vendas
@@ -317,6 +394,35 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
 
   if (qUpper.includes('SELECT') && qUpper.includes('FROM MOVIMENTACOES_FICHA')) {
     return { rows: memoryStore.movimentacoes_ficha };
+  }
+
+  // 7. Configurações
+  if (qUpper.includes('SELECT') && qUpper.includes('FROM CONFIGURACOES')) {
+    return { rows: memoryStore.configuracoes };
+  }
+
+  if (qUpper.includes('UPDATE CONFIGURACOES')) {
+    if (memoryStore.configuracoes.length > 0) {
+      const cfg = memoryStore.configuracoes[0];
+      if (params.length >= 6) {
+        cfg.chave_pix = params[0] || cfg.chave_pix;
+        cfg.nome_titular_pix = params[1] || cfg.nome_titular_pix;
+        cfg.nome_atelie = params[2] || cfg.nome_atelie;
+        cfg.template_boas_vindas = params[3] || cfg.template_boas_vindas;
+        cfg.template_cobranca_pix = params[4] || cfg.template_cobranca_pix;
+      }
+      return { rows: [cfg] };
+    }
+    return { rows: [] };
+  }
+
+  // 8. Parcelas de Crediário
+  if (qUpper.includes('SELECT') && qUpper.includes('FROM PARCELAS_CREDIARIO')) {
+    return { rows: [] };
+  }
+
+  if (qUpper.includes('UPDATE PARCELAS_CREDIARIO') || qUpper.includes('INSERT INTO PARCELAS_CREDIARIO')) {
+    return { rows: [] };
   }
 
   // Comandos de controle transacional no MemoryStore
