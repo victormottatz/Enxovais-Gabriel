@@ -225,6 +225,79 @@
     .tag-pendente { background: #CBD5E0; color: #4A5568; }
     .tag-atrasado { background: #E53E3E; color: #FFFFFF; }
 
+    /* Estilos dos Itens / Produtos Comprados */
+    .produto-card-item {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .produto-card-item.quitado {
+      border-color: #C6F6D5;
+      background: #F0FFF4;
+    }
+
+    .prod-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .prod-nome {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .prod-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .prod-tag.quitado {
+      background: #38A169;
+      color: #FFFFFF;
+    }
+
+    .prod-tag.parcial {
+      background: #D69E2E;
+      color: #FFFFFF;
+    }
+
+    .prod-tag.pendente {
+      background: #E2E8F0;
+      color: #4A5568;
+    }
+
+    .prod-val-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .progresso-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: #EDF2F7;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progresso-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
     .footer-note {
       text-align: center;
       font-size: 0.8rem;
@@ -287,12 +360,23 @@
         <div class="pix-card">
           <div class="pix-title">⚡ Pagamento Rápido via Pix</div>
           <p style="font-size: 0.8rem; color: #744210; margin-bottom: 10px;">
-            Pague suas parcelas sem sair de casa:
+            Pague suas parcelas sem sair de casa com segurança:
           </p>
           <button class="btn-pix" id="btn-copy-pix" onclick="copiarChavePix()">
             📋 Copiar Chave Pix
           </button>
           <small id="pix-aviso" style="display: block; font-size: 0.75rem; color: #744210; margin-top: 6px;"></small>
+        </div>
+      </div>
+
+      <!-- Lista de Produtos Comprados & Status de Quitação -->
+      <div class="card" id="card-produtos">
+        <h2 class="section-title">🛍️ Meus Produtos Comprados</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+          Acompanhe o que você levou e veja quais itens já estão 100% quitados:
+        </p>
+        <div id="produtos-list">
+          <!-- Preenchido via JS -->
         </div>
       </div>
 
@@ -360,6 +444,50 @@
       }
 
       document.getElementById('pix-aviso').textContent = `Titular: ${d.nome_titular_pix}`;
+
+      // Renderiza Produtos Comprados
+      const prodContainer = document.getElementById('produtos-list');
+      const cardProdutos = document.getElementById('card-produtos');
+
+      if (!d.itens || d.itens.length === 0) {
+        cardProdutos.style.display = 'none';
+      } else {
+        cardProdutos.style.display = 'block';
+        prodContainer.innerHTML = d.itens.map(it => {
+          let tagClass = 'pendente';
+          let tagTexto = '🔴 A Pagar';
+          let corBarra = '#E2E8F0';
+          const subtotal = Number(it.subtotal || 0);
+          const valorPago = Number(it.valor_pago || 0);
+          const percentual = subtotal > 0 ? Math.min(100, Math.round((valorPago / subtotal) * 100)) : 0;
+
+          if (it.status_quitacao === 'QUITADO') {
+            tagClass = 'quitado';
+            tagTexto = '✅ 100% QUITADO';
+            corBarra = '#38A169';
+          } else if (it.status_quitacao === 'PAGO_PARCIAL') {
+            tagClass = 'parcial';
+            tagTexto = `⏳ Pago ${percentual}% (Falta ${formatarMoeda(it.saldo_restante)})`;
+            corBarra = '#D69E2E';
+          }
+
+          return `
+            <div class="produto-card-item ${it.status_quitacao === 'QUITADO' ? 'quitado' : ''}">
+              <div class="prod-top-row">
+                <span class="prod-nome">🛍️ ${it.descricao_item}</span>
+                <span class="prod-tag ${tagClass}">${tagTexto}</span>
+              </div>
+              <div class="prod-val-row">
+                <span>Total: <strong>${formatarMoeda(subtotal)}</strong></span>
+                <span>Já Pago: <strong style="color: ${it.status_quitacao === 'QUITADO' ? '#38A169' : '#2D3748'}">${formatarMoeda(valorPago)}</strong></span>
+              </div>
+              <div class="progresso-bar-bg">
+                <div class="progresso-bar-fill" style="width: ${percentual}%; background: ${corBarra};"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
 
       const container = document.getElementById('parcelas-list');
       if (!d.parcelas || d.parcelas.length === 0) {

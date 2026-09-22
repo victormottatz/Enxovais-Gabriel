@@ -47,6 +47,7 @@ flowchart TD
 | **Porta Externa Evolution API** | `8080` | `8081` | ✅ Sem Conflito |
 | **Nome da Instância WhatsApp** | Instância da MGV | `enxovais_gabriel` | ✅ Instância Própria |
 | **Volume de Dados do Banco** | `mgv_postgres_data` | `postgres_data` (namespaced) | ✅ 100% Separado |
+| **Backup Automatizado (Coolify)** | Diário 03:00 UTC (`00:00 BRT`) | Diário 03:15 UTC (`00:15 BRT`) | ✅ Rotina Ativa (7 dias retenção) |
 
 ---
 
@@ -72,3 +73,19 @@ flowchart TD
 2. No menu **Projects**, clique em **+ New Project** e nomeie como **"Enxovais Gabriel"**.
 3. Adicione um **Docker Compose Resource** apontando para o arquivo `docker-compose.yml` da Enxovais.
 4. Defina as variáveis de ambiente baseadas no `.env.example` e clique em **Deploy**.
+
+---
+
+## 💾 4. Política e Rotinas de Backup Automatizado (Coolify)
+
+Os backups de banco de dados são gerenciados nativamente pelo Coolify em ambas as partições:
+
+| Parâmetro | MGV ERP (`mgv-postgres-v2`) | Enxovais Gabriel (`enxovais-postgres`) |
+| :--- | :--- | :--- |
+| **UUID do Banco** | `sv9y43rfu5b9jzp39h8fc2og` | `3nfpaeg8am65l0everqn086j` |
+| **UUID da Rotina** | `d77bx1sadnwi4eq5mwvk81ql` | `ohla7ubjubckrvzbi6rckl5o` |
+| **Horário (Cron)** | `0 3 * * *` (00:00 BRT) | `15 3 * * *` (00:15 BRT) |
+| **Escopo** | `pg_dumpall` (`dump_all: true`) | `pg_dumpall` (`dump_all: true`) |
+| **Retenção Local** | 7 dias (descarte automático) | 7 dias (descarte automático) |
+| **Diretório do Backup** | `/data/coolify/backups/databases/root-team-0/...` | `/data/coolify/backups/databases/root-team-0/...` |
+

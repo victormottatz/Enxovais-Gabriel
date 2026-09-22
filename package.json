@@ -4,6 +4,9 @@
   "description": "Workspace de Gestão e Testes - Ateliê Enxovais Gabriel",
   "private": true,
   "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "build": "npm --prefix backend run build",
+    "seed": "npm --prefix backend run seed",
     "test:backend": "npm --prefix backend test",
     "test:backend:ui": "npm --prefix backend run test:ui",
     "test:backend:coverage": "npm --prefix backend run test:coverage",

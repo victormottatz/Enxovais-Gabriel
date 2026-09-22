@@ -73,4 +73,30 @@ router.patch('/:id/ajustar-saldo', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/fichas/:id/historico-item
+const historicoItemSchema = z.object({
+  descricao: z.string().min(2, 'Informe o nome/descrição do produto'),
+  valor_total: z.number().positive('O valor do produto deve ser maior que zero'),
+  valor_ja_pago: z.number().min(0, 'O valor pago não pode ser negativo').optional(),
+  data_compra: z.string().optional(),
+  observacoes: z.string().optional(),
+});
+
+router.post('/:id/historico-item', async (req, res, next) => {
+  try {
+    const validated = historicoItemSchema.parse(req.body);
+    const resultado = await FichaCrediarioService.adicionarItemHistoricoManual({
+      fichaId: req.params.id,
+      descricao: validated.descricao,
+      valorTotal: validated.valor_total,
+      valorJaPago: validated.valor_ja_pago,
+      dataCompra: validated.data_compra,
+      observacoes: validated.observacoes,
+    });
+    res.status(201).json(resultado);
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

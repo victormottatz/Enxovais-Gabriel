@@ -26,6 +26,15 @@ export interface CarneDigitalDTO {
     forma_pagamento: string;
     created_at: string;
   }>;
+  itens?: Array<{
+    id: string;
+    descricao_item: string;
+    subtotal: number;
+    valor_pago: number;
+    saldo_restante: number;
+    status_quitacao: 'QUITADO' | 'PAGO_PARCIAL' | 'PENDENTE';
+    data_venda: string;
+  }>;
 }
 
 export class CarneDigitalService {
@@ -73,6 +82,50 @@ export class CarneDigitalService {
       [ficha.cliente_id]
     );
 
+    // Busca itens vendidos associados às vendas da cliente
+    const itensRes = await pool.query(
+      `SELECT iv.id, iv.descricao_item, iv.subtotal, v.created_at as data_venda
+       FROM itens_venda iv
+       JOIN vendas v ON v.id = iv.venda_id
+       WHERE v.cliente_id = $1
+       ORDER BY v.created_at ASC`,
+      [ficha.cliente_id]
+    );
+
+    // Calcula quitação em cascata
+    const saldoTotalAtual = Number(ficha.saldo_devedor_total);
+    const totalItens = itensRes.rows.reduce((acc, row) => acc + Number(row.subtotal), 0);
+    let totalJaAmortizado = Math.max(0, totalItens - saldoTotalAtual);
+
+    const itensCalculados = itensRes.rows.map((row) => {
+      const subtotal = Number(row.subtotal);
+      let valorPago = 0;
+      let saldoRestante = subtotal;
+      let statusQuitacao: 'QUITADO' | 'PAGO_PARCIAL' | 'PENDENTE' = 'PENDENTE';
+
+      if (totalJaAmortizado >= subtotal) {
+        valorPago = subtotal;
+        saldoRestante = 0;
+        statusQuitacao = 'QUITADO';
+        totalJaAmortizado -= subtotal;
+      } else if (totalJaAmortizado > 0) {
+        valorPago = totalJaAmortizado;
+        saldoRestante = Number((subtotal - totalJaAmortizado).toFixed(2));
+        statusQuitacao = 'PAGO_PARCIAL';
+        totalJaAmortizado = 0;
+      }
+
+      return {
+        id: row.id,
+        descricao_item: row.descricao_item,
+        subtotal,
+        valor_pago: valorPago,
+        saldo_restante: saldoRestante,
+        status_quitacao: statusQuitacao,
+        data_venda: row.data_venda,
+      };
+    });
+
     return {
       cliente_nome: ficha.cliente_nome,
       cliente_whatsapp: ficha.cliente_whatsapp,
@@ -92,6 +145,7 @@ export class CarneDigitalService {
         ...v,
         valor_total: Number(v.valor_total),
       })),
+      itens: itensCalculados.reverse(),
     };
   }
 }

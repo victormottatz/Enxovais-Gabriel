@@ -412,10 +412,25 @@ export class FichaCrediarioService {
   /**
    * Obtém detalhes completos da ficha: dados, parcelas e extrato de movimentações.
    */
+  /**
+   * Obtém detalhes completos da ficha: dados, parcelas, extrato e itens comprados.
+   */
   public static async getFichaDetalhada(id: string): Promise<{
     ficha: FichaCrediarioDTO;
     parcelas: ParcelaDTO[];
     movimentacoes: MovimentacaoFichaDTO[];
+    itens: Array<{
+      id: string;
+      descricao_item: string;
+      quantidade: number;
+      preco_unitario: number;
+      subtotal: number;
+      tipo_item: string;
+      data_venda: string;
+      status_quitacao: 'QUITADO' | 'PAGO_PARCIAL' | 'PENDENTE';
+      valor_pago: number;
+      saldo_restante: number;
+    }>;
   }> {
     const fichaRes = await pool.query<FichaCrediarioDTO>(
       `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp, c.cpf as cliente_cpf
@@ -446,11 +461,193 @@ export class FichaCrediarioService {
       [ficha.id]
     );
 
+    // Busca itens vendidos associados às vendas da cliente
+    const itensRes = await pool.query(
+      `SELECT iv.id, iv.descricao_item, iv.quantidade, iv.preco_unitario, iv.subtotal, 
+              iv.tipo_item, v.created_at as data_venda
+       FROM itens_venda iv
+       JOIN vendas v ON v.id = iv.venda_id
+       WHERE v.cliente_id = $1
+       ORDER BY v.created_at ASC`,
+      [ficha.cliente_id]
+    );
+
+    // Calcula quitação em cascata dos itens para exibição intuitiva
+    const saldoTotalAtual = Number(ficha.saldo_devedor_total);
+    const totalItens = itensRes.rows.reduce((acc, row) => acc + Number(row.subtotal), 0);
+    let totalJaAmortizado = Math.max(0, totalItens - saldoTotalAtual);
+
+    const itensCalculados = itensRes.rows.map((row) => {
+      const subtotal = Number(row.subtotal);
+      let valorPago = 0;
+      let saldoRestante = subtotal;
+      let statusQuitacao: 'QUITADO' | 'PAGO_PARCIAL' | 'PENDENTE' = 'PENDENTE';
+
+      if (totalJaAmortizado >= subtotal) {
+        valorPago = subtotal;
+        saldoRestante = 0;
+        statusQuitacao = 'QUITADO';
+        totalJaAmortizado -= subtotal;
+      } else if (totalJaAmortizado > 0) {
+        valorPago = totalJaAmortizado;
+        saldoRestante = Number((subtotal - totalJaAmortizado).toFixed(2));
+        statusQuitacao = 'PAGO_PARCIAL';
+        totalJaAmortizado = 0;
+      }
+
+      return {
+        id: row.id,
+        descricao_item: row.descricao_item,
+        quantidade: Number(row.quantidade),
+        preco_unitario: Number(row.preco_unitario),
+        subtotal,
+        tipo_item: row.tipo_item,
+        data_venda: row.data_venda,
+        status_quitacao: statusQuitacao,
+        valor_pago: valorPago,
+        saldo_restante: saldoRestante,
+      };
+    });
+
     return {
       ficha,
       parcelas: parcelasRes.rows,
       movimentacoes: movRes.rows,
+      itens: itensCalculados.reverse(), // Mostra mais recentes primeiro na UI
     };
+  }
+
+  /**
+   * Permite que a Lucélia adicione manualmente um item de histórico à ficha/carnê
+   * (ideal para migração de clientes antigos ou lançamento de produtos anteriores).
+   */
+  public static async adicionarItemHistoricoManual(params: {
+    fichaId: string;
+    descricao: string;
+    valorTotal: number;
+    valorJaPago?: number;
+    dataCompra?: string;
+    observacoes?: string;
+  }): Promise<{
+    vendaId: string;
+    itemId: string;
+    saldoDevedorAtualizado: number;
+    statusQuitacaoItem: string;
+  }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const fichaRes = await client.query(
+        `SELECT f.*, c.nome as cliente_nome
+         FROM fichas_crediario f
+         JOIN clientes c ON c.id = f.cliente_id
+         WHERE f.id = $1 OR f.cliente_id = $1
+         FOR UPDATE`,
+        [params.fichaId]
+      );
+
+      if (fichaRes.rows.length === 0) {
+        throw new AppError('Ficha de crediário não encontrada.', 404, 'FICHA_NOT_FOUND');
+      }
+
+      const ficha = fichaRes.rows[0];
+      const valorTotal = Number(params.valorTotal);
+      const valorJaPago = Number(Math.min(valorTotal, params.valorJaPago ?? 0));
+      const saldoRestante = Number(Math.max(0, valorTotal - valorJaPago).toFixed(2));
+      const statusQuitacao = saldoRestante === 0 ? 'QUITADO' : valorJaPago > 0 ? 'PAGO_PARCIAL' : 'PENDENTE';
+
+      // 1. Cria a venda associada ao histórico
+      const vendaRes = await client.query(
+        `INSERT INTO vendas (
+          cliente_id, tipo_venda, forma_pagamento, valor_total,
+          valor_entrada, valor_financiado_ficha, status_venda, observacoes, created_at
+        )
+        VALUES ($1, 'PRONTA_ENTREGA', 'CREDIARIO', $2, $3, $4, 'CONCLUIDA', $5, COALESCE($6::timestamptz, NOW()))
+        RETURNING id`,
+        [
+          ficha.cliente_id,
+          valorTotal,
+          valorJaPago,
+          saldoRestante,
+          params.observacoes || 'Histórico anterior do carnê/ficha física',
+          params.dataCompra ? new Date(params.dataCompra).toISOString() : null,
+        ]
+      );
+
+      const vendaId = vendaRes.rows[0].id;
+
+      // 2. Cria o item da venda
+      const itemRes = await client.query(
+        `INSERT INTO itens_venda (
+          venda_id, descricao_item, quantidade, preco_unitario, tipo_item, created_at
+        )
+        VALUES ($1, $2, 1, $3, 'ESTOQUE_LOCAL', COALESCE($4::timestamptz, NOW()))
+        RETURNING id`,
+        [
+          vendaId,
+          params.descricao,
+          valorTotal,
+          params.dataCompra ? new Date(params.dataCompra).toISOString() : null,
+        ]
+      );
+
+      const itemId = itemRes.rows[0].id;
+
+      let novoSaldoDevedor = Number(ficha.saldo_devedor_total);
+
+      // 3. Se ainda restar saldo a pagar, incrementa o saldo devedor da ficha
+      if (saldoRestante > 0) {
+        novoSaldoDevedor = Number((novoSaldoDevedor + saldoRestante).toFixed(2));
+
+        await client.query(
+          `UPDATE fichas_crediario
+           SET saldo_devedor_total = $1, status_ficha = 'ATIVO', updated_at = NOW()
+           WHERE id = $2`,
+          [novoSaldoDevedor, ficha.id]
+        );
+
+        // Registra movimentação de débito
+        await client.query(
+          `INSERT INTO movimentacoes_ficha (
+            ficha_id, venda_id, tipo_movimentacao, valor,
+            saldo_anterior, saldo_posterior, descricao
+          )
+          VALUES ($1, $2, 'DEBITO_COMPRA', $3, $4, $5, $6)`,
+          [
+            ficha.id,
+            vendaId,
+            saldoRestante,
+            Number(ficha.saldo_devedor_total),
+            novoSaldoDevedor,
+            `Histórico manual adicionado: ${params.descricao} (A pagar: R$ ${saldoRestante.toFixed(2)})`,
+          ]
+        );
+
+        // Sincroniza cronograma de parcelas futuras
+        await FichaCrediarioService.sincronizarParcelas(
+          client,
+          ficha.id,
+          novoSaldoDevedor,
+          Number(ficha.valor_parcela_padrao),
+          Number(ficha.dia_vencimento_padrao)
+        );
+      }
+
+      await client.query('COMMIT');
+
+      return {
+        vendaId,
+        itemId,
+        saldoDevedorAtualizado: novoSaldoDevedor,
+        statusQuitacaoItem: statusQuitacao,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   /**

@@ -126,15 +126,63 @@ function mostrarToast(mensagem, tipo = 'info') {
 }
 
 // =============================================================================
-// INICIALIZAÇÃO DA APLICAÇÃO
+// INICIALIZAÇÃO DA APLICAÇÃO & RESTAURAÇÃO DE ROTAS
 // =============================================================================
+const ABAS_VALIDAS = [
+  'inicio',
+  'cobrancas',
+  'fichas',
+  'vendas',
+  'catalogo',
+  'clientes',
+  'encomendas',
+  'caixa',
+  'importacao',
+  'whatsapp',
+];
+
 document.addEventListener('DOMContentLoaded', () => {
   registrarServiceWorker();
+  restaurarNavegacaoInicial();
   carregarDadosIniciais();
   verificarStatusWhatsApp();
   configurarDragAndDrop();
   renderizarSimuladorDemo();
 });
+
+// Listener para navegação via botões Voltar/Avançar do navegador e links com Hash
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash ? window.location.hash.replace(/^#/, '').trim() : '';
+  if (hash && ABAS_VALIDAS.includes(hash)) {
+    navegarAba(hash, false);
+  }
+});
+
+function obterAbaInicial() {
+  // 1. Prioridade: Hash na URL (ex: #fichas)
+  const hash = window.location.hash ? window.location.hash.replace(/^#/, '').trim() : '';
+  if (hash && ABAS_VALIDAS.includes(hash)) {
+    return hash;
+  }
+
+  // 2. Segunda prioridade: Última aba salva no LocalStorage
+  try {
+    const abaSalva = localStorage.getItem('enxovais_aba_ativa');
+    if (abaSalva && ABAS_VALIDAS.includes(abaSalva)) {
+      return abaSalva;
+    }
+  } catch (err) {
+    console.warn('Aviso ao consultar localStorage:', err);
+  }
+
+  // 3. Padrão inicial
+  return 'inicio';
+}
+
+function restaurarNavegacaoInicial() {
+  const abaInicial = obterAbaInicial();
+  navegarAba(abaInicial, false);
+}
 
 function registrarServiceWorker() {
   if ('serviceWorker' in navigator) {
@@ -163,7 +211,28 @@ async function carregarDadosIniciais() {
 // =============================================================================
 // ROTEAMENTO DE ABAS E NAVEGAÇÃO SPA
 // =============================================================================
-function navegarAba(abaId) {
+function navegarAba(abaId, atualizarHistorico = true) {
+  // Garante que o identificador da aba é válido
+  if (!ABAS_VALIDAS.includes(abaId)) {
+    abaId = 'inicio';
+  }
+
+  // Persiste a aba no localStorage para recargas de tela
+  try {
+    localStorage.setItem('enxovais_aba_ativa', abaId);
+  } catch (err) {
+    console.warn('Aviso ao salvar aba no localStorage:', err);
+  }
+
+  // Sincroniza o Hash da URL sem forçar novo recarregamento
+  if (atualizarHistorico && window.location.hash !== `#${abaId}`) {
+    if (window.history && window.history.pushState) {
+      window.history.pushState(null, '', `#${abaId}`);
+    } else {
+      window.location.hash = abaId;
+    }
+  }
+
   // Atualiza painéis de conteúdo
   document.querySelectorAll('.tab-pane').forEach((pane) => pane.classList.remove('active'));
   const targetPane = document.getElementById(`tab-${abaId}`);
@@ -3416,6 +3485,112 @@ function definirPassoEncomendaDemo(passo) {
   }
   if (elDesc) elDesc.innerHTML = info.desc;
   if (elZap) elZap.textContent = info.zap;
+}
+
+// =============================================================================
+// HISTÓRICO MANUAL DO CARNÊ / MIGRAÇÃO DE CLIENTES ANTIGOS
+// =============================================================================
+function abrirModalHistoricoManual() {
+  const ficha = state.fichaAtualModal;
+  if (!ficha) {
+    mostrarToast('Abra a ficha de uma cliente para adicionar produtos ao histórico.', 'warning');
+    return;
+  }
+
+  document.getElementById('hist-ficha-id').value = ficha.id || '';
+  document.getElementById('hist-descricao').value = '';
+  document.getElementById('hist-valor-total').value = '';
+  document.getElementById('hist-valor-pago').value = '';
+  document.getElementById('hist-data-compra').value = '';
+  document.getElementById('hist-observacao').value = '';
+  document.getElementById('hist-previa-box').style.display = 'none';
+
+  abrirModal('modal-historico-item');
+}
+
+function calcularPreviaHistorico() {
+  const inputTotal = parseFloat(document.getElementById('hist-valor-total').value);
+  const inputPago = parseFloat(document.getElementById('hist-valor-pago').value) || 0;
+  const box = document.getElementById('hist-previa-box');
+
+  if (isNaN(inputTotal) || inputTotal <= 0) {
+    box.style.display = 'none';
+    return;
+  }
+
+  const pago = Math.min(inputTotal, inputPago);
+  const restante = Math.max(0, inputTotal - pago);
+
+  box.style.display = 'block';
+
+  if (restante === 0) {
+    box.style.background = '#EDFDF2';
+    box.style.color = '#15803D';
+    box.style.border = '1px solid #BBF7D0';
+    box.innerHTML = `
+      <strong>🎉 Item 100% QUITADO no passado!</strong><br>
+      Este produto aparecerá com selo verde comemorativo no <strong>Carnê Digital</strong> da cliente e <em>NÃO aumentará</em> a dívida atual dela.
+    `;
+  } else {
+    box.style.background = '#FFFBEB';
+    box.style.color = '#B45309';
+    box.style.border = '1px solid #FDE68A';
+    box.innerHTML = `
+      <strong>⏳ Resta pagar: ${formatarMoeda(restante)}</strong><br>
+      A cliente já pagou ${formatarMoeda(pago)}. O valor restante de <strong>${formatarMoeda(restante)}</strong> será somado ao saldo devedor atual e recalculado nas parcelas.
+    `;
+  }
+}
+
+async function salvarItemHistoricoManual(e) {
+  e.preventDefault();
+  const fichaId = document.getElementById('hist-ficha-id').value;
+  const descricao = document.getElementById('hist-descricao').value.trim();
+  const valorTotal = parseFloat(document.getElementById('hist-valor-total').value);
+  const valorPago = parseFloat(document.getElementById('hist-valor-pago').value) || 0;
+  const dataCompra = document.getElementById('hist-data-compra').value || undefined;
+  const observacao = document.getElementById('hist-observacao').value.trim() || undefined;
+
+  if (!descricao) {
+    mostrarToast('Informe o nome do produto.', 'warning');
+    return;
+  }
+
+  if (isNaN(valorTotal) || valorTotal <= 0) {
+    mostrarToast('Informe um valor total válido para o produto.', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/fichas/${fichaId}/historico-item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        descricao,
+        valor_total: valorTotal,
+        valor_ja_pago: valorPago,
+        data_compra: dataCompra,
+        observacoes: observacao,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Erro ao registrar item no histórico');
+    }
+
+    fecharModal('modal-historico-item');
+    mostrarToast(`✅ Produto "${descricao}" adicionado ao histórico do carnê!`, 'success');
+
+    // Recarrega os dados e atualiza o modal da ficha
+    await carregarFichas();
+    if (state.fichaAtualModal && state.fichaAtualModal.id === fichaId) {
+      abrirDetalhesFicha(fichaId);
+    }
+  } catch (err) {
+    console.error(err);
+    mostrarToast(`❌ ${err.message || 'Erro ao salvar item no histórico'}`, 'error');
+  }
 }
 
 

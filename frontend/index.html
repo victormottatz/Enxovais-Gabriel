@@ -1233,9 +1233,14 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
               <h4 style="margin: 0;">📦 Todas as Compras Registradas</h4>
               <small class="text-muted">Histórico detalhado de utilidades, enxovais e encomendas adquiridas.</small>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="iniciarVendaParaClienteAtual()">
-              + Nova Compra
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-outline btn-sm" onclick="abrirModalHistoricoManual()" style="border-color: #D4AF37; color: #B7791F;" title="Adicionar compras antigas do caderno no carnê digital">
+                ➕ Adicionar ao Histórico
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="iniciarVendaParaClienteAtual()">
+                + Nova Compra
+              </button>
+            </div>
           </div>
 
           <div id="modal-ficha-compras-lista" style="margin-top: 15px;">
@@ -1914,6 +1919,61 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           🔄 Atualizar QR Code
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ADICIONAR ITEM AO HISTÓRICO DO CARNÊ (MIGRAÇÃO / MANUAL) -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-historico-item">
+    <div class="modal-sheet modal-sm">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <h3>🛍️ Adicionar Produto ao Histórico do Carnê</h3>
+        <button class="btn-close" onclick="fecharModal('modal-historico-item')">✕</button>
+      </div>
+      <form id="form-historico-item" onsubmit="salvarItemHistoricoManual(event)">
+        <input type="hidden" id="hist-ficha-id">
+        
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+          Lance produtos antigos da cliente para que apareçam no <strong>Carnê Digital</strong> dela com o selo de quitado ou com o saldo a pagar.
+        </p>
+
+        <div class="form-group">
+          <label>Nome / Descrição do Produto:</label>
+          <input type="text" id="hist-descricao" class="form-control" placeholder="Ex: Jogo de Panelas 5 Peças Cerâmica Cereja" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Valor Total do Produto (R$):</label>
+            <input type="number" id="hist-valor-total" class="form-control" step="0.50" min="0.50" required placeholder="Ex: 280.00" oninput="calcularPreviaHistorico()">
+          </div>
+          <div class="form-group">
+            <label>Quanto ela já pagou no papel (R$):</label>
+            <input type="number" id="hist-valor-pago" class="form-control" step="0.50" min="0" placeholder="Ex: 280.00 se quitado" oninput="calcularPreviaHistorico()">
+          </div>
+        </div>
+
+        <!-- Alerta de Prévia Inteligente -->
+        <div id="hist-previa-box" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.86rem; margin-bottom: 14px;">
+          <!-- Preenchido via JS dinamicamente -->
+        </div>
+
+        <div class="form-group">
+          <label>Data Aproximada da Compra (Opcional):</label>
+          <input type="date" id="hist-data-compra" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>Observação / Detalhe (Opcional):</label>
+          <input type="text" id="hist-observacao" class="form-control" placeholder="Ex: Ficha física antiga / caderno da mãe">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 10px;">
+          💾 Salvar Produto no Carnê
+        </button>
+      </form>
     </div>
   </div>
 

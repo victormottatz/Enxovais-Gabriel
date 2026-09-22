@@ -35,7 +35,73 @@ export interface MemoryStore {
 }
 
 export const memoryStore: MemoryStore = {
-  clientes: [],
+  clientes: [
+    {
+      id: 'c1111111-1111-1111-1111-111111111111',
+      nome: 'Dona Francisca Silva',
+      whatsapp: '5518998765432',
+      telefone: '18998765432',
+      cpf: '123.456.789-01',
+      endereco: 'Rua das Flores, 120 - Jardim Primavera',
+      ponto_referencia: 'Em frente à Padaria Central',
+      limite_credito: 1200.0,
+      observacoes: 'Cliente fiel há 3 anos. Prefere cores florais e panela cerâmica.',
+      ativo: true,
+      created_at: '2026-08-01T10:00:00Z',
+    },
+    {
+      id: 'c2222222-2222-2222-2222-222222222222',
+      nome: 'Maria Aparecida Souza',
+      whatsapp: '5518987654321',
+      telefone: '18987654321',
+      cpf: '234.567.890-12',
+      endereco: 'Av. Brasil, 450 - Centro',
+      ponto_referencia: 'Ao lado do Mercado Silva',
+      limite_credito: 800.0,
+      observacoes: 'Paga pontualmente no dia 20 no adiantamento/vale salarial.',
+      ativo: true,
+      created_at: '2026-08-10T14:30:00Z',
+    },
+    {
+      id: 'c3333333-3333-3333-3333-333333333333',
+      nome: 'Ana Paula Oliveira',
+      whatsapp: '5518976543210',
+      telefone: '18976543210',
+      cpf: '345.678.901-23',
+      endereco: 'Rua São João, 78 - Vila Nova',
+      ponto_referencia: 'Casa amarela com portão branco',
+      limite_credito: 1000.0,
+      observacoes: 'Migrada da ficha de papel física nº 85.',
+      ativo: true,
+      created_at: '2026-08-15T09:00:00Z',
+    },
+    {
+      id: 'c4444444-4444-4444-4444-444444444444',
+      nome: 'Juliana Mendes',
+      whatsapp: '5518965432109',
+      telefone: '18965432109',
+      cpf: '456.789.012-34',
+      endereco: 'Rua Tiradentes, 890 - Bairro Alto',
+      ponto_referencia: 'Ao lado da farmácia',
+      limite_credito: 500.0,
+      observacoes: '⚠️ Histórico de inadimplência. Produto recolhido em 22/09/2026. Apenas à vista.',
+      ativo: true,
+      created_at: '2026-07-01T11:00:00Z',
+    },
+    {
+      id: 'c5555555-5555-5555-5555-555555555555',
+      nome: 'Luciana Rocha',
+      whatsapp: '5518991239876',
+      telefone: '18991239876',
+      cpf: '567.890.123-45',
+      endereco: 'Rua Paraíba, 34 - Centro',
+      ponto_referencia: 'Próximo à pracinha',
+      limite_credito: 1500.0,
+      observacoes: '100% quitada no momento! Excelente cliente para oferta de novidades.',
+      ativo: true,
+      created_at: '2026-08-20T16:00:00Z',
+    },
+  ],
   produtos: [
     { id: '1', codigo_sku: 'UTIL-001', nome: 'Churrasqueira Portátil Inox', categoria: 'OUTROS', preco_custo: 180.0, preco_venda_vista: 300.0, preco_venda_crediario: 340.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
     { id: '2', codigo_sku: 'CAMA-001', nome: 'Cobre-Leito Queen Estampado', categoria: 'CAMA_MESA_BANHO', preco_custo: 190.0, preco_venda_vista: 320.0, preco_venda_crediario: 360.0, estoque_atual: 10, estoque_minimo: 2, permite_encomenda: true, ativo: true },
@@ -52,12 +118,220 @@ export const memoryStore: MemoryStore = {
     { id: '13', codigo_sku: 'COZ-004', nome: 'Escorredor de Louça Inox 2 Andares', categoria: 'COZINHA', preco_custo: 75.0, preco_venda_vista: 130.0, preco_venda_crediario: 145.0, estoque_atual: 8, estoque_minimo: 2, permite_encomenda: true, ativo: true },
     { id: '14', codigo_sku: 'DEC-001', nome: 'Cortina Corta Luz Blackout 2,80 x 1,80', categoria: 'DECORACAO', preco_custo: 90.0, preco_venda_vista: 160.0, preco_venda_crediario: 180.0, estoque_atual: 9, estoque_minimo: 2, permite_encomenda: true, ativo: true },
   ],
-  fichas_crediario: [],
-  vendas: [],
-  itens_venda: [],
-  encomendas: [],
+  fichas_crediario: [
+    {
+      id: 'f1111111-1111-1111-1111-111111111111',
+      cliente_id: 'c1111111-1111-1111-1111-111111111111',
+      saldo_devedor_total: 120.0,
+      valor_parcela_padrao: 60.0,
+      dia_vencimento_padrao: 5,
+      tipo_ciclo: 'MENSAL_PAGAMENTO',
+      status_ficha: 'ATIVO',
+      created_at: '2026-08-01T10:00:00Z',
+      updated_at: '2026-09-22T10:00:00Z',
+    },
+    {
+      id: 'f2222222-2222-2222-2222-222222222222',
+      cliente_id: 'c2222222-2222-2222-2222-222222222222',
+      saldo_devedor_total: 240.0,
+      valor_parcela_padrao: 80.0,
+      dia_vencimento_padrao: 20,
+      tipo_ciclo: 'QUINZENAL_VALE',
+      status_ficha: 'ATIVO',
+      created_at: '2026-08-10T14:30:00Z',
+      updated_at: '2026-09-20T11:00:00Z',
+    },
+    {
+      id: 'f3333333-3333-3333-3333-333333333333',
+      cliente_id: 'c3333333-3333-3333-3333-333333333333',
+      saldo_devedor_total: 250.0,
+      valor_parcela_padrao: 100.0,
+      dia_vencimento_padrao: 5,
+      tipo_ciclo: 'MENSAL_PAGAMENTO',
+      status_ficha: 'ATIVO',
+      created_at: '2026-08-15T09:00:00Z',
+      updated_at: '2026-09-05T15:00:00Z',
+    },
+    {
+      id: 'f4444444-4444-4444-4444-444444444444',
+      cliente_id: 'c4444444-4444-4444-4444-444444444444',
+      saldo_devedor_total: 0.0,
+      valor_parcela_padrao: 50.0,
+      dia_vencimento_padrao: 10,
+      tipo_ciclo: 'MENSAL_PAGAMENTO',
+      status_ficha: 'BLOQUEADO',
+      created_at: '2026-07-01T11:00:00Z',
+      updated_at: '2026-09-22T09:00:00Z',
+    },
+    {
+      id: 'f5555555-5555-5555-5555-555555555555',
+      cliente_id: 'c5555555-5555-5555-5555-555555555555',
+      saldo_devedor_total: 0.0,
+      valor_parcela_padrao: 85.0,
+      dia_vencimento_padrao: 5,
+      tipo_ciclo: 'MENSAL_PAGAMENTO',
+      status_ficha: 'QUITADO',
+      created_at: '2026-08-20T16:00:00Z',
+      updated_at: '2026-09-05T10:00:00Z',
+    },
+  ],
+  vendas: [
+    {
+      id: 'v1111111-1111-1111-1111-111111111111',
+      cliente_id: 'c1111111-1111-1111-1111-111111111111',
+      tipo_venda: 'PRONTA_ENTREGA',
+      forma_pagamento: 'CREDIARIO',
+      valor_total: 280.0,
+      valor_entrada: 0.0,
+      valor_financiado_ficha: 280.0,
+      status_venda: 'CONCLUIDA',
+      observacoes: 'Jogo de panelas cerâmica vermelha',
+      created_at: '2026-08-05T11:00:00Z',
+    },
+    {
+      id: 'v1111111-1111-1111-1111-111111111112',
+      cliente_id: 'c1111111-1111-1111-1111-111111111111',
+      tipo_venda: 'PRONTA_ENTREGA',
+      forma_pagamento: 'CREDIARIO',
+      valor_total: 200.0,
+      valor_entrada: 0.0,
+      valor_financiado_ficha: 200.0,
+      status_venda: 'CONCLUIDA',
+      observacoes: 'Edredom Casal Queen Toque de Pluma Floral',
+      created_at: '2026-08-20T15:30:00Z',
+    },
+    {
+      id: 'v2222222-2222-2222-2222-222222222221',
+      cliente_id: 'c2222222-2222-2222-2222-222222222222',
+      tipo_venda: 'PRONTA_ENTREGA',
+      forma_pagamento: 'CREDIARIO',
+      valor_total: 320.0,
+      valor_entrada: 0.0,
+      valor_financiado_ficha: 320.0,
+      status_venda: 'CONCLUIDA',
+      observacoes: 'Cobredon Aveludado Casal Dupla Face',
+      created_at: '2026-08-25T14:00:00Z',
+    },
+    {
+      id: 'v3333333-3333-3333-3333-333333333331',
+      cliente_id: 'c3333333-3333-3333-3333-333333333333',
+      tipo_venda: 'PRONTA_ENTREGA',
+      forma_pagamento: 'CREDIARIO',
+      valor_total: 350.0,
+      valor_entrada: 0.0,
+      valor_financiado_ficha: 350.0,
+      status_venda: 'CONCLUIDA',
+      observacoes: 'Saldo Inicial de Migração - Ficha Física nº 85',
+      created_at: '2026-08-15T09:00:00Z',
+    },
+  ],
+  itens_venda: [
+    {
+      id: 'iv-001',
+      venda_id: 'v1111111-1111-1111-1111-111111111111',
+      descricao_item: 'Jogo de Panelas 5 Peças Cerâmica Antiaderente Cereja',
+      quantidade: 1,
+      preco_unitario: 280.0,
+      subtotal: 280.0,
+      tipo_item: 'ESTOQUE_LOCAL',
+      created_at: '2026-08-05T11:00:00Z',
+    },
+    {
+      id: 'iv-002',
+      venda_id: 'v1111111-1111-1111-1111-111111111112',
+      descricao_item: 'Edredom Casal Queen Toque de Pluma Floral Rosa',
+      quantidade: 1,
+      preco_unitario: 200.0,
+      subtotal: 200.0,
+      tipo_item: 'ESTOQUE_LOCAL',
+      created_at: '2026-08-20T15:30:00Z',
+    },
+    {
+      id: 'iv-003',
+      venda_id: 'v2222222-2222-2222-2222-222222222221',
+      descricao_item: 'Cobredon Aveludado Casal Dupla Face Geométrico',
+      quantidade: 1,
+      preco_unitario: 320.0,
+      subtotal: 320.0,
+      tipo_item: 'ESTOQUE_LOCAL',
+      created_at: '2026-08-25T14:00:00Z',
+    },
+    {
+      id: 'iv-004',
+      venda_id: 'v3333333-3333-3333-3333-333333333331',
+      descricao_item: 'Saldo Inicial de Migração - Ficha Física nº 85',
+      quantidade: 1,
+      preco_unitario: 350.0,
+      subtotal: 350.0,
+      tipo_item: 'ESTOQUE_LOCAL',
+      created_at: '2026-08-15T09:00:00Z',
+    },
+  ],
+  encomendas: [
+    {
+      id: 'enc-001',
+      item_venda_id: 'iv-002',
+      fornecedor_nome: 'Corttex Distribuidora',
+      data_previsao_chegada: '2026-10-05',
+      status_encomenda: 'A_CAMINHO',
+      created_at: '2026-09-20T16:00:00Z',
+    },
+  ],
   pedidos: [],
-  movimentacoes_ficha: [],
+  movimentacoes_ficha: [
+    {
+      id: 'm-001',
+      ficha_id: 'f1111111-1111-1111-1111-111111111111',
+      venda_id: 'v1111111-1111-1111-1111-111111111111',
+      tipo_movimentacao: 'DEBITO_COMPRA',
+      valor: 280.0,
+      saldo_anterior: 0.0,
+      saldo_posterior: 280.0,
+      descricao: 'Compra a Prazo: Jogo de Panelas 5 Peças Cerâmica Cereja',
+      created_at: '2026-08-05T11:00:00Z',
+    },
+    {
+      id: 'm-002',
+      ficha_id: 'f1111111-1111-1111-1111-111111111111',
+      venda_id: 'v1111111-1111-1111-1111-111111111112',
+      tipo_movimentacao: 'DEBITO_COMPRA',
+      valor: 200.0,
+      saldo_anterior: 280.0,
+      saldo_posterior: 480.0,
+      descricao: 'Compra a Prazo: Edredom Casal Queen Toque de Pluma Floral',
+      created_at: '2026-08-20T15:30:00Z',
+    },
+    {
+      id: 'm-003',
+      ficha_id: 'f1111111-1111-1111-1111-111111111111',
+      tipo_movimentacao: 'CREDITO_PAGAMENTO',
+      valor: 150.0,
+      saldo_anterior: 480.0,
+      saldo_posterior: 330.0,
+      descricao: 'Pagamento Pix recebido: Marido transferiu no dia do salário',
+      created_at: '2026-09-05T12:30:00Z',
+    },
+    {
+      id: 'm-004',
+      ficha_id: 'f1111111-1111-1111-1111-111111111111',
+      tipo_movimentacao: 'CREDITO_PAGAMENTO',
+      valor: 100.0,
+      saldo_anterior: 330.0,
+      saldo_posterior: 230.0,
+      descricao: 'Pagamento em Dinheiro no balcão: Vale quinzenal',
+      created_at: '2026-09-20T14:15:00Z',
+    },
+    {
+      id: 'm-005',
+      ficha_id: 'f1111111-1111-1111-1111-111111111111',
+      tipo_movimentacao: 'CREDITO_PAGAMENTO',
+      valor: 110.0,
+      saldo_anterior: 230.0,
+      saldo_posterior: 120.0,
+      descricao: 'Pagamento Pix recebido: Panela 100% quitada!',
+      created_at: '2026-09-22T09:45:00Z',
+    },
+  ],
   configuracoes: [
     {
       id: '1',
@@ -370,7 +644,34 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     return { rows: [novoItem] };
   }
 
+  if (qUpper.includes('SELECT') && qUpper.includes('FROM ITENS_VENDA')) {
+    const clienteId = params[0];
+    const vendasDoCliente = memoryStore.vendas.filter((v) => !clienteId || v.cliente_id === clienteId);
+    const vendaIds = vendasDoCliente.map((v) => v.id);
+    const itens = memoryStore.itens_venda
+      .filter((it) => !clienteId || vendaIds.includes(it.venda_id))
+      .map((it) => {
+        const v = memoryStore.vendas.find((ven) => ven.id === it.venda_id);
+        return {
+          ...it,
+          subtotal: it.subtotal || (it.quantidade * it.preco_unitario),
+          data_venda: v ? v.created_at : it.created_at,
+        };
+      });
+    return { rows: itens };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM VENDAS')) {
+    if (qUpper.includes('WHERE V.ID =') || qUpper.includes('WHERE ID =')) {
+      const id = params[0];
+      const venda = memoryStore.vendas.find((v) => v.id === id);
+      return { rows: venda ? [venda] : [] };
+    }
+    if (qUpper.includes('WHERE V.CLIENTE_ID =') || qUpper.includes('WHERE CLIENTE_ID =')) {
+      const cliId = params[0];
+      const vendasCliente = memoryStore.vendas.filter((v) => v.cliente_id === cliId);
+      return { rows: vendasCliente };
+    }
     return { rows: memoryStore.vendas };
   }
 
