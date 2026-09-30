@@ -180,7 +180,10 @@ export class FichaCrediarioService {
   public static async registrarPagamento(params: {
     fichaId: string;
     valorPago: number;
+    dataPagamento?: string;
     descricao?: string;
+    formaPagamento?: string;
+    vendaId?: string;
   }): Promise<{ ficha: FichaCrediarioDTO; saldoRestante: number; recibo: string }> {
     const client = await pool.connect();
     try {
@@ -204,6 +207,10 @@ export class FichaCrediarioService {
       const saldoPosterior = Math.max(0, saldoAnterior - valorAbatido);
       const novoStatus = saldoPosterior === 0 ? 'QUITADO' : 'ATIVO';
 
+      const dataPagamentoISO = params.dataPagamento
+        ? new Date(params.dataPagamento.includes('T') ? params.dataPagamento : `${params.dataPagamento}T12:00:00Z`).toISOString()
+        : null;
+
       // 1. Atualiza ficha
       const updatedFicha = await client.query<FichaCrediarioDTO>(
         `UPDATE fichas_crediario
@@ -215,21 +222,36 @@ export class FichaCrediarioService {
         [saldoPosterior, novoStatus, params.fichaId]
       );
 
-      // 2. Registra movimentação de crédito
+      // 2. Registra movimentação de crédito com data e venda se fornecidas
+      const descricaoFinal = params.descricao || (params.formaPagamento ? `Pagamento recebido via ${params.formaPagamento}` : 'Pagamento / Amortização recebida');
+
       await client.query(
         `INSERT INTO movimentacoes_ficha (
-          ficha_id, tipo_movimentacao, valor,
-          saldo_anterior, saldo_posterior, descricao
+          ficha_id, venda_id, tipo_movimentacao, valor,
+          saldo_anterior, saldo_posterior, descricao, created_at
         )
-        VALUES ($1, 'CREDITO_PAGAMENTO', $2, $3, $4, $5)`,
+        VALUES ($1, $2, 'CREDITO_PAGAMENTO', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
         [
           params.fichaId,
+          params.vendaId || null,
           valorAbatido,
           saldoAnterior,
           saldoPosterior,
-          params.descricao || 'Pagamento / Amortização recebida',
+          descricaoFinal,
+          dataPagamentoISO,
         ]
       );
+
+      // Se informou vendaId específico, atualiza valor_entrada da venda
+      if (params.vendaId) {
+        await client.query(
+          `UPDATE vendas 
+           SET valor_entrada = COALESCE(valor_entrada, 0) + $1,
+               status_venda = CASE WHEN (COALESCE(valor_entrada, 0) + $1) >= valor_total THEN 'CONCLUIDA' ELSE status_venda END
+           WHERE id = $2`,
+          [valorAbatido, params.vendaId]
+        ).catch(() => {});
+      }
 
       // 3. Dá baixa sequencial nas parcelas em aberto
       let valorRestanteParaAbater = valorAbatido;
@@ -250,11 +272,11 @@ export class FichaCrediarioService {
           await client.query(
             `UPDATE parcelas_crediario
              SET valor_pago = valor_parcela,
-                 data_pagamento = CURRENT_DATE,
+                 data_pagamento = COALESCE($1::date, CURRENT_DATE),
                  status = 'PAGO_TOTAL',
                  updated_at = NOW()
-             WHERE id = $1`,
-            [parcela.id]
+             WHERE id = $2`,
+            [dataPagamentoISO, parcela.id]
           );
           valorRestanteParaAbater -= valorDevidoParcela;
         } else {
@@ -263,10 +285,11 @@ export class FichaCrediarioService {
           await client.query(
             `UPDATE parcelas_crediario
              SET valor_pago = $1,
+                 data_pagamento = COALESCE($2::date, CURRENT_DATE),
                  status = 'PAGO_PARCIAL',
                  updated_at = NOW()
-             WHERE id = $2`,
-            [novoValorPago, parcela.id]
+             WHERE id = $3`,
+            [novoValorPago, dataPagamentoISO, parcela.id]
           );
           valorRestanteParaAbater = 0;
         }
@@ -527,6 +550,7 @@ export class FichaCrediarioService {
     valorTotal: number;
     valorJaPago?: number;
     dataCompra?: string;
+    dataPagamento?: string;
     observacoes?: string;
   }): Promise<{
     vendaId: string;
@@ -557,6 +581,14 @@ export class FichaCrediarioService {
       const saldoRestante = Number(Math.max(0, valorTotal - valorJaPago).toFixed(2));
       const statusQuitacao = saldoRestante === 0 ? 'QUITADO' : valorJaPago > 0 ? 'PAGO_PARCIAL' : 'PENDENTE';
 
+      const dataCompraISO = params.dataCompra
+        ? new Date(params.dataCompra.includes('T') ? params.dataCompra : `${params.dataCompra}T12:00:00Z`).toISOString()
+        : null;
+
+      const dataPagamentoISO = params.dataPagamento
+        ? new Date(params.dataPagamento.includes('T') ? params.dataPagamento : `${params.dataPagamento}T12:00:00Z`).toISOString()
+        : dataCompraISO;
+
       // 1. Cria a venda associada ao histórico
       const vendaRes = await client.query(
         `INSERT INTO vendas (
@@ -571,7 +603,7 @@ export class FichaCrediarioService {
           valorJaPago,
           saldoRestante,
           params.observacoes || 'Histórico anterior do carnê/ficha física',
-          params.dataCompra ? new Date(params.dataCompra).toISOString() : null,
+          dataCompraISO,
         ]
       );
 
@@ -588,13 +620,33 @@ export class FichaCrediarioService {
           vendaId,
           params.descricao,
           valorTotal,
-          params.dataCompra ? new Date(params.dataCompra).toISOString() : null,
+          dataCompraISO,
         ]
       );
 
       const itemId = itemRes.rows[0].id;
 
       let novoSaldoDevedor = Number(ficha.saldo_devedor_total);
+
+      // Se a cliente já pagou algum valor no passado, registra a movimentação de crédito no extrato com a data informada
+      if (valorJaPago > 0) {
+        await client.query(
+          `INSERT INTO movimentacoes_ficha (
+            ficha_id, venda_id, tipo_movimentacao, valor,
+            saldo_anterior, saldo_posterior, descricao, created_at
+          )
+          VALUES ($1, $2, 'CREDITO_PAGAMENTO', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
+          [
+            ficha.id,
+            vendaId,
+            valorJaPago,
+            Number(ficha.saldo_devedor_total) + valorTotal,
+            Number(ficha.saldo_devedor_total) + saldoRestante,
+            `Pagamento prévio registrado no caderno: ${params.descricao} (Valor: R$ ${valorJaPago.toFixed(2)})`,
+            dataPagamentoISO,
+          ]
+        );
+      }
 
       // 3. Se ainda restar saldo a pagar, incrementa o saldo devedor da ficha
       if (saldoRestante > 0) {
@@ -611,9 +663,9 @@ export class FichaCrediarioService {
         await client.query(
           `INSERT INTO movimentacoes_ficha (
             ficha_id, venda_id, tipo_movimentacao, valor,
-            saldo_anterior, saldo_posterior, descricao
+            saldo_anterior, saldo_posterior, descricao, created_at
           )
-          VALUES ($1, $2, 'DEBITO_COMPRA', $3, $4, $5, $6)`,
+          VALUES ($1, $2, 'DEBITO_COMPRA', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
           [
             ficha.id,
             vendaId,
@@ -621,6 +673,7 @@ export class FichaCrediarioService {
             Number(ficha.saldo_devedor_total),
             novoSaldoDevedor,
             `Histórico manual adicionado: ${params.descricao} (A pagar: R$ ${saldoRestante.toFixed(2)})`,
+            dataCompraISO,
           ]
         );
 

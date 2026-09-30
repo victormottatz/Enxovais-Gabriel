@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Enxovais Gabriel - Novo Layout (Ambiente de Teste)</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#8C2D40">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles-teste.css">
+</head>
+<body>
+
+  <!-- ========================================================================= -->
+  <!-- BANNER SUPERIOR DE IDENTIFICAÇÃO DO AMBIENTE DE TESTE -->
+  <!-- ========================================================================= -->
+  <aside class="test-env-banner">
+    <div class="test-env-badge">
+      <span class="dot-pulse"></span>
+      <span>🧪 Ambiente de Teste: Layout v2 (Intuitivo & Responsivo)</span>
+    </div>
+    <a href="/" class="btn-switch-layout">
+      <span>🔙 Voltar ao Layout Clássico</span>
+    </a>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- APP SHELL (DESKTOP + TABLET + MOBILE) -->
+  <!-- ========================================================================= -->
+  <div class="app-layout-shell">
+
+    <!-- SIDEBAR LATERAL RETRÁTIL (DESKTOP & TABLETS) -->
+    <aside class="sidebar-v2" id="sidebar-v2">
+      <div class="sidebar-v2-brand">
+        <div class="brand-logo">🏠</div>
+        <div class="brand-text">
+          <h2>Enxovais Gabriel</h2>
+          <span>Ateliê & Crediário</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-v2-menu">
+        <div class="menu-category-title">Rotina do Balcão</div>
+        <button class="sidebar-v2-btn active" data-tab="inicio" onclick="navegarAbaV2('inicio')">
+          <span class="btn-icon">⚡</span>
+          <span>Central de Comando</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="cobrancas" onclick="navegarAbaV2('cobrancas')">
+          <span class="btn-icon">📅</span>
+          <span>Cobranças do Dia</span>
+          <span class="badge-pill" id="sidebar-badge-cobrancas">Dia 05 / 20</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="fichas" onclick="navegarAbaV2('fichas')">
+          <span class="btn-icon">📑</span>
+          <span>Fichas & Crediário</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="vendas" onclick="navegarAbaV2('vendas')">
+          <span class="btn-icon">🛒</span>
+          <span>Nova Venda / PDV</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="caixa" onclick="navegarAbaV2('caixa')">
+          <span class="btn-icon">💰</span>
+          <span>Caixa do Dia</span>
+        </button>
+
+        <div class="menu-category-title">Operação & Estoque</div>
+        <button class="sidebar-v2-btn" data-tab="catalogo" onclick="navegarAbaV2('catalogo')">
+          <span class="btn-icon">📦</span>
+          <span>Catálogo de Produtos</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="clientes" onclick="navegarAbaV2('clientes')">
+          <span class="btn-icon">👥</span>
+          <span>Gestão de Clientes</span>
+        </button>
+        <button class="sidebar-v2-btn" data-tab="encomendas" onclick="navegarAbaV2('encomendas')">
+          <span class="btn-icon">🚚</span>
+          <span>Encomendas</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-v2-footer">
+        <div class="whatsapp-status-pill" onclick="navegarAbaV2('inicio')">
+          <span class="whatsapp-live-status">🟢 <strong>WhatsApp Conectado</strong></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <main class="main-content-v2">
+
+      <!-- HEADER SUPERIOR COM BUSCA GLOBAL INSTANTÂNEA -->
+      <header class="header-v2">
+        <div class="header-left-box">
+          <button class="mobile-nav-toggle" onclick="abrirDrawerMais()" aria-label="Abrir Menu">
+            <span>☰</span>
+          </button>
+
+          <!-- Campo de Busca Global Inteligente -->
+          <div class="global-search-container">
+            <span class="search-icon-inside">🔍</span>
+            <input type="text" id="global-search-input" class="global-search-input" placeholder="Buscar cliente, ficha ou produto..." autocomplete="off">
+            
+            <!-- Resultados Dinâmicos da Busca -->
+            <div id="search-quick-results" class="search-quick-results"></div>
+          </div>
+        </div>
+
+        <div class="header-actions-v2">
+          <div class="quick-kpi-pill">
+            <span>📅 Hoje:</span>
+            <span class="kpi-num" id="header-kpi-hoje">R$ 0,00</span>
+          </div>
+
+          <button class="btn-primary-v2" onclick="abrirModalNovaVendaV2()">
+            <span>➕</span>
+            <span class="btn-label-desktop">Nova Venda</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- PAINÉIS DE CONTEÚDO DINÂMICO -->
+      <div class="tab-content-v2">
+
+        <!-- =================================================================== -->
+        <!-- ABA 1: CENTRAL DE COMANDO OPERACIONAL (DASHBOARD v2) -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-inicio" class="tab-pane-v2 active">
+          
+          <!-- Banner de Boas-Vindas com Data do Dia -->
+          <div class="dashboard-welcome-banner">
+            <div class="welcome-texts">
+              <h1 id="welcome-greeting">Bom atendimento, Ateliê Enxovais Gabriel! 🌸</h1>
+              <p>Hoje é <strong class="today-highlight" id="header-live-date">Carregando data...</strong>. Aqui está o resumo das cobranças e finanças do seu balcão.</p>
+            </div>
+            <div class="action-buttons-group">
+              <button class="btn-secondary-v2" onclick="navegarAbaV2('cobrancas')">
+                <span>📅 Ver Cobranças</span>
+              </button>
+              <button class="btn-primary-v2" onclick="abrirModalNovaVendaV2()">
+                <span>🛒 Nova Venda</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cards de KPIs Rápidos -->
+          <div class="kpi-grid-v2">
+            <div class="kpi-card-v2 cobrancas" onclick="navegarAbaV2('cobrancas')">
+              <div class="kpi-icon-box">📅</div>
+              <div class="kpi-data-box">
+                <span class="kpi-label">Cobranças de Hoje</span>
+                <div class="kpi-value" id="kpi-v2-receber-hoje">R$ 0,00</div>
+                <div class="kpi-helper" id="kpi-v2-receber-count">0 clientes para cobrar</div>
+              </div>
+            </div>
+
+            <div class="kpi-card-v2 fichas" onclick="navegarAbaV2('fichas')">
+              <div class="kpi-icon-box">📑</div>
+              <div class="kpi-data-box">
+                <span class="kpi-label">Saldo em Dividendo</span>
+                <div class="kpi-value" id="kpi-v2-dividendo-total">R$ 0,00</div>
+                <div class="kpi-helper" id="kpi-v2-fichas-count">0 fichas ativas</div>
+              </div>
+            </div>
+
+            <div class="kpi-card-v2 caixa" onclick="navegarAbaV2('caixa')">
+              <div class="kpi-icon-box">💰</div>
+              <div class="kpi-data-box">
+                <span class="kpi-label">Caixa do Dia</span>
+                <div class="kpi-value" id="kpi-v2-caixa-dia">R$ 0,00</div>
+                <div class="kpi-helper">Entradas em Pix & Dinheiro</div>
+              </div>
+            </div>
+
+            <div class="kpi-card-v2 encomendas" onclick="navegarAbaV2('encomendas')">
+              <div class="kpi-icon-box">🚚</div>
+              <div class="kpi-data-box">
+                <span class="kpi-label">Encomendas</span>
+                <div class="kpi-value">Acompanhar</div>
+                <div class="kpi-helper">Fornecedores & Distribuição</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grade em 2 Colunas: Cobranças Prioritárias + Simulador de Balcão -->
+          <div class="dashboard-columns-v2">
+            
+            <!-- Coluna 1: Cobranças Prioritárias do Dia -->
+            <div class="section-panel-v2">
+              <div class="panel-header-v2">
+                <div class="panel-title-box">
+                  <h3><span>🔔</span> Cobranças Prioritárias do Dia</h3>
+                  <span>Clientes com vencimento hoje nos dias combinados (05 ou 20)</span>
+                </div>
+                <span class="see-all-link" onclick="navegarAbaV2('cobrancas')">Ver Todas →</span>
+              </div>
+
+              <div class="cobrancas-quick-list" id="dashboard-cobrancas-quick">
+                <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  Carregando lista de cobranças do dia...
+                </div>
+              </div>
+            </div>
+
+            <!-- Coluna 2: Simulador de Crediário em Tempo Real -->
+            <div class="simulator-widget-v2">
+              <div class="panel-header-v2">
+                <div class="panel-title-box">
+                  <h3><span>🎮</span> Simulador de Crediário</h3>
+                  <span>Calcule na hora com a cliente no balcão</span>
+                </div>
+                <span class="see-all-link" onclick="limparSimuladorV2()">Limpar</span>
+              </div>
+
+              <div class="sim-quick-inputs">
+                <div class="sim-field-group">
+                  <label>Produtos Rápidos para Simular:</label>
+                  <div class="sim-btn-group">
+                    <button type="button" class="sim-chip-btn" onclick="adicionarItemSimulador('Lençol Casal', 170)">🛏️ Lençol (+R$170)</button>
+                    <button type="button" class="sim-chip-btn" onclick="adicionarItemSimulador('Jogo de Panelas', 600)">🍳 Panelas (+R$600)</button>
+                    <button type="button" class="sim-chip-btn" onclick="adicionarItemSimulador('Churrasqueira', 340)">🥩 Churrasqueira (+R$340)</button>
+                  </div>
+                </div>
+
+                <div class="sim-field-group">
+                  <label>Dia Combinado do Vencimento:</label>
+                  <div class="sim-btn-group" id="sim-dias-group">
+                    <button type="button" class="sim-chip-btn active" onclick="setDiaSimulador(20, this)">🎟️ Dia 20 (Vale)</button>
+                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(5, this)">💵 Dia 05 (Salário)</button>
+                  </div>
+                </div>
+
+                <div class="sim-field-group">
+                  <label>Valor da Parcela Fixa:</label>
+                  <div class="sim-btn-group" id="sim-parcelas-group">
+                    <button type="button" class="sim-chip-btn active" onclick="setParcelaSimulador(50, this)">R$ 50/mês</button>
+                    <button type="button" class="sim-chip-btn" onclick="setParcelaSimulador(80, this)">R$ 80/mês</button>
+                    <button type="button" class="sim-chip-btn" onclick="setParcelaSimulador(100, this)">R$ 100/mês</button>
+                    <button type="button" class="sim-chip-btn" onclick="setParcelaSimulador(150, this)">R$ 150/mês</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cartão de Resultado da Simulação -->
+              <div class="sim-results-card">
+                <div class="sim-stat-box">
+                  <span>Novo Saldo Total</span>
+                  <strong id="sim-stat-saldo">R$ 510,00</strong>
+                </div>
+                <div class="sim-stat-box">
+                  <span>Parcela Combinada</span>
+                  <strong id="sim-stat-parcela">R$ 50,00/mês</strong>
+                </div>
+                <div class="sim-stat-box">
+                  <span>Tempo Previsto</span>
+                  <strong id="sim-stat-previsao">11 meses</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 2: COBRANÇAS DO DIA (DIA 05 E DIA 20) -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-cobrancas" class="tab-pane-v2">
+          <div class="panel-header-v2">
+            <div class="panel-title-box">
+              <h2>📅 Cobranças Agendadas</h2>
+              <span>Lembretes pontuais casados com o fluxo de salário ou vale das clientes</span>
+            </div>
+          </div>
+
+          <div class="subtabs-pill-nav">
+            <button class="subtab-pill active" onclick="filtrarFichasV2('todas', this)">Todas as Cobranças</button>
+            <button class="subtab-pill" onclick="filtrarFichasV2('hoje', this)">Vencem Hoje</button>
+            <button class="subtab-pill" onclick="filtrarFichasV2('atraso', this)">Em Atraso</button>
+          </div>
+
+          <div id="fichas-grid-v2-cobrancas" class="fichas-grid-v2">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 3: FICHAS & CREDIÁRIO -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-fichas" class="tab-pane-v2">
+          <div class="panel-header-v2">
+            <div class="panel-title-box">
+              <h2>📑 Fichas de Crediário Ateliê</h2>
+              <span>Acompanhamento de saldos em dividendo contínuo e histórico de parcelas</span>
+            </div>
+            <button class="btn-primary-v2" onclick="abrirModalNovaVendaV2()">
+              <span>➕ Nova Venda / Ficha</span>
+            </button>
+          </div>
+
+          <div class="subtabs-pill-nav">
+            <button class="subtab-pill active" onclick="filtrarFichasV2('todas', this)">Todas as Fichas</button>
+            <button class="subtab-pill" onclick="filtrarFichasV2('hoje', this)">Vencem Hoje</button>
+            <button class="subtab-pill" onclick="filtrarFichasV2('atraso', this)">Em Atraso</button>
+            <button class="subtab-pill" onclick="filtrarFichasV2('quitadas', this)">Quitadas</button>
+          </div>
+
+          <div id="fichas-grid-v2-container" class="fichas-grid-v2">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 4: NOVA VENDA / PDV -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-vendas" class="tab-pane-v2">
+          <div class="section-panel-v2">
+            <div class="panel-header-v2">
+              <div class="panel-title-box">
+                <h2>🛒 Nova Venda & Simulador de Crediário</h2>
+                <span>Vendas à pronta entrega ou encomenda com acumulação automática na ficha</span>
+              </div>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+              <p style="color: var(--text-body); margin-bottom: 16px; font-size: 1.05rem;">
+                Deseja lançar uma venda utilizando o módulo integrado com emissão de Carnê e baixa de estoque?
+              </p>
+              <a href="/#vendas" class="btn-primary-v2" style="text-decoration: none; display: inline-flex;">
+                <span>Abrir Frente de Caixa & PDV Completo</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 5: CATÁLOGO & ESTOQUE -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-catalogo" class="tab-pane-v2">
+          <div class="panel-header-v2">
+            <div class="panel-title-box">
+              <h2>📦 Catálogo de Utilidades & Enxovais</h2>
+              <span>Artigos para o lar (cama, mesa, banho, cozinha e decoração)</span>
+            </div>
+          </div>
+          <div id="catalogo-grid-v2" class="fichas-grid-v2">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 6: GESTÃO DE CLIENTES -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-clientes" class="tab-pane-v2">
+          <div class="panel-header-v2">
+            <div class="panel-title-box">
+              <h2>👥 Clientes Cadastradas</h2>
+              <span>Histórico de compras, telefones e dias de pagamento casados</span>
+            </div>
+          </div>
+          <div id="clientes-grid-v2" class="fichas-grid-v2">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 7: CAIXA DO DIA -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-caixa" class="tab-pane-v2">
+          <div class="section-panel-v2">
+            <div class="panel-header-v2">
+              <div class="panel-title-box">
+                <h2>💰 Fechamento & Caixa do Dia</h2>
+                <span>Entradas em Pix, dinheiro, cartão e amortizações de crediário</span>
+              </div>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+              <p style="color: var(--text-body); margin-bottom: 16px; font-size: 1.05rem;">
+                Acesse o fechamento de caixa detalhado com relatórios de sangria e conferência:
+              </p>
+              <a href="/#caixa" class="btn-primary-v2" style="text-decoration: none; display: inline-flex;">
+                <span>Abrir Extrato Completo do Caixa</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- ABA 8: ENCOMENDAS -->
+        <!-- =================================================================== -->
+        <section id="tab-v2-encomendas" class="tab-pane-v2">
+          <div class="section-panel-v2">
+            <div class="panel-header-v2">
+              <div class="panel-title-box">
+                <h2>🚚 Gestão de Encomendas</h2>
+                <span>Acompanhamento de pedidos com distribuidores e fornecedores</span>
+              </div>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+              <p style="color: var(--text-body); margin-bottom: 16px; font-size: 1.05rem;">
+                Acompanhe o status das encomendas solicitadas aos distribuidores:
+              </p>
+              <a href="/#encomendas" class="btn-primary-v2" style="text-decoration: none; display: inline-flex;">
+                <span>Abrir Módulo de Encomendas</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FLOATING DOCK INFERIOR (MOBILE FIRST TOUCH ERGONOMICS) -->
+  <!-- ========================================================================= -->
+  <footer class="mobile-bottom-dock">
+    <nav class="bottom-dock-nav">
+      <button class="dock-item-btn active" data-tab="inicio" onclick="navegarAbaV2('inicio')">
+        <span class="dock-icon">⚡</span>
+        <span>Início</span>
+      </button>
+      <button class="dock-item-btn" data-tab="cobrancas" onclick="navegarAbaV2('cobrancas')">
+        <span class="dock-icon">📅</span>
+        <span>Cobranças</span>
+      </button>
+      <button class="dock-item-btn highlight-dock" onclick="abrirModalNovaVendaV2()" aria-label="Nova Venda">
+        <span class="dock-icon">➕</span>
+        <span>Venda</span>
+      </button>
+      <button class="dock-item-btn" data-tab="fichas" onclick="navegarAbaV2('fichas')">
+        <span class="dock-icon">📑</span>
+        <span>Fichas</span>
+      </button>
+      <button class="dock-item-btn" onclick="abrirDrawerMais()">
+        <span class="dock-icon">☰</span>
+        <span>Mais</span>
+      </button>
+    </nav>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- BOTTOM SHEET (GAVETA DESLIZANTE PARA OPÇÕES ADICIONAIS NO MOBILE) -->
+  <!-- ========================================================================= -->
+  <div class="bottom-sheet-overlay" id="bottom-sheet-overlay" onclick="fecharDrawerMais()">
+    <div class="bottom-sheet-drawer" onclick="event.stopPropagation()">
+      <div class="drawer-drag-handle"></div>
+      <div class="drawer-header">
+        <h3>Outras Ferramentas</h3>
+        <button class="drawer-close-btn" onclick="fecharDrawerMais()">✕</button>
+      </div>
+      <div class="drawer-grid-tools">
+        <div class="drawer-tool-tile" onclick="navegarAbaV2('catalogo')">
+          <span class="tile-icon">📦</span>
+          <strong>Catálogo</strong>
+          <span>Estoque de utilidades</span>
+        </div>
+        <div class="drawer-tool-tile" onclick="navegarAbaV2('clientes')">
+          <span class="tile-icon">👥</span>
+          <strong>Clientes</strong>
+          <span>Cadastros e contatos</span>
+        </div>
+        <div class="drawer-tool-tile" onclick="navegarAbaV2('encomendas')">
+          <span class="tile-icon">🚚</span>
+          <strong>Encomendas</strong>
+          <span>Pedidos a fornecedores</span>
+        </div>
+        <div class="drawer-tool-tile" onclick="navegarAbaV2('caixa')">
+          <span class="tile-icon">💰</span>
+          <strong>Caixa do Dia</strong>
+          <span>Entradas e sangrias</span>
+        </div>
+        <div class="drawer-tool-tile" onclick="window.location.href='/#whatsapp'">
+          <span class="tile-icon">📱</span>
+          <strong>WhatsApp Gateway</strong>
+          <span>Conexão QR Code</span>
+        </div>
+        <div class="drawer-tool-tile" onclick="window.location.href='/'">
+          <span class="tile-icon">🔙</span>
+          <strong>Layout Clássico</strong>
+          <span>Voltar à versão anterior</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL RÁPIDO: RECEBER PAGAMENTO / AMORTIZAR PARCELA -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay-v2" id="modal-receber-pagamento">
+    <div class="modal-box-v2">
+      <div class="modal-header-v2">
+        <h3>💵 Registrar Pagamento / Parcela</h3>
+        <button class="modal-close-btn" onclick="fecharModalPagamento()">✕</button>
+      </div>
+      <div class="modal-body-v2">
+        <div style="background: var(--primary-light); padding: 14px; border-radius: 12px; margin-bottom: 16px;">
+          <small style="color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">Cliente</small>
+          <strong id="modal-pagto-cliente-nome" style="display: block; font-size: 1.15rem; color: var(--primary-dark);">Dona Maria Silva</strong>
+        </div>
+
+        <div class="form-group-v2">
+          <label>Valor Pago pela Cliente (R$):</label>
+          <input type="number" id="modal-pagto-valor" class="form-input-v2" step="0.50" value="50.00">
+        </div>
+
+        <div class="form-group-v2">
+          <label>Forma de Pagamento:</label>
+          <select id="modal-pagto-forma" class="form-select-v2">
+            <option value="Pix">⚡ Pix (Copia-e-Cola / QR Code)</option>
+            <option value="Dinheiro" selected>💵 Dinheiro em Espécie</option>
+            <option value="Cartão de Débito">💳 Cartão de Débito</option>
+            <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer-v2">
+        <button class="btn-secondary-v2" onclick="fecharModalPagamento()">Cancelar</button>
+        <button class="btn-primary-v2" onclick="confirmarAmortizacaoV2()">
+          <span>Confirmar Recebimento</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script da aplicação de teste -->
+  <script src="/teste.js"></script>
+</body>
+</html>

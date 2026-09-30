@@ -879,27 +879,74 @@ async function abrirDetalhesFicha(fichaId) {
     } else {
       elComprasLista.innerHTML = vendas.map((v, idx) => {
         const dataFmt = new Date(v.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const totalCompra = Number(v.valor_total || v.total || 0);
+        const entradaRegistrada = Number(v.valor_entrada || 0);
+        
+        // Pagamentos vinculados no extrato ou quitado pelo saldo total zerado
+        let valorJaPago = entradaRegistrada;
+        if (saldoTotal <= 0) {
+          valorJaPago = totalCompra;
+        } else {
+          const pagtosDestaVenda = movs.filter((m) => m.venda_id === v.id && m.tipo_movimentacao === 'CREDITO_PAGAMENTO');
+          const somaPagtos = pagtosDestaVenda.reduce((acc, p) => acc + Number(p.valor || 0), 0);
+          valorJaPago = Math.min(totalCompra, entradaRegistrada + somaPagtos);
+        }
+
+        const saldoRestanteCompra = Math.max(0, totalCompra - valorJaPago);
+        const isQuitada = saldoRestanteCompra === 0;
+
         const itensList = (v.itens || []).map((it) => `
           <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted rgba(0,0,0,0.06); font-size: 0.86rem;">
-            <span><strong>${it.quantidade || 1}x</strong> ${it.nome || it.produto_nome || 'Item do Ateliê'}</span>
+            <span><strong>${it.quantidade || 1}x</strong> ${it.nome || it.descricao_item || it.produto_nome || 'Item do Ateliê'}</span>
             <span>${formatarMoeda((it.preco_unitario || it.preco || 0) * (it.quantidade || 1))}</span>
           </div>
         `).join('') || '<div style="font-size:0.85rem; color:var(--text-muted);">Produtos diversos</div>';
 
         return `
-          <div class="purchase-card">
-            <div class="purchase-card-header">
+          <div class="purchase-card" style="border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px; background: #fff; padding: 14px;">
+            <div class="purchase-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
               <div>
-                <strong style="font-size: 0.95rem; color: var(--text-dark);">Compra #${vendas.length - idx}</strong>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">${dataFmt}</div>
+                <strong style="font-size: 0.98rem; color: var(--text-dark);">Compra #${vendas.length - idx}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">📅 ${dataFmt}</div>
               </div>
               <div style="text-align: right;">
-                <span class="badge-status ${v.tipo_entrega === 'ENCOMENDA' ? 'erro' : 'valido'}">${v.tipo_entrega === 'ENCOMENDA' ? '📦 Encomenda' : '✨ Pronta Entrega'}</span>
-                <div style="font-size: 1.05rem; font-weight: 700; color: var(--wine-primary); margin-top: 4px;">${formatarMoeda(v.valor_total || v.total || 0)}</div>
+                <span class="badge-status ${isQuitada ? 'valido' : (v.tipo_entrega === 'ENCOMENDA' ? 'erro' : 'alerta')}">
+                  ${isQuitada ? '✨ Quitada' : (v.tipo_entrega === 'ENCOMENDA' ? '📦 Encomenda' : '⏳ Em Aberto')}
+                </span>
               </div>
             </div>
-            <div class="purchase-card-items" style="padding: 10px 0;">
+            
+            <div class="purchase-card-items" style="padding: 6px 0; margin-bottom: 8px;">
               ${itensList}
+            </div>
+
+            <!-- Detalhamento de Quanto Já Pagou, Saldo e Botão de Baixa -->
+            <div style="background: #F9FAFB; border-radius: 6px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border: 1px solid rgba(0,0,0,0.05);">
+              <div>
+                <span style="font-size: 0.76rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; display: block;">Valor Total</span>
+                <strong style="color: var(--text-dark); font-size: 0.95rem;">${formatarMoeda(totalCompra)}</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.76rem; color: var(--success); text-transform: uppercase; font-weight: 600; display: block;">Já Pagou</span>
+                <strong style="color: var(--success); font-size: 0.95rem;">${formatarMoeda(valorJaPago)}</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.76rem; color: ${isQuitada ? 'var(--success)' : 'var(--wine-primary)'}; text-transform: uppercase; font-weight: 600; display: block;">
+                  ${isQuitada ? 'Situação' : 'Resta Pagar'}
+                </span>
+                <strong style="color: ${isQuitada ? 'var(--success)' : 'var(--wine-primary)'}; font-size: 0.95rem;">
+                  ${isQuitada ? '🎉 100% PAGO' : formatarMoeda(saldoRestanteCompra)}
+                </strong>
+              </div>
+              <div>
+                ${!isQuitada ? `
+                  <button class="btn btn-sm btn-outline" onclick="abrirModalAmortizacaoFicha('${v.id}', ${saldoRestanteCompra}, 'Compra #${vendas.length - idx}')" style="border-color: var(--wine-primary); color: var(--wine-primary); font-weight: 600; font-size: 0.8rem; padding: 6px 10px;">
+                    💵 Lançar Pagamento / Dia
+                  </button>
+                ` : `
+                  <span style="font-size: 0.8rem; color: var(--success); font-weight: 600;">✔️ Liquidado</span>
+                `}
+              </div>
             </div>
           </div>
         `;
@@ -1268,24 +1315,58 @@ async function salvarAjusteSaldoManual(e) {
   }
 }
 
-function abrirModalAmortizacaoFicha() {
-  fecharModal('modal-ficha-detalhes');
+function abrirModalAmortizacaoFicha(vendaId = null, valorSugerido = null, descricaoCompra = '') {
   const ficha = state.fichaAtualModal;
   if (!ficha) return;
 
   const saldo = Number(ficha.saldo_devedor_total) || 0;
   const parcela = Number(ficha.valor_parcela_padrao) || 50;
 
-  // Gera chips de atalhos rápidos
+  // Seta a data de hoje por padrão, mas permite alterar o dia livremente
+  const inputData = document.getElementById('amortizacao-data');
+  if (inputData) {
+    const hojeStr = new Date().toISOString().split('T')[0];
+    inputData.value = hojeStr;
+  }
+
+  // Configura campo oculto e alerta de compra vinculada
+  const inputVendaId = document.getElementById('amortizacao-venda-id');
+  if (inputVendaId) inputVendaId.value = vendaId || '';
+
+  const infoVendaBox = document.getElementById('amortizacao-venda-info');
+  if (infoVendaBox) {
+    if (vendaId) {
+      infoVendaBox.style.display = 'block';
+      infoVendaBox.innerHTML = `
+        <strong>🛍️ Pagamento Vinculado:</strong> ${descricaoCompra || 'Compra Selecionada'}<br>
+        <span style="font-size: 0.82rem;">Este pagamento amortizará o saldo restante desta compra e abaterá da ficha da cliente.</span>
+      `;
+    } else {
+      infoVendaBox.style.display = 'none';
+      infoVendaBox.innerHTML = '';
+    }
+  }
+
+  // Gera chips de atalhos rápidos de valor
   const chipsContainer = document.getElementById('quick-amort-chips');
   if (chipsContainer) {
+    const valorBase = valorSugerido && valorSugerido > 0 ? valorSugerido : parcela;
     chipsContainer.innerHTML = `
+      ${valorSugerido && valorSugerido > 0 ? `<button type="button" class="chip-action" onclick="preencherValorAmortizacao(${valorSugerido})">🎯 Restante da Compra (${formatarMoeda(valorSugerido)})</button>` : ''}
       <button type="button" class="chip-action" onclick="preencherValorAmortizacao(${parcela})">💵 Pagar Parcela (${formatarMoeda(parcela)})</button>
       <button type="button" class="chip-action" onclick="preencherValorAmortizacao(${parcela / 2})">🪙 Pagar Metade (${formatarMoeda(parcela / 2)})</button>
       <button type="button" class="chip-action" onclick="preencherValorAmortizacao(${saldo})">🎉 Quitar Tudo (${formatarMoeda(saldo)})</button>
     `;
   }
 
+  // Pré-carrega o valor sugerido se fornecido
+  if (valorSugerido && valorSugerido > 0) {
+    preencherValorAmortizacao(valorSugerido);
+  } else {
+    preencherValorAmortizacao(parcela);
+  }
+
+  fecharModal('modal-ficha-detalhes');
   abrirModal('modal-amortizacao');
 }
 
@@ -1298,6 +1379,11 @@ async function salvarAmortizacao(e) {
   e.preventDefault();
   const fichaId = document.getElementById('amortizacao-ficha-id').value;
   const valorPago = Number(document.getElementById('amortizacao-valor').value);
+  const dataPagamento = document.getElementById('amortizacao-data') ? document.getElementById('amortizacao-data').value : '';
+  const formaPagto = document.getElementById('amortizacao-forma') ? document.getElementById('amortizacao-forma').value : 'PIX';
+  const novaParcelaInput = document.getElementById('amortizacao-nova-parcela');
+  const novaParcela = novaParcelaInput && Number(novaParcelaInput.value) > 0 ? Number(novaParcelaInput.value) : undefined;
+  const vendaId = document.getElementById('amortizacao-venda-id') ? document.getElementById('amortizacao-venda-id').value : '';
   const enviarZap = document.getElementById('amortizacao-enviar-zap') ? document.getElementById('amortizacao-enviar-zap').checked : false;
 
   if (isNaN(valorPago) || valorPago <= 0) {
@@ -1316,7 +1402,10 @@ async function salvarAmortizacao(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         valor_pago: valorPago,
-        descricao: 'Amortização de Crediário',
+        data_pagamento: dataPagamento || undefined,
+        forma_pagamento: formaPagto,
+        venda_id: vendaId || undefined,
+        descricao: vendaId ? `Pagamento de compra via ${formaPagto}` : `Pagamento / Amortização (${formaPagto})`,
       }),
     });
 
@@ -1324,12 +1413,25 @@ async function salvarAmortizacao(e) {
 
     if (res.ok) {
       const data = await res.json();
-      if (data.novo_saldo_devedor !== undefined) novoSaldo = data.novo_saldo_devedor;
+      if (data.saldoRestante !== undefined) novoSaldo = data.saldoRestante;
+      else if (data.novo_saldo_devedor !== undefined) novoSaldo = data.novo_saldo_devedor;
+    }
+
+    // Se houve renegociação de parcela, atualiza
+    if (novaParcela && novaParcela > 0) {
+      await fetch(`${API_BASE}/fichas/${fichaId}/ajustar-saldo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          novo_valor_parcela: novaParcela,
+          motivo: 'Renegociação de parcela combinada no momento do pagamento',
+        }),
+      }).catch(() => {});
     }
 
     fecharModal('modal-amortizacao');
-    fecharModal('modal-ficha-detalhes');
-    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado! Novo Saldo: ${formatarMoeda(novoSaldo)}`, 'success');
+    const dataFmt = dataPagamento ? new Date(dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR') : 'hoje';
+    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} em ${dataFmt} registrado! Novo Saldo: ${formatarMoeda(novoSaldo)}`, 'success');
 
     if (enviarZap && fone) {
       enviarReciboPagamentoWhatsApp(fone, nome, valorPago, novoSaldo);
@@ -1337,15 +1439,22 @@ async function salvarAmortizacao(e) {
 
     await carregarFichas();
     atualizarDashboardCobrancas();
+    
+    // Reabre o prontuário da cliente para exibir extrato e compras atualizados
+    if (ficha.id || fichaId) {
+      await abrirDetalhesFicha(ficha.id || fichaId);
+    }
   } catch (err) {
     const novoSaldo = Math.max(0, (Number(ficha.saldo_devedor_total) || 0) - valorPago);
     fecharModal('modal-amortizacao');
-    fecharModal('modal-ficha-detalhes');
-    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado!`, 'success');
+    mostrarToast(`✅ Pagamento de ${formatarMoeda(valorPago)} registrado localmente!`, 'success');
     if (enviarZap && fone) {
       enviarReciboPagamentoWhatsApp(fone, nome, valorPago, novoSaldo);
     }
     await carregarFichas();
+    if (ficha.id || fichaId) {
+      await abrirDetalhesFicha(ficha.id || fichaId);
+    }
   }
 }
 
@@ -3502,6 +3611,8 @@ function abrirModalHistoricoManual() {
   document.getElementById('hist-valor-total').value = '';
   document.getElementById('hist-valor-pago').value = '';
   document.getElementById('hist-data-compra').value = '';
+  const inputDataPagto = document.getElementById('hist-data-pagamento');
+  if (inputDataPagto) inputDataPagto.value = '';
   document.getElementById('hist-observacao').value = '';
   document.getElementById('hist-previa-box').style.display = 'none';
 
@@ -3549,6 +3660,7 @@ async function salvarItemHistoricoManual(e) {
   const valorTotal = parseFloat(document.getElementById('hist-valor-total').value);
   const valorPago = parseFloat(document.getElementById('hist-valor-pago').value) || 0;
   const dataCompra = document.getElementById('hist-data-compra').value || undefined;
+  const dataPagamento = document.getElementById('hist-data-pagamento') ? document.getElementById('hist-data-pagamento').value || undefined : undefined;
   const observacao = document.getElementById('hist-observacao').value.trim() || undefined;
 
   if (!descricao) {
@@ -3570,6 +3682,7 @@ async function salvarItemHistoricoManual(e) {
         valor_total: valorTotal,
         valor_ja_pago: valorPago,
         data_compra: dataCompra,
+        data_pagamento: dataPagamento,
         observacoes: observacao,
       }),
     });
@@ -3580,7 +3693,7 @@ async function salvarItemHistoricoManual(e) {
     }
 
     fecharModal('modal-historico-item');
-    mostrarToast(`✅ Produto "${descricao}" adicionado ao histórico do carnê!`, 'success');
+    mostrarToast(`✅ Produto "${descricao}" adicionado ao histórico do carnê com data e valores registrados!`, 'success');
 
     // Recarrega os dados e atualiza o modal da ficha
     await carregarFichas();

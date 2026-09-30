@@ -110,6 +110,9 @@
       </div>
 
       <div class="header-actions">
+        <a href="/teste" class="btn btn-outline btn-sm" style="background: linear-gradient(135deg, #8C2D40 0%, #541421 100%); color: #FFF; border: none; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <span>🧪 Novo Layout (Teste)</span>
+        </a>
         <button class="btn btn-outline btn-sm" onclick="abrirModalConexaoWhatsApp()">
           <span id="header-zap-icon">📱</span>
           <span class="desktop-only">WhatsApp: </span>
@@ -1462,13 +1465,25 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
       </div>
       <form id="form-amortizacao" onsubmit="salvarAmortizacao(event)">
         <input type="hidden" id="amortizacao-ficha-id">
+        <input type="hidden" id="amortizacao-venda-id">
+
+        <div id="amortizacao-venda-info" style="display: none; padding: 10px 14px; background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 6px; font-size: 0.88rem; margin-bottom: 14px; color: #1E40AF;">
+          <!-- Informação da compra vinculada inserida via JS -->
+        </div>
         
-        <div class="form-group">
-          <label>Valor Pago (R$):</label>
-          <input type="number" id="amortizacao-valor" class="form-control input-lg" step="0.50" min="0.50" inputmode="decimal" required placeholder="R$ 0,00">
-          <div class="quick-amort-chips" id="quick-amort-chips">
-            <!-- Chips gerados via JS com sugestões rápidas de valor -->
+        <div class="form-row">
+          <div class="form-group" style="flex: 1.2;">
+            <label>Valor Pago (R$): *</label>
+            <input type="number" id="amortizacao-valor" class="form-control input-lg" step="0.50" min="0.50" inputmode="decimal" required placeholder="R$ 0,00">
           </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Data do Pagamento (Dia): *</label>
+            <input type="date" id="amortizacao-data" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="quick-amort-chips" id="quick-amort-chips" style="margin-top: -6px; margin-bottom: 14px;">
+          <!-- Chips gerados via JS com sugestões rápidas de valor -->
         </div>
 
         <div class="form-group">
@@ -1960,9 +1975,16 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           <!-- Preenchido via JS dinamicamente -->
         </div>
 
-        <div class="form-group">
-          <label>Data Aproximada da Compra (Opcional):</label>
-          <input type="date" id="hist-data-compra" class="form-control">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data da Compra (Opcional):</label>
+            <input type="date" id="hist-data-compra" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Data em que Pagou no Papel:</label>
+            <input type="date" id="hist-data-pagamento" class="form-control">
+            <small class="text-muted">Dia do recibo/baixa no caderno.</small>
+          </div>
         </div>
 
         <div class="form-group">

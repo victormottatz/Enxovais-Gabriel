@@ -6,7 +6,10 @@ const router = Router();
 
 const registrarPagamentoSchema = z.object({
   valor_pago: z.number().positive('O valor do pagamento deve ser maior que zero'),
+  data_pagamento: z.string().optional(),
   descricao: z.string().optional(),
+  forma_pagamento: z.string().optional(),
+  venda_id: z.string().optional(),
 });
 
 const ajustarSaldoSchema = z.object({
@@ -48,7 +51,10 @@ router.post('/:id/pagamentos', async (req, res, next) => {
     const resultado = await FichaCrediarioService.registrarPagamento({
       fichaId: req.params.id,
       valorPago: validated.valor_pago,
+      dataPagamento: validated.data_pagamento,
       descricao: validated.descricao,
+      formaPagamento: validated.forma_pagamento,
+      vendaId: validated.venda_id,
     });
     res.json(resultado);
   } catch (err) {
@@ -79,6 +85,7 @@ const historicoItemSchema = z.object({
   valor_total: z.number().positive('O valor do produto deve ser maior que zero'),
   valor_ja_pago: z.number().min(0, 'O valor pago não pode ser negativo').optional(),
   data_compra: z.string().optional(),
+  data_pagamento: z.string().optional(),
   observacoes: z.string().optional(),
 });
 
@@ -91,6 +98,7 @@ router.post('/:id/historico-item', async (req, res, next) => {
       valorTotal: validated.valor_total,
       valorJaPago: validated.valor_ja_pago,
       dataCompra: validated.data_compra,
+      dataPagamento: validated.data_pagamento,
       observacoes: validated.observacoes,
     });
     res.status(201).json(resultado);

@@ -99,6 +99,15 @@ app.get(['/carne', '/carne/*', '/meu-carne', '/meu-carne/*'], (req, res) => {
   return res.redirect('/');
 });
 
+// Rota específica para o Novo Layout Intuitivo e Responsivo (Ambiente de Teste)
+app.get(['/teste', '/layout-teste', '/novo-layout'], (req, res) => {
+  const testePath = path.join(frontendPath, 'teste.html');
+  if (fs.existsSync(testePath)) {
+    return res.sendFile(testePath);
+  }
+  return res.redirect('/');
+});
+
 // Rota Principal e Fallback SPA para o Frontend
 app.get('*', (req, res, next) => {
   if (
