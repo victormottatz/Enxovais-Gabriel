@@ -1,0 +1,8 @@
+whatsapp;nome;tipo;data;valor;forma_pagamento;parcela_ref;descricao;observacoes
+16988479219;Fabiana Amiga (Indaiá);COMPRA_A_PRAZO;02/06/2026;1020,00;CREDIARIO;6 parcelas de 170;2 Cobredons;Ficha física nº 548LU - Rua Angelo Maioli, Bairro P. Ava.
+16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/07/2026;170,00;DINHEIRO;Parcela 01/06;Pagamento anotado na ficha física;Pg 170 em 10/07
+16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/08/2026;170,00;DINHEIRO;Parcela 02/06;Pagamento anotado na ficha física;Pg 170 em 10/08
+16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/09/2026;170,00;DINHEIRO;Parcela 03/06;Pagamento anotado na ficha física;Pg 170 em 10/09
+11987654321;Maria das Gracas Silva;PAGAMENTO;10/02/2026;100,00;PIX;Parcela 01/05;Amortização no Pix;Comprovante enviado no WhatsApp
+11987654321;Maria das Gracas Silva;COMPRA_A_PRAZO;15/02/2026;350,00;;;Jogo Edredom Queen Toque de Pluma;Ficha de papel nº 12
+11976543210;Ana Paula Oliveira;PAGAMENTO;20/02/2026;150,00;DINHEIRO;Vale Quinzenal;Adiantamento recebido em mãos;Cliente assinou o canhoto

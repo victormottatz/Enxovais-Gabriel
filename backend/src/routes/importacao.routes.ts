@@ -53,5 +53,44 @@ router.post('/executar', async (req, res, next) => {
   }
 });
 
+// Schemas para Histórico de Pagamentos e Amortizações Anteriores
+const executarImportacaoHistoricoSchema = z.object({
+  itens: z.array(
+    z.object({
+      whatsapp: z.string().min(10, 'WhatsApp é obrigatório'),
+      nome: z.string().optional().nullable(),
+      tipo: z.enum(['PAGAMENTO', 'COMPRA_A_PRAZO', 'AMORTIZACAO']),
+      data: z.string().min(5, 'Data é obrigatória'),
+      valor: z.number().positive('Valor deve ser maior que zero'),
+      forma_pagamento: z.string().optional().nullable(),
+      parcela_ref: z.string().optional().nullable(),
+      descricao: z.string().optional().nullable(),
+      observacoes: z.string().optional().nullable(),
+    }).passthrough()
+  ).min(1, 'Envie ao menos um lançamento histórico para importar'),
+});
+
+// POST /api/v1/importacao/historico/validar
+router.post('/historico/validar', (req, res, next) => {
+  try {
+    const validated = validarCsvSchema.parse(req.body);
+    const resultado = ImportacaoService.processarCSVHistorico(validated.csv_content);
+    res.json(resultado);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/importacao/historico/executar
+router.post('/historico/executar', async (req, res, next) => {
+  try {
+    const validated = executarImportacaoHistoricoSchema.parse(req.body);
+    const resultado = await ImportacaoService.executarImportacaoHistorico(validated.itens as any);
+    res.status(201).json(resultado);
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
 

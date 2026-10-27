@@ -8,8 +8,11 @@ Este repositório contém a documentação de produto, arquitetura e especifica�
 
 | Arquivo | Descrição |
 | :--- | :--- |
-| **[`discovery_gestao_enxoval.md`](file:///x:/enxovais%20gabriel/docs/discovery_gestao_enxoval.md)** | **Product Discovery:** Contexto, dores da artesã, personas, jornada de pedidos e métricas de sucesso. |
-| **[`prd_gestao_enxoval.md`](file:///x:/enxovais%20gabriel/docs/prd_gestao_enxoval.md)** | **PRD Oficial:** Requisitos funcionais (RF), não-funcionais (RNF), modelo de dados (Sheets), UX AppSheet e automações Make/WhatsApp. |
+| **[`relatorio_status_e_manual_migracao.md`](file:///x:/enxovais%20gabriel/docs/relatorio_status_e_manual_migracao.md)** | **Relatório de Status & Manual de Migração:** Raio-X do que está pronto vs a concluir e manual prático para migrar fichas de papel sem estresse. |
+| **[`visao_geral_e_contexto_projeto.md`](file:///x:/enxovais%20gabriel/docs/visao_geral_e_contexto_projeto.md)** | **Visão Geral e Contexto Completo:** Contexto de negócio, utilidades do sistema, dores e problemas a resolver, mecânica do crediário e fluxos operacionais. |
+| **[`discovery_gestao_enxoval.md`](file:///x:/enxovais%20gabriel/docs/discovery_gestao_enxoval.md)** | **Product Discovery:** Contexto, personas, jornada de pedidos e métricas de sucesso. |
+| **[`prd_gestao_enxoval.md`](file:///x:/enxovais%20gabriel/docs/prd_gestao_enxoval.md)** | **PRD Oficial:** Requisitos funcionais (RF), não-funcionais (RNF), modelo de dados e automações Make/WhatsApp. |
+| **[`SPEC.md`](file:///x:/enxovais%20gabriel/docs/SPEC.md)** | **Especificação Técnica:** Arquitetura de software, tabelas SQL (PostgreSQL) e endpoints RESTful. |
 | **[`README.md`](file:///x:/enxovais%20gabriel/docs/README.md)** | Este índice de navegação. |
 
 ---

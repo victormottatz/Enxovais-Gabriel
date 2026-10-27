@@ -122,16 +122,23 @@ CREATE INDEX IF NOT EXISTS idx_encomendas_data_previsao ON encomendas (data_prev
 CREATE TABLE IF NOT EXISTS movimentacoes_ficha (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ficha_id UUID NOT NULL REFERENCES fichas_crediario(id) ON DELETE CASCADE,
+    cliente_id UUID REFERENCES clientes(id) ON DELETE CASCADE,
     venda_id UUID REFERENCES vendas(id) ON DELETE SET NULL,
     tipo_movimentacao VARCHAR(30) NOT NULL CHECK (tipo_movimentacao IN ('DEBITO_COMPRA', 'CREDITO_PAGAMENTO', 'AJUSTE_PARCELA', 'ESTORNO')),
     valor NUMERIC(10, 2) NOT NULL CHECK (valor > 0),
     saldo_anterior NUMERIC(10, 2) NOT NULL,
     saldo_posterior NUMERIC(10, 2) NOT NULL,
     descricao VARCHAR(255) NOT NULL,
+    data_movimentacao DATE NOT NULL DEFAULT CURRENT_DATE,
+    forma_pagamento VARCHAR(30) DEFAULT 'OUTRO',
+    numero_parcela_ref VARCHAR(50),
+    observacoes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_ficha_id ON movimentacoes_ficha (ficha_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_cliente_id ON movimentacoes_ficha (cliente_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoes_ficha (data_movimentacao);
 
 -- 8. Tabela: Parcelas de Crediário
 CREATE TABLE IF NOT EXISTS parcelas_crediario (

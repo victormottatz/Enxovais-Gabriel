@@ -10,6 +10,8 @@ const registrarPagamentoSchema = z.object({
   descricao: z.string().optional(),
   forma_pagamento: z.string().optional(),
   venda_id: z.string().optional(),
+  numero_parcela_ref: z.string().optional(),
+  observacoes: z.string().optional(),
 });
 
 const ajustarSaldoSchema = z.object({
@@ -55,6 +57,8 @@ router.post('/:id/pagamentos', async (req, res, next) => {
       descricao: validated.descricao,
       formaPagamento: validated.forma_pagamento,
       vendaId: validated.venda_id,
+      numeroParcelaRef: validated.numero_parcela_ref,
+      observacoes: validated.observacoes,
     });
     res.json(resultado);
   } catch (err) {
@@ -87,6 +91,14 @@ const historicoItemSchema = z.object({
   data_compra: z.string().optional(),
   data_pagamento: z.string().optional(),
   observacoes: z.string().optional(),
+  pagamentos_anteriores: z.array(
+    z.object({
+      data: z.string().optional(),
+      valor: z.number().positive(),
+      forma_pagamento: z.string().optional(),
+      parcela_ref: z.string().optional(),
+    })
+  ).optional(),
 });
 
 router.post('/:id/historico-item', async (req, res, next) => {
@@ -100,6 +112,12 @@ router.post('/:id/historico-item', async (req, res, next) => {
       dataCompra: validated.data_compra,
       dataPagamento: validated.data_pagamento,
       observacoes: validated.observacoes,
+      pagamentosAnteriores: validated.pagamentos_anteriores?.map((p) => ({
+        data: p.data,
+        valor: p.valor,
+        formaPagamento: p.forma_pagamento,
+        parcelaRef: p.parcela_ref,
+      })),
     });
     res.status(201).json(resultado);
   } catch (err) {

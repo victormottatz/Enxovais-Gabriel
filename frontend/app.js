@@ -969,15 +969,25 @@ async function abrirDetalhesFicha(fichaId) {
     } else {
       extratoContainer.innerHTML = movs.map((m) => {
         const isDebito = m.tipo_movimentacao === 'DEBITO_COMPRA';
-        const dataFmt = new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        let dataFmt = '';
+        if (m.data_movimentacao) {
+          const partes = m.data_movimentacao.split('-');
+          dataFmt = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : m.data_movimentacao;
+        } else {
+          dataFmt = new Date(m.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        const badgeForma = m.forma_pagamento ? `<span class="badge-status" style="font-size: 0.72rem; padding: 2px 6px; margin-left: 6px; background: #E8F5E9; color: #2E7D32;">${m.forma_pagamento}</span>` : '';
+        const badgeRef = m.numero_parcela_ref ? `<span class="badge-status" style="font-size: 0.72rem; padding: 2px 6px; margin-left: 4px; background: #FFF8E1; color: #F57F17;">${m.numero_parcela_ref}</span>` : '';
+
         return `
           <div class="extrato-item">
             <div class="extrato-icon ${isDebito ? 'debito' : 'credito'}">
               ${isDebito ? '🛒' : '💵'}
             </div>
             <div class="extrato-details">
-              <strong>${m.descricao || (isDebito ? 'Compra a Prazo' : 'Pagamento / Amortização')}</strong>
+              <strong>${m.descricao || (isDebito ? 'Compra a Prazo' : 'Pagamento / Amortização')} ${badgeForma} ${badgeRef}</strong>
               <small>${dataFmt} • Saldo após operação: ${formatarMoeda(m.saldo_posterior)}</small>
+              ${m.observacoes ? `<small style="display: block; color: var(--text-muted); font-style: italic;">📝 ${m.observacoes}</small>` : ''}
             </div>
             <div class="extrato-valor ${isDebito ? 'debito' : 'credito'}">
               ${isDebito ? '+ ' : '- '}${formatarMoeda(m.valor)}
@@ -1332,6 +1342,10 @@ function abrirModalAmortizacaoFicha(vendaId = null, valorSugerido = null, descri
   // Configura campo oculto e alerta de compra vinculada
   const inputVendaId = document.getElementById('amortizacao-venda-id');
   if (inputVendaId) inputVendaId.value = vendaId || '';
+  const inputParcelaRef = document.getElementById('amortizacao-parcela-ref');
+  if (inputParcelaRef) inputParcelaRef.value = '';
+  const inputObsAmort = document.getElementById('amortizacao-observacoes');
+  if (inputObsAmort) inputObsAmort.value = '';
 
   const infoVendaBox = document.getElementById('amortizacao-venda-info');
   if (infoVendaBox) {
@@ -1384,6 +1398,8 @@ async function salvarAmortizacao(e) {
   const novaParcelaInput = document.getElementById('amortizacao-nova-parcela');
   const novaParcela = novaParcelaInput && Number(novaParcelaInput.value) > 0 ? Number(novaParcelaInput.value) : undefined;
   const vendaId = document.getElementById('amortizacao-venda-id') ? document.getElementById('amortizacao-venda-id').value : '';
+  const parcelaRef = document.getElementById('amortizacao-parcela-ref') ? document.getElementById('amortizacao-parcela-ref').value.trim() : '';
+  const observacoesAmort = document.getElementById('amortizacao-observacoes') ? document.getElementById('amortizacao-observacoes').value.trim() : '';
   const enviarZap = document.getElementById('amortizacao-enviar-zap') ? document.getElementById('amortizacao-enviar-zap').checked : false;
 
   if (isNaN(valorPago) || valorPago <= 0) {
@@ -1405,6 +1421,8 @@ async function salvarAmortizacao(e) {
         data_pagamento: dataPagamento || undefined,
         forma_pagamento: formaPagto,
         venda_id: vendaId || undefined,
+        numero_parcela_ref: parcelaRef || undefined,
+        observacoes: observacoesAmort || undefined,
         descricao: vendaId ? `Pagamento de compra via ${formaPagto}` : `Pagamento / Amortização (${formaPagto})`,
       }),
     });
@@ -1986,6 +2004,27 @@ function configurarDragAndDrop() {
   });
 }
 
+function alternarModoImportacao(modo) {
+  state.modoImportacao = modo;
+  const btnFichas = document.getElementById('btn-modo-import-fichas');
+  const btnHist = document.getElementById('btn-modo-import-historico');
+  const tituloDrop = document.getElementById('dropzone-titulo');
+  const descDrop = document.getElementById('dropzone-desc');
+
+  if (modo === 'HISTORICO') {
+    if (btnFichas) { btnFichas.className = 'btn btn-sm btn-outline'; }
+    if (btnHist) { btnHist.className = 'btn btn-sm btn-primary'; }
+    if (tituloDrop) tituloDrop.textContent = 'Arraste a planilha de Histórico de Pagamentos e Compras (.CSV)';
+    if (descDrop) descDrop.innerHTML = 'Modelo: <code>template_historico_pagamentos.csv</code> (WhatsApp, Data, Valor, Tipo, Forma Pgto)';
+  } else {
+    if (btnFichas) { btnFichas.className = 'btn btn-sm btn-primary'; }
+    if (btnHist) { btnHist.className = 'btn btn-sm btn-outline'; }
+    if (tituloDrop) tituloDrop.textContent = 'Arraste a planilha de Fichas e Clientes Iniciais (.CSV)';
+    if (descDrop) descDrop.innerHTML = 'Modelo: <code>template_fichas_crediario.csv</code> (Nome, WhatsApp, Vencimento, Saldo, Parcela)';
+  }
+  cancelarImportacao();
+}
+
 function aoSelecionarArquivoCSV(event) {
   const file = event.target.files[0];
   if (file) {
@@ -2008,8 +2047,18 @@ function processarArquivoCSV(file) {
       csvContent = decoderAnsi.decode(arrayBuffer);
     }
 
+    // Identifica dinamicamente se o arquivo é de histórico pelo cabeçalho
+    const primeiraLinha = csvContent.split(/\r?\n/)[0]?.toLowerCase() || '';
+    const pareceHistorico = state.modoImportacao === 'HISTORICO' ||
+      primeiraLinha.includes('tipo') ||
+      primeiraLinha.includes('parcela_ref') ||
+      primeiraLinha.includes('amortizacao');
+
+    state.isHistoricoImportacao = pareceHistorico;
+    const endpoint = pareceHistorico ? `${API_BASE}/importacao/historico/validar` : `${API_BASE}/importacao/validar`;
+
     try {
-      const res = await fetch(`${API_BASE}/importacao/validar`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ csv_content: csvContent }),
@@ -2017,7 +2066,7 @@ function processarArquivoCSV(file) {
 
       if (res.ok) {
         const resultado = await res.json();
-        renderizarPreviaImportacao(resultado);
+        renderizarPreviaImportacao(resultado, pareceHistorico);
       } else {
         const err = await res.json();
         alert(`Erro na validação da planilha: ${err.message || 'Formato inválido'}`);
@@ -2030,47 +2079,168 @@ function processarArquivoCSV(file) {
   reader.readAsArrayBuffer(file);
 }
 
-function renderizarPreviaImportacao(resultado) {
+function renderizarPreviaImportacao(resultado, isHistorico = false) {
   const panel = document.getElementById('import-preview-panel');
   const tbody = document.getElementById('import-preview-tbody');
+  const thead = document.querySelector('#tab-importacao table.data-table thead');
   const btnConfirm = document.getElementById('btn-confirmar-importacao');
 
-  document.getElementById('import-total-count').textContent = `${resultado.total} fichas`;
+  state.resultadoImportacaoBruto = resultado;
+  state.isHistoricoImportacao = isHistorico;
+
+  document.getElementById('import-total-count').textContent = `${resultado.total} ${isHistorico ? 'lançamentos' : 'fichas'}`;
   document.getElementById('import-validas-count').textContent = resultado.validos;
   document.getElementById('import-erros-count').textContent = resultado.comErros;
 
   state.itensImportacaoValidados = resultado.itens.filter((i) => i.valido).map((i) => i.dados);
 
+  if (thead) {
+    if (isHistorico) {
+      thead.innerHTML = `
+        <tr>
+          <th>Linha</th>
+          <th>Status</th>
+          <th>WhatsApp</th>
+          <th>Cliente</th>
+          <th>Operação</th>
+          <th>Data</th>
+          <th>Valor</th>
+          <th>Forma Pgto</th>
+          <th>Parcela Ref</th>
+          <th>Descrição / Ação</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr>
+          <th>Linha</th>
+          <th>Status</th>
+          <th>Nome da Cliente</th>
+          <th>WhatsApp</th>
+          <th>Dia Vencimento</th>
+          <th>Saldo Inicial</th>
+          <th>Parcela Padrão</th>
+          <th>Produtos Comprados</th>
+          <th>Observações / Ação</th>
+        </tr>
+      `;
+    }
+  }
+
   if (tbody) {
-    tbody.innerHTML = resultado.itens
-      .map(
-        (it) => `
-      <tr style="${it.valido ? '' : 'background: #FDF2F2;'}">
-        <td><strong>#${it.linha}</strong></td>
-        <td>
-          <span class="badge-status ${it.valido ? 'valido' : 'erro'}">
-            ${it.valido ? '✅ Válida' : '⚠️ Erro'}
-          </span>
-        </td>
-        <td><strong>${it.dados.nome || '-'}</strong></td>
-        <td>${it.dados.whatsapp || '-'}</td>
-        <td>Dia 0${it.dados.dia_vencimento}</td>
-        <td><strong>${formatarMoeda(it.dados.saldo_devedor_atual)}</strong></td>
-        <td>${formatarMoeda(it.dados.valor_parcela)}</td>
-        <td><small style="color: var(--primary); font-weight: 500;">${it.dados.produtos || '-'}</small></td>
-        <td><small style="color: ${it.valido ? 'var(--text-muted)' : 'var(--danger)'};">${it.erros.join(', ') || [it.dados.observacoes, it.dados.data_venda ? 'Data: ' + it.dados.data_venda : '', it.dados.pagamento_parcelas ? 'Pgto: ' + it.dados.pagamento_parcelas : ''].filter(Boolean).join(' | ') || 'OK'}</small></td>
-      </tr>
-    `
-      )
-      .join('');
+    if (isHistorico) {
+      tbody.innerHTML = resultado.itens
+        .map(
+          (it, idx) => `
+        <tr style="${it.valido ? '' : 'background: #FDF2F2;'}">
+          <td><strong>#${it.linha}</strong></td>
+          <td>
+            <span class="badge-status ${it.valido ? 'valido' : 'erro'}">
+              ${it.valido ? '✅ Válido' : '⚠️ Erro'}
+            </span>
+          </td>
+          <td><strong>${it.dados.whatsapp || '-'}</strong></td>
+          <td>${it.dados.nome || '<span style="color:var(--text-muted);">(Busca por WhatsApp)</span>'}</td>
+          <td>
+            <span class="badge-status" style="font-size:0.75rem; background: ${it.dados.tipo === 'COMPRA_A_PRAZO' ? '#EFF6FF; color: #1D4ED8;' : '#EDFDF2; color: #15803D;'}">
+              ${it.dados.tipo === 'COMPRA_A_PRAZO' ? '🛒 Compra' : '💵 Pagamento'}
+            </span>
+          </td>
+          <td>${it.dados.data || '-'}</td>
+          <td><strong>${formatarMoeda(it.dados.valor)}</strong></td>
+          <td>${it.dados.forma_pagamento || '-'}</td>
+          <td><small>${it.dados.parcela_ref || '-'}</small></td>
+          <td>
+            <small style="color: ${it.valido ? 'var(--text-muted)' : 'var(--danger)'}; display: block;">
+              ${it.erros.join(', ') || [it.dados.descricao, it.dados.observacoes].filter(Boolean).join(' • ') || 'OK'}
+            </small>
+            ${!it.valido ? `<button type="button" class="btn btn-outline btn-sm" style="margin-top: 4px; padding: 2px 8px; font-size: 0.75rem;" onclick="corrigirLinhaImportacaoInline(${idx})">✏️ Corrigir na Tela</button>` : ''}
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    } else {
+      tbody.innerHTML = resultado.itens
+        .map(
+          (it, idx) => `
+        <tr style="${it.valido ? '' : 'background: #FDF2F2;'}">
+          <td><strong>#${it.linha}</strong></td>
+          <td>
+            <span class="badge-status ${it.valido ? 'valido' : 'erro'}">
+              ${it.valido ? '✅ Válida' : '⚠️ Erro'}
+            </span>
+          </td>
+          <td><strong>${it.dados.nome || '-'}</strong></td>
+          <td>${it.dados.whatsapp || '-'}</td>
+          <td>Dia ${String(it.dados.dia_vencimento).padStart(2, '0')}</td>
+          <td><strong>${formatarMoeda(it.dados.saldo_devedor_atual)}</strong></td>
+          <td>${formatarMoeda(it.dados.valor_parcela)}</td>
+          <td><small style="color: var(--primary); font-weight: 500;">${it.dados.produtos || '-'}</small></td>
+          <td>
+            <small style="color: ${it.valido ? 'var(--text-muted)' : 'var(--danger)'}; display: block;">
+              ${it.erros.join(', ') || [it.dados.observacoes, it.dados.data_venda ? 'Data: ' + it.dados.data_venda : '', it.dados.pagamento_parcelas ? 'Pgto: ' + it.dados.pagamento_parcelas : ''].filter(Boolean).join(' | ') || 'OK'}
+            </small>
+            ${!it.valido ? `<button type="button" class="btn btn-outline btn-sm" style="margin-top: 4px; padding: 2px 8px; font-size: 0.75rem;" onclick="corrigirLinhaImportacaoInline(${idx})">✏️ Corrigir na Tela</button>` : ''}
+          </td>
+        </tr>
+      `
+        )
+        .join('');
+    }
   }
 
   if (btnConfirm) {
     btnConfirm.disabled = state.itensImportacaoValidados.length === 0;
-    btnConfirm.textContent = `🚀 Confirmar e Digitalizar ${state.itensImportacaoValidados.length} Fichas Válidas`;
+    const tipoLabel = isHistorico ? 'Lançamentos de Histórico' : 'Fichas';
+    btnConfirm.textContent = `🚀 Confirmar e Digitalizar ${state.itensImportacaoValidados.length} ${tipoLabel} Válidos`;
   }
 
   if (panel) panel.style.display = 'block';
+}
+
+function corrigirLinhaImportacaoInline(index) {
+  const resultado = state.resultadoImportacaoBruto;
+  if (!resultado || !resultado.itens || !resultado.itens[index]) return;
+
+  const item = resultado.itens[index];
+  const isHistorico = Boolean(state.isHistoricoImportacao);
+
+  if (!isHistorico) {
+    const novoNome = prompt('Nome da Cliente:', item.dados.nome || '');
+    if (novoNome === null) return;
+    const novoZap = prompt('WhatsApp com DDD (Ex: 16988479219):', item.dados.whatsapp || '');
+    if (novoZap === null) return;
+
+    const zapLimpo = novoZap.replace(/\D/g, '');
+    item.dados.nome = novoNome.trim();
+    item.dados.whatsapp = zapLimpo.startsWith('55') ? zapLimpo : `55${zapLimpo}`;
+    item.erros = [];
+    if (item.dados.nome.length < 2) item.erros.push('Nome inválido');
+    if (item.dados.whatsapp.length < 12) item.erros.push('WhatsApp precisa de DDD + 9 dígitos');
+    item.valido = item.erros.length === 0;
+  } else {
+    const novoZap = prompt('WhatsApp com DDD (Ex: 16988479219):', item.dados.whatsapp || '');
+    if (novoZap === null) return;
+    const novoValorStr = prompt('Valor do Lançamento (R$):', String(item.dados.valor || ''));
+    if (novoValorStr === null) return;
+
+    const zapLimpo = novoZap.replace(/\D/g, '');
+    const valorNum = parseFloat(novoValorStr.replace(',', '.'));
+    item.dados.whatsapp = zapLimpo.startsWith('55') ? zapLimpo : `55${zapLimpo}`;
+    item.dados.valor = isNaN(valorNum) ? 0 : valorNum;
+    item.erros = [];
+    if (item.dados.whatsapp.length < 12) item.erros.push('WhatsApp precisa de DDD + 9 dígitos');
+    if (item.dados.valor <= 0) item.erros.push('Valor deve ser maior que zero');
+    item.valido = item.erros.length === 0;
+  }
+
+  resultado.validos = resultado.itens.filter((i) => i.valido).length;
+  resultado.comErros = resultado.total - resultado.validos;
+  renderizarPreviaImportacao(resultado, isHistorico);
+  if (item.valido) {
+    mostrarToast(`✅ Linha #${item.linha} corrigida e pronta para importar!`, 'success');
+  }
 }
 
 async function executarImportacaoFinal() {
@@ -2079,12 +2249,17 @@ async function executarImportacaoFinal() {
     return;
   }
 
-  if (!confirm(`Confirma a digitalização de ${state.itensImportacaoValidados.length} fichas no sistema?`)) {
+  const isHistorico = Boolean(state.isHistoricoImportacao);
+  const tipoLabel = isHistorico ? 'lançamentos de histórico' : 'fichas';
+
+  if (!confirm(`Confirma a digitalização de ${state.itensImportacaoValidados.length} ${tipoLabel} no sistema?`)) {
     return;
   }
 
+  const endpoint = isHistorico ? `${API_BASE}/importacao/historico/executar` : `${API_BASE}/importacao/executar`;
+
   try {
-    const res = await fetch(`${API_BASE}/importacao/executar`, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ itens: state.itensImportacaoValidados }),
@@ -2092,8 +2267,12 @@ async function executarImportacaoFinal() {
 
     if (res.ok) {
       const data = await res.json();
-      mostrarToast(`🎉 Sucesso! ${data.importados} fichas foram digitalizadas no crediário!`, 'success');
-      alert(`🎉 Sucesso! ${data.importados} fichas foram digitalizadas e já estão prontas no crediário!`);
+      const sucessoMsg = isHistorico
+        ? `🎉 Sucesso! ${data.importados} lançamentos de histórico foram registrados e vinculados às fichas!`
+        : `🎉 Sucesso! ${data.importados} fichas foram digitalizadas no crediário!`;
+
+      mostrarToast(sucessoMsg, 'success');
+      alert(sucessoMsg);
       cancelarImportacao();
       await carregarClientes();
       await carregarFichas();
@@ -2426,6 +2605,114 @@ function filtrarClientesTab(texto) {
   renderizarTabelaClientes(filtrados);
 }
 
+// -----------------------------------------------------------------------------
+// MODO FICHA DE PAPEL EXPRESS (DENTRO DO MODAL NOVO CLIENTE)
+// -----------------------------------------------------------------------------
+function aoMudarQtdParcelasFichaPapel() {
+  const qtd = parseInt(document.getElementById('cli-ficha-qtd-parcelas')?.value || '0', 10);
+  const valorParcela = parseFloat(document.getElementById('cli-parcela-padrao')?.value || '0');
+  const inputPrecoTotal = document.getElementById('cli-ficha-preco-total');
+
+  if (qtd > 0 && valorParcela > 0 && inputPrecoTotal) {
+    inputPrecoTotal.value = (qtd * valorParcela).toFixed(2);
+  }
+  recalcularFichaPapelExpress();
+}
+
+function adicionarLinhaPagamentoFichaPapel(dataSugerida = '', valorSugerido = '') {
+  const container = document.getElementById('cli-ficha-pagamentos-lista');
+  if (!container) return;
+
+  const parcelaPadrao = parseFloat(document.getElementById('cli-parcela-padrao')?.value || '100') || 100;
+  const valInicial = valorSugerido !== '' ? valorSugerido : parcelaPadrao.toFixed(2);
+  const numLinha = container.children.length + 1;
+  const qtdTotal = parseInt(document.getElementById('cli-ficha-qtd-parcelas')?.value || '0', 10);
+  const refDefault = qtdTotal > 0 ? `Parcela ${String(numLinha).padStart(2, '0')}/${String(qtdTotal).padStart(2, '0')}` : `Parcela ${String(numLinha).padStart(2, '0')}`;
+
+  const row = document.createElement('div');
+  row.className = 'ficha-papel-pagto-row';
+  row.style.cssText = 'display: flex; gap: 6px; align-items: center; background: #fff; padding: 6px 8px; border: 1px solid #E2E8F0; border-radius: 6px;';
+  row.innerHTML = `
+    <span style="font-size: 0.78rem; font-weight: 700; color: #475569; min-width: 24px;">#${numLinha}</span>
+    <input type="date" class="form-control fp-data" style="flex: 1.1; padding: 6px; font-size: 0.85rem;" value="${dataSugerida}" oninput="recalcularFichaPapelExpress()">
+    <input type="number" step="0.50" min="0" class="form-control fp-valor" style="flex: 1; padding: 6px; font-size: 0.85rem;" placeholder="R$ Pago" value="${valInicial}" oninput="recalcularFichaPapelExpress()">
+    <select class="form-control fp-forma" style="flex: 0.9; padding: 6px; font-size: 0.82rem;">
+      <option value="DINHEIRO">💵 Dinheiro</option>
+      <option value="PIX">⚡ Pix</option>
+      <option value="CARTAO">💳 Cartão</option>
+    </select>
+    <input type="text" class="form-control fp-ref" style="flex: 1; padding: 6px; font-size: 0.82rem;" placeholder="Ref" value="${refDefault}">
+    <button type="button" style="background: none; border: none; color: #DC2626; font-weight: bold; cursor: pointer; padding: 4px 6px;" onclick="this.parentElement.remove(); recalcularFichaPapelExpress();" title="Remover linha">✕</button>
+  `;
+  container.appendChild(row);
+  recalcularFichaPapelExpress();
+}
+
+function recalcularFichaPapelExpress() {
+  const inputPrecoTotal = document.getElementById('cli-ficha-preco-total');
+  const inputTotalPago = document.getElementById('cli-ficha-total-pago');
+  const inputSaldoInicial = document.getElementById('cli-saldo-inicial');
+  const inputParcela = document.getElementById('cli-parcela-padrao');
+  const boxResumo = document.getElementById('cli-ficha-resumo-box');
+  const containerLinhas = document.getElementById('cli-ficha-pagamentos-lista');
+
+  const precoTotal = parseFloat(inputPrecoTotal?.value || '0') || 0;
+  const parcelaPadrao = parseFloat(inputParcela?.value || '100') || 100;
+
+  // Soma linhas individuais se houver
+  let somaLinhas = 0;
+  let qtdLinhas = 0;
+  if (containerLinhas) {
+    const inputsValor = containerLinhas.querySelectorAll('.fp-valor');
+    inputsValor.forEach((inp) => {
+      const v = parseFloat(inp.value || '0');
+      if (v > 0) {
+        somaLinhas += v;
+        qtdLinhas++;
+      }
+    });
+  }
+
+  if (qtdLinhas > 0 && inputTotalPago) {
+    inputTotalPago.value = somaLinhas.toFixed(2);
+  }
+
+  const totalPago = qtdLinhas > 0 ? somaLinhas : (parseFloat(inputTotalPago?.value || '0') || 0);
+
+  if (precoTotal > 0) {
+    const restaPagar = Math.max(0, precoTotal - totalPago);
+    if (inputSaldoInicial) {
+      inputSaldoInicial.value = restaPagar.toFixed(2);
+    }
+    const parcelasRestantes = parcelaPadrao > 0 ? Math.ceil(restaPagar / parcelaPadrao) : 0;
+
+    if (boxResumo) {
+      boxResumo.style.display = 'block';
+      boxResumo.innerHTML = `
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span>🛍️ Total da Compra: <strong>${formatarMoeda(precoTotal)}</strong></span>
+          <span>✅ Total Pago no Papel: <strong style="color: #15803D;">- ${formatarMoeda(totalPago)}</strong></span>
+          <span>📌 RESTA PAGAR HOJE: <strong style="color: #B91C1C; font-size: 1rem;">${formatarMoeda(restaPagar)}</strong> (${parcelasRestantes}x restantes)</span>
+        </div>
+      `;
+    }
+  } else if (boxResumo) {
+    boxResumo.style.display = 'none';
+  }
+}
+
+function limparBlocoFichaPapelExpress() {
+  const ids = ['cli-ficha-codigo', 'cli-ficha-objeto', 'cli-ficha-data-compra', 'cli-ficha-qtd-parcelas', 'cli-ficha-preco-total', 'cli-ficha-total-pago'];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const containerLinhas = document.getElementById('cli-ficha-pagamentos-lista');
+  if (containerLinhas) containerLinhas.innerHTML = '';
+  const boxResumo = document.getElementById('cli-ficha-resumo-box');
+  if (boxResumo) boxResumo.style.display = 'none';
+}
+
 async function salvarNovoCliente(e) {
   e.preventDefault();
   const form = e.target;
@@ -2439,6 +2726,33 @@ async function salvarNovoCliente(e) {
   const endereco = document.getElementById('cli-endereco').value.trim();
   const referencia = document.getElementById('cli-referencia') ? document.getElementById('cli-referencia').value.trim() : '';
   const observacoes = document.getElementById('cli-observacoes') ? document.getElementById('cli-observacoes').value.trim() : '';
+  const manterAberto = document.getElementById('cli-manter-aberto')?.value === 'true';
+
+  // Dados opcionais do Modo Ficha de Papel Express
+  const codigoFichaPapel = document.getElementById('cli-ficha-codigo')?.value.trim() || '';
+  const objetoFichaPapel = document.getElementById('cli-ficha-objeto')?.value.trim() || '';
+  const dataCompraFichaPapel = document.getElementById('cli-ficha-data-compra')?.value || '';
+  const precoTotalFichaPapel = parseFloat(document.getElementById('cli-ficha-preco-total')?.value || '0') || 0;
+  const totalPagoFichaPapel = parseFloat(document.getElementById('cli-ficha-total-pago')?.value || '0') || 0;
+
+  const pagamentosAnteriores = [];
+  const containerLinhas = document.getElementById('cli-ficha-pagamentos-lista');
+  if (containerLinhas) {
+    containerLinhas.querySelectorAll('.ficha-papel-pagto-row').forEach((row) => {
+      const dt = row.querySelector('.fp-data')?.value || undefined;
+      const val = parseFloat(row.querySelector('.fp-valor')?.value || '0') || 0;
+      const forma = row.querySelector('.fp-forma')?.value || 'DINHEIRO';
+      const ref = row.querySelector('.fp-ref')?.value.trim() || undefined;
+      if (val > 0) {
+        pagamentosAnteriores.push({ data: dt, valor: val, forma_pagamento: forma, parcela_ref: ref });
+      }
+    });
+  }
+
+  const obsPartes = [];
+  if (codigoFichaPapel) obsPartes.push(`Ficha Física Nº ${codigoFichaPapel}`);
+  if (observacoes) obsPartes.push(observacoes);
+  const obsFinal = obsPartes.join(' | ');
 
   try {
     const res = await fetch(`${API_BASE}/clientes`, {
@@ -2450,45 +2764,68 @@ async function salvarNovoCliente(e) {
         cpf: cpf || undefined,
         endereco: endereco || undefined,
         ponto_referencia: referencia || undefined,
-        limite_credito: 1000.0,
+        limite_credito: Math.max(1000.0, precoTotalFichaPapel || saldoInicial),
         dia_vencimento: diaVenc,
         valor_parcela_padrao: parcela,
-        observacoes: observacoes || undefined,
+        observacoes: obsFinal || undefined,
       }),
     });
 
     if (res.ok) {
       const novoCli = await res.json();
-      
-      // Se houver saldo inicial de caderno/dívida antiga, atualiza a ficha imediatamente
-      if (saldoInicial > 0 && novoCli && novoCli.id) {
-        try {
-          const resFichas = await fetch(`${API_BASE}/fichas`);
-          if (resFichas.ok) {
-            const todasFichas = await resFichas.json();
-            const lista = Array.isArray(todasFichas) ? todasFichas : (todasFichas.data || []);
-            const ficha = lista.find((f) => f.cliente_id === novoCli.id);
-            if (ficha) {
-              await fetch(`${API_BASE}/fichas/${ficha.id}/ajustar-saldo`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  novo_saldo: saldoInicial,
-                  motivo: 'Saldo inicial migrado de anotações antigas do caderno',
-                  novo_valor_parcela: parcela,
-                  novo_dia_vencimento: diaVenc,
-                }),
-              });
-            }
-          }
-        } catch (errFicha) {
-          console.log('Aviso ao lançar saldo inicial:', errFicha);
+
+      // Localiza a ficha criada para a cliente
+      let fichaId = novoCli?.ficha_id || novoCli?.id;
+      try {
+        const resFichas = await fetch(`${API_BASE}/fichas`);
+        if (resFichas.ok) {
+          const todasFichas = await resFichas.json();
+          const lista = Array.isArray(todasFichas) ? todasFichas : (todasFichas.data || []);
+          const fichaEncontrada = lista.find((f) => f.cliente_id === novoCli.id);
+          if (fichaEncontrada) fichaId = fichaEncontrada.id;
         }
+      } catch {}
+
+      // Caso 1: Preencheu os dados da Ficha de Papel Azul (Objeto + Preço Total)
+      if (objetoFichaPapel && precoTotalFichaPapel > 0 && fichaId) {
+        await fetch(`${API_BASE}/fichas/${fichaId}/historico-item`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            descricao: objetoFichaPapel,
+            valor_total: precoTotalFichaPapel,
+            valor_ja_pago: totalPagoFichaPapel,
+            data_compra: dataCompraFichaPapel || undefined,
+            observacoes: obsFinal || 'Digitalizada pelo Modo Ficha de Papel Express',
+            pagamentos_anteriores: pagamentosAnteriores.length > 0 ? pagamentosAnteriores : undefined,
+          }),
+        }).catch((errHist) => console.log('Aviso ao lançar histórico da ficha:', errHist));
+      } else if (saldoInicial > 0 && fichaId) {
+        // Caso 2: Informou apenas o Saldo Inicial Devedor avulso
+        await fetch(`${API_BASE}/fichas/${fichaId}/ajustar-saldo`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            novo_saldo: saldoInicial,
+            motivo: obsFinal || 'Saldo inicial migrado de anotações antigas do caderno',
+            novo_valor_parcela: parcela,
+            novo_dia_vencimento: diaVenc,
+          }),
+        }).catch((errFicha) => console.log('Aviso ao lançar saldo inicial:', errFicha));
       }
 
-      fecharModal('modal-novo-cliente');
       if (form) form.reset();
-      mostrarToast(`🎉 Cliente ${nome} cadastrada com sucesso!`, 'success');
+      limparBlocoFichaPapelExpress();
+
+      if (manterAberto) {
+        mostrarToast(`✅ Ficha de ${nome} salva! Digite os dados da próxima ficha do bloco.`, 'success');
+        const inputNome = document.getElementById('cli-nome');
+        if (inputNome) inputNome.focus();
+      } else {
+        fecharModal('modal-novo-cliente');
+        mostrarToast(`🎉 Cliente ${nome} e ficha digitalizadas com sucesso!`, 'success');
+      }
+
       await carregarClientes();
       await carregarFichas();
       atualizarDashboardCobrancas();

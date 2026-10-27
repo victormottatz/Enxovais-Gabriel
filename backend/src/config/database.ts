@@ -459,6 +459,19 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     return { rows };
   }
 
+  if (qUpper.includes('UPDATE FICHAS_CREDIARIO')) {
+    const id = params[params.length - 1];
+    let ficha = memoryStore.fichas_crediario.find((f) => f.id === id || f.cliente_id === id);
+    if (ficha) {
+      if (params.length >= 1 && typeof params[0] === 'number') {
+        ficha.saldo_devedor_total = params[0];
+      }
+      ficha.updated_at = new Date().toISOString();
+      return { rows: [ficha] };
+    }
+    return { rows: [] };
+  }
+
   // 3. Produtos
   if (qUpper.includes('INSERT INTO PRODUTOS')) {
     const id = uuidv4();
@@ -678,22 +691,67 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
   // 6. Movimentações
   if (qUpper.includes('INSERT INTO MOVIMENTACOES_FICHA')) {
     const id = uuidv4();
-    const novaMov = {
+    const novaMov: any = {
       id,
       ficha_id: params[0],
-      venda_id: params[1] || null,
-      tipo_movimentacao: params[2],
-      valor: Number(params[3]) || 0,
-      saldo_anterior: Number(params[4]) || 0,
-      saldo_posterior: Number(params[5]) || 0,
-      descricao: params[6] || '',
+      cliente_id: null,
+      venda_id: null,
+      tipo_movimentacao: qUpper.includes('CREDITO_PAGAMENTO') ? 'CREDITO_PAGAMENTO' : 'DEBITO_COMPRA',
+      valor: 0,
+      saldo_anterior: 0,
+      saldo_posterior: 0,
+      descricao: '',
+      data_movimentacao: new Date().toISOString().split('T')[0],
+      forma_pagamento: qUpper.includes('CREDITO_PAGAMENTO') ? 'DINHEIRO' : 'CREDIARIO',
+      numero_parcela_ref: null,
+      observacoes: null,
       created_at: new Date().toISOString(),
     };
+
+    if (params.length === 7) {
+      novaMov.venda_id = params[1] || null;
+      novaMov.tipo_movimentacao = params[2];
+      novaMov.valor = Number(params[3]) || 0;
+      novaMov.saldo_anterior = Number(params[4]) || 0;
+      novaMov.saldo_posterior = Number(params[5]) || 0;
+      novaMov.descricao = params[6] || '';
+    } else if (params.length >= 9) {
+      novaMov.cliente_id = params[1] || null;
+      const hasVendaId = qUpper.includes('VENDA_ID');
+      const offset = hasVendaId ? 1 : 0;
+      if (hasVendaId) novaMov.venda_id = params[2] || null;
+      novaMov.valor = Number(params[2 + offset]) || 0;
+      novaMov.saldo_anterior = Number(params[3 + offset]) || 0;
+      novaMov.saldo_posterior = Number(params[4 + offset]) || 0;
+      novaMov.descricao = params[5 + offset] || '';
+      novaMov.data_movimentacao = params[6 + offset] || novaMov.data_movimentacao;
+      if (qUpper.includes('CREDITO_PAGAMENTO')) {
+        novaMov.forma_pagamento = params[7 + offset] || 'DINHEIRO';
+        novaMov.numero_parcela_ref = params[8 + offset] || null;
+        novaMov.observacoes = params[9 + offset] || null;
+      } else {
+        novaMov.numero_parcela_ref = params[7 + offset] || null;
+        novaMov.observacoes = params[8 + offset] || null;
+      }
+    } else {
+      for (const p of params) {
+        if (typeof p === 'number' && novaMov.valor === 0) novaMov.valor = p;
+        else if (typeof p === 'string' && (p === 'DEBITO_COMPRA' || p === 'CREDITO_PAGAMENTO' || p === 'AJUSTE_PARCELA' || p === 'ESTORNO')) {
+          novaMov.tipo_movimentacao = p;
+        } else if (typeof p === 'string' && p.length > 5 && !novaMov.descricao) {
+          novaMov.descricao = p;
+        }
+      }
+    }
+
     memoryStore.movimentacoes_ficha.push(novaMov);
     return { rows: [novaMov] };
   }
 
   if (qUpper.includes('SELECT') && qUpper.includes('FROM MOVIMENTACOES_FICHA')) {
+    if (qUpper.includes('WHERE FICHA_ID =') && params[0]) {
+      return { rows: memoryStore.movimentacoes_ficha.filter((m) => m.ficha_id === params[0]) };
+    }
     return { rows: memoryStore.movimentacoes_ficha };
   }
 
@@ -891,14 +949,29 @@ export async function initDatabase(): Promise<void> {
         CREATE TABLE IF NOT EXISTS movimentacoes_ficha (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           ficha_id UUID NOT NULL REFERENCES fichas_crediario(id) ON DELETE CASCADE,
+          cliente_id UUID REFERENCES clientes(id) ON DELETE CASCADE,
           venda_id UUID REFERENCES vendas(id) ON DELETE SET NULL,
           tipo_movimentacao VARCHAR(30) NOT NULL,
           valor NUMERIC(10, 2) NOT NULL,
           saldo_anterior NUMERIC(10, 2) NOT NULL,
           saldo_posterior NUMERIC(10, 2) NOT NULL,
           descricao VARCHAR(255) NOT NULL,
+          data_movimentacao DATE NOT NULL DEFAULT CURRENT_DATE,
+          forma_pagamento VARCHAR(30) DEFAULT 'OUTRO',
+          numero_parcela_ref VARCHAR(50),
+          observacoes TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        ALTER TABLE movimentacoes_ficha ADD COLUMN IF NOT EXISTS cliente_id UUID REFERENCES clientes(id) ON DELETE CASCADE;
+        ALTER TABLE movimentacoes_ficha ADD COLUMN IF NOT EXISTS data_movimentacao DATE NOT NULL DEFAULT CURRENT_DATE;
+        ALTER TABLE movimentacoes_ficha ADD COLUMN IF NOT EXISTS forma_pagamento VARCHAR(30) DEFAULT 'OUTRO';
+        ALTER TABLE movimentacoes_ficha ADD COLUMN IF NOT EXISTS numero_parcela_ref VARCHAR(50);
+        ALTER TABLE movimentacoes_ficha ADD COLUMN IF NOT EXISTS observacoes TEXT;
+
+        CREATE INDEX IF NOT EXISTS idx_movimentacoes_ficha_id ON movimentacoes_ficha (ficha_id);
+        CREATE INDEX IF NOT EXISTS idx_movimentacoes_cliente_id ON movimentacoes_ficha (cliente_id);
+        CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoes_ficha (data_movimentacao);
 
         CREATE TABLE IF NOT EXISTS parcelas_crediario (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

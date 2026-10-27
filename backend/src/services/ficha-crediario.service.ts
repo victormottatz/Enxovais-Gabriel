@@ -31,12 +31,17 @@ export interface ParcelaDTO {
 export interface MovimentacaoFichaDTO {
   id: string;
   ficha_id: string;
+  cliente_id?: string | null;
   venda_id?: string | null;
   tipo_movimentacao: 'DEBITO_COMPRA' | 'CREDITO_PAGAMENTO' | 'AJUSTE_PARCELA' | 'ESTORNO';
   valor: number;
   saldo_anterior: number;
   saldo_posterior: number;
   descricao: string;
+  data_movimentacao?: string | null;
+  forma_pagamento?: string | null;
+  numero_parcela_ref?: string | null;
+  observacoes?: string | null;
   created_at: string;
 }
 
@@ -134,17 +139,20 @@ export class FichaCrediarioService {
       // 2. Registra a movimentação no extrato
       await client.query(
         `INSERT INTO movimentacoes_ficha (
-          ficha_id, venda_id, tipo_movimentacao, valor,
-          saldo_anterior, saldo_posterior, descricao
+          ficha_id, cliente_id, venda_id, tipo_movimentacao, valor,
+          saldo_anterior, saldo_posterior, descricao, data_movimentacao,
+          forma_pagamento, numero_parcela_ref, observacoes
         )
-        VALUES ($1, $2, 'DEBITO_COMPRA', $3, $4, $5, $6)`,
+        VALUES ($1, $2, $3, 'DEBITO_COMPRA', $4, $5, $6, $7, CURRENT_DATE, 'CREDIARIO', NULL, $8)`,
         [
           params.fichaId,
-          params.vendaId,
+          fichaAtual.cliente_id,
+          params.vendaId || null,
           params.valorFinanciado,
           saldoAnterior,
           novoSaldo,
           params.descricao || 'Nova compra lançada no crediário',
+          null,
         ]
       );
 
@@ -184,6 +192,8 @@ export class FichaCrediarioService {
     descricao?: string;
     formaPagamento?: string;
     vendaId?: string;
+    numeroParcelaRef?: string;
+    observacoes?: string;
   }): Promise<{ ficha: FichaCrediarioDTO; saldoRestante: number; recibo: string }> {
     const client = await pool.connect();
     try {
@@ -210,6 +220,7 @@ export class FichaCrediarioService {
       const dataPagamentoISO = params.dataPagamento
         ? new Date(params.dataPagamento.includes('T') ? params.dataPagamento : `${params.dataPagamento}T12:00:00Z`).toISOString()
         : null;
+      const dataMovimentacaoStr = dataPagamentoISO ? dataPagamentoISO.split('T')[0] : null;
 
       // 1. Atualiza ficha
       const updatedFicha = await client.query<FichaCrediarioDTO>(
@@ -227,17 +238,23 @@ export class FichaCrediarioService {
 
       await client.query(
         `INSERT INTO movimentacoes_ficha (
-          ficha_id, venda_id, tipo_movimentacao, valor,
-          saldo_anterior, saldo_posterior, descricao, created_at
+          ficha_id, cliente_id, venda_id, tipo_movimentacao, valor,
+          saldo_anterior, saldo_posterior, descricao, data_movimentacao,
+          forma_pagamento, numero_parcela_ref, observacoes, created_at
         )
-        VALUES ($1, $2, 'CREDITO_PAGAMENTO', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
+        VALUES ($1, $2, $3, 'CREDITO_PAGAMENTO', $4, $5, $6, $7, COALESCE($8::date, CURRENT_DATE), $9, $10, $11, COALESCE($12::timestamptz, NOW()))`,
         [
           params.fichaId,
+          ficha.cliente_id,
           params.vendaId || null,
           valorAbatido,
           saldoAnterior,
           saldoPosterior,
           descricaoFinal,
+          dataMovimentacaoStr,
+          params.formaPagamento || 'OUTRO',
+          params.numeroParcelaRef || null,
+          params.observacoes || null,
           dataPagamentoISO,
         ]
       );
@@ -480,7 +497,7 @@ export class FichaCrediarioService {
     const movRes = await pool.query<MovimentacaoFichaDTO>(
       `SELECT * FROM movimentacoes_ficha
        WHERE ficha_id = $1
-       ORDER BY created_at DESC`,
+       ORDER BY COALESCE(data_movimentacao, created_at::date) DESC, created_at DESC`,
       [ficha.id]
     );
 
@@ -552,6 +569,12 @@ export class FichaCrediarioService {
     dataCompra?: string;
     dataPagamento?: string;
     observacoes?: string;
+    pagamentosAnteriores?: Array<{
+      data?: string;
+      valor: number;
+      formaPagamento?: string;
+      parcelaRef?: string;
+    }>;
   }): Promise<{
     vendaId: string;
     itemId: string;
@@ -577,17 +600,22 @@ export class FichaCrediarioService {
 
       const ficha = fichaRes.rows[0];
       const valorTotal = Number(params.valorTotal);
-      const valorJaPago = Number(Math.min(valorTotal, params.valorJaPago ?? 0));
+      const listaPagtos = (params.pagamentosAnteriores || []).filter((p) => Number(p.valor) > 0);
+      const somaListaPagtos = listaPagtos.reduce((acc, p) => acc + Number(p.valor), 0);
+      const valorJaPagoBruto = listaPagtos.length > 0 ? somaListaPagtos : (params.valorJaPago ?? 0);
+      const valorJaPago = Number(Math.min(valorTotal, valorJaPagoBruto));
       const saldoRestante = Number(Math.max(0, valorTotal - valorJaPago).toFixed(2));
       const statusQuitacao = saldoRestante === 0 ? 'QUITADO' : valorJaPago > 0 ? 'PAGO_PARCIAL' : 'PENDENTE';
 
       const dataCompraISO = params.dataCompra
         ? new Date(params.dataCompra.includes('T') ? params.dataCompra : `${params.dataCompra}T12:00:00Z`).toISOString()
         : null;
+      const dataCompraDateStr = dataCompraISO ? dataCompraISO.split('T')[0] : null;
 
       const dataPagamentoISO = params.dataPagamento
         ? new Date(params.dataPagamento.includes('T') ? params.dataPagamento : `${params.dataPagamento}T12:00:00Z`).toISOString()
         : dataCompraISO;
+      const dataPagtoDateStr = dataPagamentoISO ? dataPagamentoISO.split('T')[0] : null;
 
       // 1. Cria a venda associada ao histórico
       const vendaRes = await client.query(
@@ -626,55 +654,105 @@ export class FichaCrediarioService {
 
       const itemId = itemRes.rows[0].id;
 
-      let novoSaldoDevedor = Number(ficha.saldo_devedor_total);
+      const saldoInicialFicha = Number(ficha.saldo_devedor_total);
+      let saldoCorrenteExtrato = Number((saldoInicialFicha + valorTotal).toFixed(2));
 
-      // Se a cliente já pagou algum valor no passado, registra a movimentação de crédito no extrato com a data informada
-      if (valorJaPago > 0) {
+      // Registra a compra original no extrato com o valor total do objeto da ficha
+      await client.query(
+        `INSERT INTO movimentacoes_ficha (
+          ficha_id, cliente_id, venda_id, tipo_movimentacao, valor,
+          saldo_anterior, saldo_posterior, descricao, data_movimentacao,
+          forma_pagamento, numero_parcela_ref, observacoes, created_at
+        )
+        VALUES ($1, $2, $3, 'DEBITO_COMPRA', $4, $5, $6, $7, COALESCE($8::date, CURRENT_DATE), 'CREDIARIO', NULL, $9, COALESCE($10::timestamptz, NOW()))`,
+        [
+          ficha.id,
+          ficha.cliente_id,
+          vendaId,
+          valorTotal,
+          saldoInicialFicha,
+          saldoCorrenteExtrato,
+          `Compra na ficha física: ${params.descricao}`,
+          dataCompraDateStr,
+          params.observacoes || null,
+          dataCompraISO,
+        ]
+      );
+
+      // Se a usuária informou pagamentos detalhados linha a linha (DATA | PAGO), registra cada um individualmente
+      if (listaPagtos.length > 0) {
+        for (let idx = 0; idx < listaPagtos.length; idx++) {
+          const pag = listaPagtos[idx];
+          const valPag = Math.min(Number(pag.valor), saldoCorrenteExtrato);
+          if (valPag <= 0) continue;
+
+          const saldoAntPag = saldoCorrenteExtrato;
+          saldoCorrenteExtrato = Number(Math.max(0, saldoCorrenteExtrato - valPag).toFixed(2));
+          const dtPagISO = pag.data
+            ? new Date(pag.data.includes('T') ? pag.data : `${pag.data}T12:00:00Z`).toISOString()
+            : dataPagamentoISO;
+          const dtPagDate = dtPagISO ? dtPagISO.split('T')[0] : null;
+          const refParcela = pag.parcelaRef || `Parcela ${String(idx + 1).padStart(2, '0')}`;
+
+          await client.query(
+            `INSERT INTO movimentacoes_ficha (
+              ficha_id, cliente_id, venda_id, tipo_movimentacao, valor,
+              saldo_anterior, saldo_posterior, descricao, data_movimentacao,
+              forma_pagamento, numero_parcela_ref, observacoes, created_at
+            )
+            VALUES ($1, $2, $3, 'CREDITO_PAGAMENTO', $4, $5, $6, $7, COALESCE($8::date, CURRENT_DATE), $9, $10, $11, COALESCE($12::timestamptz, NOW()))`,
+            [
+              ficha.id,
+              ficha.cliente_id,
+              vendaId,
+              valPag,
+              saldoAntPag,
+              saldoCorrenteExtrato,
+              `Pagamento anotado na ficha: ${params.descricao}`,
+              dtPagDate,
+              pag.formaPagamento || 'DINHEIRO',
+              refParcela,
+              params.observacoes || null,
+              dtPagISO,
+            ]
+          );
+        }
+      } else if (valorJaPago > 0) {
+        // Caso tenha informado apenas o valor total já pago de uma vez
+        const saldoAntPag = saldoCorrenteExtrato;
+        saldoCorrenteExtrato = Number(Math.max(0, saldoCorrenteExtrato - valorJaPago).toFixed(2));
+
         await client.query(
           `INSERT INTO movimentacoes_ficha (
-            ficha_id, venda_id, tipo_movimentacao, valor,
-            saldo_anterior, saldo_posterior, descricao, created_at
+            ficha_id, cliente_id, venda_id, tipo_movimentacao, valor,
+            saldo_anterior, saldo_posterior, descricao, data_movimentacao,
+            forma_pagamento, numero_parcela_ref, observacoes, created_at
           )
-          VALUES ($1, $2, 'CREDITO_PAGAMENTO', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
+          VALUES ($1, $2, $3, 'CREDITO_PAGAMENTO', $4, $5, $6, $7, COALESCE($8::date, CURRENT_DATE), 'DINHEIRO', 'Abatimento Ficha Física', $9, COALESCE($10::timestamptz, NOW()))`,
           [
             ficha.id,
+            ficha.cliente_id,
             vendaId,
             valorJaPago,
-            Number(ficha.saldo_devedor_total) + valorTotal,
-            Number(ficha.saldo_devedor_total) + saldoRestante,
+            saldoAntPag,
+            saldoCorrenteExtrato,
             `Pagamento prévio registrado no caderno: ${params.descricao} (Valor: R$ ${valorJaPago.toFixed(2)})`,
+            dataPagtoDateStr,
+            params.observacoes || null,
             dataPagamentoISO,
           ]
         );
       }
 
+      const novoSaldoDevedor = Number((saldoInicialFicha + saldoRestante).toFixed(2));
+
       // 3. Se ainda restar saldo a pagar, incrementa o saldo devedor da ficha
       if (saldoRestante > 0) {
-        novoSaldoDevedor = Number((novoSaldoDevedor + saldoRestante).toFixed(2));
-
         await client.query(
           `UPDATE fichas_crediario
            SET saldo_devedor_total = $1, status_ficha = 'ATIVO', updated_at = NOW()
            WHERE id = $2`,
           [novoSaldoDevedor, ficha.id]
-        );
-
-        // Registra movimentação de débito
-        await client.query(
-          `INSERT INTO movimentacoes_ficha (
-            ficha_id, venda_id, tipo_movimentacao, valor,
-            saldo_anterior, saldo_posterior, descricao, created_at
-          )
-          VALUES ($1, $2, 'DEBITO_COMPRA', $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()))`,
-          [
-            ficha.id,
-            vendaId,
-            saldoRestante,
-            Number(ficha.saldo_devedor_total),
-            novoSaldoDevedor,
-            `Histórico manual adicionado: ${params.descricao} (A pagar: R$ ${saldoRestante.toFixed(2)})`,
-            dataCompraISO,
-          ]
         );
 
         // Sincroniza cronograma de parcelas futuras
