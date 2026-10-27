@@ -3483,3 +3483,485 @@ input, select, textarea {
   background: #FAF5FF;
   color: #7E22CE;
 }
+
+/* ========================================================================= */
+/* 17. MODO FICHA DE PAPEL EXPRESS & MELHORIAS DE USABILIDADE MOBILE (V2.2)  */
+/* ========================================================================= */
+
+/* Linhas de pagamento da Ficha de Papel (Desktop: linha única / Mobile: grid 2 linhas) */
+.ficha-papel-pagto-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #FFFFFF;
+  padding: 8px 10px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.ficha-papel-pagto-row:focus-within {
+  border-color: var(--wine-primary);
+  box-shadow: 0 0 0 2px rgba(140, 45, 64, 0.12);
+}
+
+.ficha-papel-pagto-row .fp-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1E40AF;
+  background: #DBEAFE;
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.ficha-papel-pagto-row .fp-data {
+  flex: 1.15;
+  padding: 8px;
+  font-size: 0.88rem;
+}
+
+.ficha-papel-pagto-row .fp-valor {
+  flex: 1;
+  padding: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ficha-papel-pagto-row .fp-forma {
+  flex: 0.95;
+  padding: 8px;
+  font-size: 0.85rem;
+}
+
+.ficha-papel-pagto-row .fp-ref {
+  flex: 1.1;
+  padding: 8px;
+  font-size: 0.85rem;
+}
+
+.ficha-papel-pagto-row .fp-btn-del {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Blindagem contra rolagem horizontal acidental em qualquer tela */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ========================================================================= */
+/* RESPONSIVIDADE MOBILE & TABLET (<= 900px)                                 */
+/* ========================================================================= */
+@media (max-width: 900px) {
+  .main-wrapper,
+  .content-area {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Header Superior Mobile enxuto e sem aperto */
+  .app-header {
+    padding: 0 12px;
+    height: 60px;
+    gap: 8px;
+  }
+
+  .header-left {
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-title-box {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-title-box h1 {
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-subtitle {
+    display: none !important;
+  }
+
+  /* Esconde botão secundário de teste no topo mobile (já existe no menu lateral) */
+  .header-btn-teste {
+    display: none !important;
+  }
+
+  .header-actions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .header-actions .btn-sm {
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    min-height: 38px;
+  }
+
+  /* Botão Flutuante da Lia posicionado ACIMA da barra de navegação inferior */
+  .lia-floating-btn {
+    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 14px) !important;
+    right: 14px !important;
+    padding: 10px 14px;
+    z-index: 950;
+    box-shadow: 0 6px 20px rgba(140, 45, 64, 0.35);
+  }
+
+  /* Toasts centralizados no topo da tela do celular */
+  #toast-container {
+    top: 12px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  /* Chips de filtro com rolagem horizontal suave e sem barra feia */
+  .filter-chips,
+  .category-pills,
+  .lia-quick-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    max-width: 100%;
+  }
+
+  .filter-chips::-webkit-scrollbar,
+  .category-pills::-webkit-scrollbar,
+  .lia-quick-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Modais estilo Bottom Sheet nativo no celular */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-sheet,
+  .modal-sheet.modal-sm,
+  .modal-sheet.modal-md,
+  .modal-sheet.modal-lg,
+  .prontuario-modal-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 14px 16px calc(22px + var(--safe-area-bottom)) !important;
+    margin: 0 !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Header do Prontuário e Abas fixos no topo ao rolar a ficha no celular */
+  .prontuario-header {
+    position: sticky;
+    top: -14px;
+    background: var(--bg-card);
+    z-index: 15;
+    padding-top: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .ficha-tabs-nav {
+    position: sticky;
+    top: 52px;
+    background: var(--bg-card);
+    z-index: 14;
+    margin: 0 -16px 14px -16px;
+    padding: 6px 16px;
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+  }
+
+  .ficha-tab-btn {
+    padding: 8px 12px;
+    font-size: 0.84rem;
+    border-radius: 99px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .ficha-tab-btn.active {
+    background: var(--wine-primary);
+    color: #FFFFFF;
+    border-color: var(--wine-primary);
+  }
+
+  /* Ações Rápidas do Prontuário em grade 2x2 confortável para o polegar */
+  .prontuario-quick-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .prontuario-quick-actions .btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 0.86rem;
+    padding: 10px 8px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Evita auto-zoom intrusivo do iOS Safari ao tocar em campos de texto/número */
+  input.form-control,
+  select.form-control,
+  textarea.form-control,
+  .filter-search input,
+  .search-box-large input,
+  #pos-search-product {
+    font-size: 16px !important;
+  }
+}
+
+/* ========================================================================= */
+/* SMARTPHONES COMPACTOS (<= 600px)                                          */
+/* ========================================================================= */
+@media (max-width: 600px) {
+  .content-area {
+    padding: 12px 12px calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 28px);
+  }
+
+  /* No celular estreito, mostra apenas o ícone 📱 no botão de status do WhatsApp */
+  .header-btn-zap #header-zap-text {
+    display: none;
+  }
+
+  .header-btn-zap {
+    padding: 7px 9px !important;
+  }
+
+  /* Botão flutuante da Lia compacto para não cobrir conteúdo */
+  .lia-floating-btn {
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+
+  .lia-floating-btn .lia-floating-text {
+    display: none;
+  }
+
+  .lia-floating-btn .lia-badge-avatar {
+    font-size: 1.35rem;
+    margin: 0;
+  }
+
+  /* KPIs em grade 2 colunas compacta no celular (economiza rolagem vertical) */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .kpi-grid .kpi-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .kpi-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .kpi-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.2rem;
+  }
+
+  .kpi-details h3 {
+    font-size: 1.15rem;
+  }
+
+  .kpi-details span {
+    font-size: 0.75rem;
+  }
+
+  /* Toolbars de seção empilhadas com botão 100% largo */
+  .section-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  .section-toolbar .search-box-large {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .section-toolbar > .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  /* Cards de Cliente / Ficha com 3 botões de ação alinhados e fáceis de tocar */
+  .client-card {
+    padding: 14px;
+  }
+
+  .client-card-actions {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: nowrap;
+  }
+
+  .client-card-actions .btn {
+    flex: 1;
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 0.84rem;
+    justify-content: center;
+  }
+
+  /* Cards de Resumo dentro do Prontuário 360° em 2 colunas */
+  .ficha-summary-cards {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px;
+  }
+
+  .ficha-summary-cards .fcard:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .fcard {
+    padding: 12px;
+  }
+
+  .fcard h2 {
+    font-size: 1.45rem;
+  }
+
+  .fcard h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Linhas de Pagamento da Ficha de Papel Azul em Grid de 2 andares no celular */
+  .ficha-papel-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .ficha-papel-add-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+    font-weight: 600;
+  }
+
+  .ficha-papel-pagto-row {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .ficha-papel-pagto-row .fp-num {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ficha-papel-pagto-row .fp-data {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .ficha-papel-pagto-row .fp-valor {
+    grid-column: 3;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .ficha-papel-pagto-row .fp-forma {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .ficha-papel-pagto-row .fp-ref {
+    grid-column: 3;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .ficha-papel-pagto-row .fp-btn-del {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+
+  /* Botões duplos de salvar ficha empilhados no celular para toque confortável */
+  .modal-dual-submit-row {
+    flex-direction: column;
+  }
+
+  .modal-dual-submit-row .btn {
+    width: 100% !important;
+    min-height: 50px;
+    justify-content: center;
+  }
+
+  /* Seletor de Modo de Importação CSV empilhado no celular */
+  .import-mode-selector {
+    flex-direction: column;
+  }
+
+  .import-mode-selector .btn,
+  .import-actions-top .btn,
+  .import-footer-actions .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  .import-footer-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  /* Extrato de pagamentos mais legível em telas pequenas */
+  .extrato-item {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .extrato-details {
+    flex: 1 1 calc(100% - 56px);
+  }
+
+  .extrato-valor {
+    width: 100%;
+    text-align: right;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-subtle);
+    font-size: 1rem;
+  }
+}
+

@@ -396,10 +396,13 @@ function atualizarDashboardCobrancas() {
 
         <div class="client-card-actions">
           <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${ficha.id}')">
-            📑 Ver Ficha
+            📑 Ficha
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalAmortizacaoDireta('${ficha.id}')">
+            💵 Receber
           </button>
           <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${ficha.valor_parcela_padrao}, ${ficha.saldo_devedor_total})">
-            📱 Cobrar no Zap
+            📱 Zap
           </button>
         </div>
       </div>
@@ -642,13 +645,17 @@ function renderizarFichas() {
             </div>
           </div>
 
-          <div class="client-card-actions" style="display: flex; gap: 6px;">
-            <button class="btn btn-outline btn-sm btn-block" onclick="abrirDetalhesFicha('${ficha.id}')">
-              📑 Prontuário 360°
+          <div class="client-card-actions">
+            <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${ficha.id}')">
+              📑 Prontuário
             </button>
+            ${saldo > 0 ? `
+            <button class="btn btn-primary btn-sm" onclick="abrirModalAmortizacaoDireta('${ficha.id}')">
+              💵 Receber
+            </button>` : ''}
             ${fone ? `
             <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${parcela}, ${saldo})" title="Cobrar WhatsApp">
-              💬
+              💬 Zap
             </button>` : ''}
           </div>
         </div>
@@ -1325,10 +1332,22 @@ async function salvarAjusteSaldoManual(e) {
   }
 }
 
+function abrirModalAmortizacaoDireta(fichaId) {
+  const fichaObj = state.fichas.find((f) => f.id === fichaId || f.cliente_id === fichaId);
+  if (!fichaObj) return;
+  state.fichaAtualModal = fichaObj;
+  abrirModalAmortizacaoFicha();
+}
+
 function abrirModalAmortizacaoFicha(vendaId = null, valorSugerido = null, descricaoCompra = '') {
   const ficha = state.fichaAtualModal;
   if (!ficha) return;
 
+  const hiddenId = document.getElementById('amortizacao-ficha-id');
+  if (hiddenId) hiddenId.value = ficha.id;
+
+  const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+  const nomeCli = cli.nome || ficha.cliente_nome || 'Cliente';
   const saldo = Number(ficha.saldo_devedor_total) || 0;
   const parcela = Number(ficha.valor_parcela_padrao) || 50;
 
@@ -1349,15 +1368,17 @@ function abrirModalAmortizacaoFicha(vendaId = null, valorSugerido = null, descri
 
   const infoVendaBox = document.getElementById('amortizacao-venda-info');
   if (infoVendaBox) {
+    infoVendaBox.style.display = 'block';
     if (vendaId) {
-      infoVendaBox.style.display = 'block';
       infoVendaBox.innerHTML = `
-        <strong>🛍️ Pagamento Vinculado:</strong> ${descricaoCompra || 'Compra Selecionada'}<br>
-        <span style="font-size: 0.82rem;">Este pagamento amortizará o saldo restante desta compra e abaterá da ficha da cliente.</span>
+        <strong>👤 Cliente: ${nomeCli}</strong> • <strong>🛍️ ${descricaoCompra || 'Compra Selecionada'}</strong><br>
+        <span style="font-size: 0.82rem;">Saldo Total da Ficha: <strong>${formatarMoeda(saldo)}</strong> • Abaterá desta compra e da ficha.</span>
       `;
     } else {
-      infoVendaBox.style.display = 'none';
-      infoVendaBox.innerHTML = '';
+      infoVendaBox.innerHTML = `
+        <strong>👤 Cliente: ${nomeCli}</strong><br>
+        <span style="font-size: 0.82rem;">Saldo Devedor Atual: <strong>${formatarMoeda(saldo)}</strong> • Parcela Combinada: <strong>${formatarMoeda(parcela)}</strong></span>
+      `;
     }
   }
 
@@ -2631,18 +2652,17 @@ function adicionarLinhaPagamentoFichaPapel(dataSugerida = '', valorSugerido = ''
 
   const row = document.createElement('div');
   row.className = 'ficha-papel-pagto-row';
-  row.style.cssText = 'display: flex; gap: 6px; align-items: center; background: #fff; padding: 6px 8px; border: 1px solid #E2E8F0; border-radius: 6px;';
   row.innerHTML = `
-    <span style="font-size: 0.78rem; font-weight: 700; color: #475569; min-width: 24px;">#${numLinha}</span>
-    <input type="date" class="form-control fp-data" style="flex: 1.1; padding: 6px; font-size: 0.85rem;" value="${dataSugerida}" oninput="recalcularFichaPapelExpress()">
-    <input type="number" step="0.50" min="0" class="form-control fp-valor" style="flex: 1; padding: 6px; font-size: 0.85rem;" placeholder="R$ Pago" value="${valInicial}" oninput="recalcularFichaPapelExpress()">
-    <select class="form-control fp-forma" style="flex: 0.9; padding: 6px; font-size: 0.82rem;">
+    <span class="fp-num">#${numLinha}</span>
+    <input type="date" class="form-control fp-data" value="${dataSugerida}" oninput="recalcularFichaPapelExpress()" aria-label="Data do Pagamento">
+    <input type="number" step="0.50" min="0" inputmode="decimal" class="form-control fp-valor" placeholder="R$ Pago" value="${valInicial}" oninput="recalcularFichaPapelExpress()" aria-label="Valor Pago">
+    <select class="form-control fp-forma" aria-label="Forma de Pagamento">
       <option value="DINHEIRO">💵 Dinheiro</option>
       <option value="PIX">⚡ Pix</option>
       <option value="CARTAO">💳 Cartão</option>
     </select>
-    <input type="text" class="form-control fp-ref" style="flex: 1; padding: 6px; font-size: 0.82rem;" placeholder="Ref" value="${refDefault}">
-    <button type="button" style="background: none; border: none; color: #DC2626; font-weight: bold; cursor: pointer; padding: 4px 6px;" onclick="this.parentElement.remove(); recalcularFichaPapelExpress();" title="Remover linha">✕</button>
+    <input type="text" class="form-control fp-ref" placeholder="Ref (Ex: Parcela 01)" value="${refDefault}" aria-label="Referência da Parcela">
+    <button type="button" class="fp-btn-del" onclick="this.parentElement.remove(); recalcularFichaPapelExpress();" title="Remover linha" aria-label="Remover linha">✕</button>
   `;
   container.appendChild(row);
   recalcularFichaPapelExpress();
