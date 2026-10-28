@@ -1256,6 +1256,46 @@ function parseCsvLineSimple(line: string, sep = ';'): string[] {
   return result.map((c) => c.replace(/^["']|["']$/g, '').trim());
 }
 
+function parseFichaRowFromHeaders(headerCols: string[], rowCols: string[]) {
+  const getVal = (colName: string): string => {
+    const idx = headerCols.indexOf(colName.toLowerCase());
+    return idx >= 0 && idx < rowCols.length ? rowCols[idx] : '';
+  };
+  return {
+    arquivos_origem: getVal('arquivos_origem'),
+    codigo_ficha: getVal('codigo_ficha'),
+    rawNome: getVal('nome'),
+    rawWhatsapp: getVal('whatsapp'),
+    cpf: getVal('cpf'),
+    endereco: getVal('endereco'),
+    ponto_referencia: getVal('ponto_referencia'),
+    produtos: getVal('produtos'),
+    valor_total_compra: getVal('valor_total_compra'),
+    data_venda: getVal('data_venda'),
+    dia_vencimento: getVal('dia_vencimento'),
+    tipo_ciclo: getVal('tipo_ciclo'),
+    valor_parcela: getVal('valor_parcela'),
+    pagamento_parcelas: getVal('pagamento_parcelas'),
+    saldo_devedor_atual: getVal('saldo_devedor_atual'),
+    limite_credito: getVal('limite_credito'),
+    observacoes: getVal('observacoes'),
+  };
+}
+
+function extrairValorTotalCompra(rawValor: string, saldoNum: number): number {
+  let parsed = 0;
+  const matchParcelas = String(rawValor || '').match(/(\d+)\s*(?:x|p\.?|parcelas?)\s*([\d.,]+)/i);
+  if (matchParcelas) {
+    const qtd = parseInt(matchParcelas[1], 10);
+    const val = parseFloat(matchParcelas[2].replace(',', '.'));
+    if (!isNaN(qtd) && !isNaN(val)) parsed = qtd * val;
+  }
+  if (parsed === 0) {
+    parsed = parseFloat(String(rawValor || '').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+  }
+  return Math.max(saldoNum, parsed);
+}
+
 function resolveCsvDigitalizadasPath(): string | undefined {
   const possiblePaths = [
     path.resolve(process.cwd(), 'fichas_digitalizadas_completas.csv'),
@@ -1275,6 +1315,7 @@ async function seedFichasDigitalizadasPostgres(client: any): Promise<void> {
     const lines = rawContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length <= 1) return;
 
+    const headerCols = parseCsvLineSimple(lines[0], ';').map((h) => h.toLowerCase().trim());
     const existingRes = await client.query('SELECT observacoes FROM fichas_crediario');
     const existingObsList: string[] = (existingRes.rows || []).map((r: any) => String(r.observacoes || ''));
 
@@ -1284,27 +1325,28 @@ async function seedFichasDigitalizadasPostgres(client: any): Promise<void> {
     for (let i = 1; i < lines.length; i++) {
       try {
         const cols = parseCsvLineSimple(lines[i], ';');
-        if (cols.length < 10) continue;
+        if (cols.length < 5) continue;
 
-        const [
+        const row = parseFichaRowFromHeaders(headerCols, cols);
+        const {
           arquivos_origem,
           codigo_ficha,
           rawNome,
           rawWhatsapp,
           cpf,
           endereco,
-          valor_total_compra,
           ponto_referencia,
-          limite_credito,
+          produtos,
+          valor_total_compra,
+          data_venda,
           dia_vencimento,
           tipo_ciclo,
-          saldo_devedor_atual,
           valor_parcela,
-          observacoes,
-          produtos,
-          data_venda,
           pagamento_parcelas,
-        ] = cols;
+          saldo_devedor_atual,
+          limite_credito,
+          observacoes,
+        } = row;
 
         if (!rawNome) continue;
 
@@ -1358,8 +1400,7 @@ async function seedFichasDigitalizadasPostgres(client: any): Promise<void> {
         );
         const fichaId = fichaRes.rows[0].id;
 
-        const parsedValor = parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-        const valorCompraNum = Math.max(saldoNum, parsedValor);
+        const valorCompraNum = extrairValorTotalCompra(valor_total_compra, saldoNum);
 
         if (valorCompraNum > 0) {
           const jaPago = Math.max(0, Number((valorCompraNum - saldoNum).toFixed(2)));
@@ -1418,31 +1459,33 @@ function seedFichasDigitalizadasMemory(): void {
     const lines = rawContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length <= 1) return;
 
+    const headerCols = parseCsvLineSimple(lines[0], ';').map((h) => h.toLowerCase().trim());
     const seenNames = new Map<string, number>();
 
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCsvLineSimple(lines[i], ';');
-      if (cols.length < 10) continue;
+      if (cols.length < 5) continue;
 
-      const [
+      const row = parseFichaRowFromHeaders(headerCols, cols);
+      const {
         arquivos_origem,
         codigo_ficha,
         rawNome,
         rawWhatsapp,
         cpf,
         endereco,
-        valor_total_compra,
         ponto_referencia,
-        limite_credito,
+        produtos,
+        valor_total_compra,
+        data_venda,
         dia_vencimento,
         tipo_ciclo,
-        saldo_devedor_atual,
         valor_parcela,
-        observacoes,
-        produtos,
-        data_venda,
         pagamento_parcelas,
-      ] = cols;
+        saldo_devedor_atual,
+        limite_credito,
+        observacoes,
+      } = row;
 
       if (!rawNome) continue;
 
@@ -1507,10 +1550,7 @@ function seedFichasDigitalizadasMemory(): void {
         updated_at: '2026-10-28T12:00:00Z',
       });
 
-      const valorCompraNum = Math.max(
-        saldoNum,
-        parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || saldoNum
-      );
+      const valorCompraNum = extrairValorTotalCompra(valor_total_compra, saldoNum);
 
       if (valorCompraNum > 0 || produtos) {
         const vendaId = `venda-dig-${String(i).padStart(3, '0')}`;

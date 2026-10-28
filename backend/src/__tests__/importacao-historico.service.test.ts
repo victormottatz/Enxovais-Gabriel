@@ -91,10 +91,10 @@ describe('ImportacaoService - Histórico de Pagamentos e Compras Anteriores', ()
 
   it('deve importar fielmente o caso real da ficha física (Fabiana Amiga Indaiá - 2 Cobredons, 6x 170 com 3 pagas)', async () => {
     const csvFabiana = `whatsapp;nome;tipo;data;valor;forma_pagamento;parcela_ref;descricao;observacoes
-16988479219;Fabiana Amiga (Indaiá);COMPRA_A_PRAZO;02/06/2026;1020,00;CREDIARIO;6 parcelas de 170;2 Cobredons;Ficha física nº 548LU - Rua Angelo Maioli, Bairro P. Ava.
-16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/07/2026;170,00;DINHEIRO;Parcela 01/06;Pagamento anotado na ficha;Pg 170 em 10/07
-16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/08/2026;170,00;DINHEIRO;Parcela 02/06;Pagamento anotado na ficha;Pg 170 em 10/08
-16988479219;Fabiana Amiga (Indaiá);PAGAMENTO;10/09/2026;170,00;DINHEIRO;Parcela 03/06;Pagamento anotado na ficha;Pg 170 em 10/09`;
+16988479999;Fabiana Teste (Indaiá);COMPRA_A_PRAZO;02/06/2026;1020,00;CREDIARIO;6 parcelas de 170;2 Cobredons;Ficha física nº 548LU - Rua Angelo Maioli, Bairro P. Ava.
+16988479999;Fabiana Teste (Indaiá);PAGAMENTO;10/07/2026;170,00;DINHEIRO;Parcela 01/06;Pagamento anotado na ficha;Pg 170 em 10/07
+16988479999;Fabiana Teste (Indaiá);PAGAMENTO;10/08/2026;170,00;DINHEIRO;Parcela 02/06;Pagamento anotado na ficha;Pg 170 em 10/08
+16988479999;Fabiana Teste (Indaiá);PAGAMENTO;10/09/2026;170,00;DINHEIRO;Parcela 03/06;Pagamento anotado na ficha;Pg 170 em 10/09`;
 
     const validacao = ImportacaoService.processarCSVHistorico(csvFabiana);
     expect(validacao.validos).toBe(4);
