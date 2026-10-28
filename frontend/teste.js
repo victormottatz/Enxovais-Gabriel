@@ -179,14 +179,15 @@ function processarCobrancasHoje() {
   const diaHoje = new Date().getDate();
   state.cobrancasHoje = state.fichas.filter(f => {
     const saldo = Number(f.saldo_devedor_total) || 0;
-    const diaVenc = Number(f.dia_vencimento_padrao) || 20;
-    return saldo > 0 && (diaVenc === diaHoje || (diaHoje <= 5 && diaVenc === 5) || (diaHoje > 15 && diaHoje <= 20 && diaVenc === 20));
+    const diaVenc = Math.min(31, Math.max(1, Number(f.dia_vencimento_padrao) || 10));
+    const diff = diaVenc - diaHoje;
+    return saldo > 0 && (diaVenc === diaHoje || (diff >= 0 && diff <= 5));
   });
 
   // Atualiza badge da aba cobranças na sidebar
   const badgeEl = document.getElementById('sidebar-badge-cobrancas');
   if (badgeEl) {
-    badgeEl.textContent = `${state.cobrancasHoje.length} hoje`;
+    badgeEl.textContent = `${state.cobrancasHoje.length} próximas`;
   }
 }
 
@@ -374,7 +375,12 @@ function limparSimuladorV2() {
 }
 
 function setDiaSimulador(dia, btn) {
-  state.simulador.dia = dia;
+  const diaNum = Math.min(31, Math.max(1, parseInt(dia, 10) || 10));
+  state.simulador.dia = diaNum;
+  const inputLivre = document.getElementById('sim-dia-livre-v2');
+  if (inputLivre && Number(inputLivre.value) !== diaNum) {
+    inputLivre.value = diaNum;
+  }
   document.querySelectorAll('#sim-dias-group .sim-chip-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   calcularSimulacaoV2();

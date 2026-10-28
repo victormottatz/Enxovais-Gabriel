@@ -24,13 +24,41 @@ const ajustarSaldoSchema = z.object({
 // GET /api/v1/fichas
 router.get('/', async (req, res, next) => {
   try {
-    const { dia_vencimento, status_ficha, search } = req.query;
+    const { dia_vencimento, status_ficha, search, apenas_pendencias } = req.query;
     const fichas = await FichaCrediarioService.listFichas({
       diaVencimento: dia_vencimento ? parseInt(dia_vencimento as string, 10) : undefined,
       statusFicha: status_ficha as string,
       search: search as string,
+      apenasPendencias: apenas_pendencias === 'true' || apenas_pendencias === '1',
     });
     res.json(fichas);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const cadastroRapidoSchema = z.object({
+  nome: z.string().min(2).optional(),
+  whatsapp: z.string().optional(),
+  cpf: z.string().optional(),
+  endereco: z.string().optional(),
+  ponto_referencia: z.string().optional(),
+  limite_credito: z.number().min(0).optional(),
+  dia_vencimento_padrao: z.number().int().min(1).max(31).optional(),
+  valor_parcela_padrao: z.number().positive().optional(),
+  saldo_devedor_total: z.number().min(0).optional(),
+  observacoes: z.string().optional(),
+});
+
+// PATCH /api/v1/fichas/:id/cadastro-rapido
+router.patch('/:id/cadastro-rapido', async (req, res, next) => {
+  try {
+    const validated = cadastroRapidoSchema.parse(req.body);
+    const fichaAtualizada = await FichaCrediarioService.atualizarCadastroRapidoFicha({
+      fichaId: req.params.id,
+      ...validated,
+    });
+    res.json(fichaAtualizada);
   } catch (err) {
     next(err);
   }

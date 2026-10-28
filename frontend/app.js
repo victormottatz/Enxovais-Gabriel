@@ -299,15 +299,40 @@ function toggleSidebar() {
 }
 
 // =============================================================================
-// MÓDULO 1: COBRANÇAS DO DIA (VALE VS PAGAMENTO)
+// MÓDULO 1: COBRANÇAS DO DIA & UTILITÁRIOS DE VENCIMENTO LIVRE (1 A 31)
 // =============================================================================
+function formatarDiaDoisDigitos(dia) {
+  const num = Math.max(1, Math.min(31, parseInt(dia, 10) || 10));
+  return String(num).padStart(2, '0');
+}
+
+function criarDataVencimentoMensalSegura(ano, mesZeroBased, diaEscolhido) {
+  const diaLimpo = Math.max(1, Math.min(31, parseInt(diaEscolhido, 10) || 10));
+  const baseMes = new Date(ano, mesZeroBased, 1);
+  const ultimoDiaMes = new Date(baseMes.getFullYear(), baseMes.getMonth() + 1, 0).getDate();
+  const diaReal = Math.min(diaLimpo, ultimoDiaMes);
+  return new Date(baseMes.getFullYear(), baseMes.getMonth(), diaReal);
+}
+
+function venceNosProximosDias(diaVenc, diaHoje, janelaDias = 5) {
+  const d = Number(diaVenc) || 10;
+  if (d >= diaHoje && d <= diaHoje + janelaDias) return true;
+  // Caso esteja nos últimos dias do mês e o vencimento seja nos primeiros dias do mês seguinte
+  const hoje = new Date();
+  const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+  const diasRestantesMes = ultimoDiaMes - diaHoje;
+  if (diasRestantesMes < janelaDias && d <= (janelaDias - diasRestantesMes)) {
+    return true;
+  }
+  return false;
+}
+
 function atualizarDashboardCobrancas() {
   const container = document.getElementById('cobrancas-container');
   if (!container) return;
 
   let totalHoje = 0;
   let totalDividendo = 0;
-  let totalRecebidoMes = 0;
 
   state.fichas.forEach((f) => {
     totalDividendo += Number(f.saldo_devedor_total) || 0;
@@ -316,21 +341,19 @@ function atualizarDashboardCobrancas() {
   const hoje = new Date();
   const diaHoje = hoje.getDate();
 
-  // Filtra de acordo com o chip selecionado
+  // Filtra de acordo com o chip ou dia específico (1 a 31) selecionado
   const filtradas = state.fichas.filter((ficha) => {
     if (Number(ficha.saldo_devedor_total) <= 0) return false;
+    const diaFicha = Number(ficha.dia_vencimento_padrao) || 10;
 
-    if (state.filtroCobrancaAtual === 'hoje') {
-      return Number(ficha.dia_vencimento_padrao) === diaHoje;
-    }
-    if (state.filtroCobrancaAtual === 5) {
-      return Number(ficha.dia_vencimento_padrao) === 5;
-    }
-    if (state.filtroCobrancaAtual === 20) {
-      return Number(ficha.dia_vencimento_padrao) === 20;
-    }
-    if (state.filtroCobrancaAtual === 10) {
-      return Number(ficha.dia_vencimento_padrao) === 10;
+    if (state.filtroCobrancaAtual === 'todos') return true;
+    if (state.filtroCobrancaAtual === 'hoje') return diaFicha === diaHoje;
+    if (state.filtroCobrancaAtual === 'proximos5') return venceNosProximosDias(diaFicha, diaHoje, 5);
+    if (state.filtroCobrancaAtual === 'atrasadas') return diaFicha < diaHoje;
+
+    const diaFiltroNum = parseInt(state.filtroCobrancaAtual, 10);
+    if (!isNaN(diaFiltroNum) && diaFiltroNum >= 1 && diaFiltroNum <= 31) {
+      return diaFicha === diaFiltroNum;
     }
     return true;
   });
@@ -365,8 +388,9 @@ function atualizarDashboardCobrancas() {
       const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
       const nome = cli.nome || ficha.cliente_nome || 'Cliente';
       const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
-      const diaVenc = ficha.dia_vencimento_padrao || 5;
-      const isVale = diaVenc === 20;
+      const diaVenc = Number(ficha.dia_vencimento_padrao) || 10;
+      const diaFmt = formatarDiaDoisDigitos(diaVenc);
+      const isVenceHoje = diaVenc === diaHoje;
 
       return `
       <div class="client-card">
@@ -378,8 +402,8 @@ function atualizarDashboardCobrancas() {
               <span>📱 ${fone || 'Sem WhatsApp'}</span>
             </div>
           </div>
-          <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
-            ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${diaVenc}`}
+          <span class="badge-tag ${isVenceHoje ? 'vale' : 'pagamento'}">
+            ${isVenceHoje ? `🎯 Hoje (Dia ${diaFmt})` : `📅 Todo Dia ${diaFmt}`}
           </span>
         </div>
 
@@ -401,7 +425,7 @@ function atualizarDashboardCobrancas() {
           <button class="btn btn-primary btn-sm" onclick="abrirModalAmortizacaoDireta('${ficha.id}')">
             💵 Receber
           </button>
-          <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${ficha.valor_parcela_padrao}, ${ficha.saldo_devedor_total})">
+          <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${ficha.valor_parcela_padrao}, ${ficha.saldo_devedor_total}, ${diaVenc})">
             📱 Zap
           </button>
         </div>
@@ -413,8 +437,23 @@ function atualizarDashboardCobrancas() {
 
 function filtrarCobrancas(tipo, btn) {
   state.filtroCobrancaAtual = tipo;
+  const inputDia = document.getElementById('filtro-dia-cobrancas-input');
+  if (inputDia && isNaN(parseInt(tipo, 10))) inputDia.value = '';
   document.querySelectorAll('#tab-cobrancas .filter-chips .chip').forEach((c) => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  atualizarDashboardCobrancas();
+}
+
+function filtrarCobrancasPorDiaEspecifico(valorDia) {
+  const diaNum = parseInt(valorDia, 10);
+  document.querySelectorAll('#tab-cobrancas .filter-chips .chip').forEach((c) => c.classList.remove('active'));
+  if (!isNaN(diaNum) && diaNum >= 1 && diaNum <= 31) {
+    state.filtroCobrancaAtual = diaNum;
+  } else {
+    state.filtroCobrancaAtual = 'todos';
+    const firstChip = document.querySelector('#tab-cobrancas .filter-chips .chip');
+    if (firstChip) firstChip.classList.add('active');
+  }
   atualizarDashboardCobrancas();
 }
 
@@ -448,11 +487,94 @@ async function carregarFichas() {
   renderizarFichas();
 }
 
+function obterDiagnosticoFichaUI(ficha) {
+  if (ficha && Array.isArray(ficha.alertas)) {
+    return {
+      tem_pendencia: Boolean(ficha.tem_pendencia || ficha.alertas.length > 0),
+      alertas: ficha.alertas,
+      arquivos_origem: Array.isArray(ficha.arquivos_origem) ? ficha.arquivos_origem : [],
+      codigo_ficha: ficha.codigo_ficha || null,
+    };
+  }
+
+  const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+  const alertas = [];
+  const obs = String(ficha.observacoes || cli.observacoes || '');
+  const fotos = obs.match(/IMG_\d+(?:\(\d+\))?\.jpg/gi) || [];
+  const matchCod = obs.match(/Ficha(?:\s*F[íi]sica)?:\s*([^|]+)/i);
+  const codigoFicha = ficha.codigo_ficha || (matchCod && matchCod[1] ? matchCod[1].trim() : null);
+
+  const rawZap = String(cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '').replace(/\D/g, '');
+  if (!rawZap || rawZap.length < 10 || rawZap.startsWith('0000')) {
+    alertas.push({
+      codigo: 'SEM_WHATSAPP',
+      titulo: 'Falta WhatsApp',
+      detalhe: 'Telefone ausente na ficha de papel. Clique para preencher.',
+      severidade: 'alta',
+      campo: 'whatsapp',
+    });
+  }
+
+  const rawEnd = String(cli.endereco || ficha.cliente_endereco || '').trim();
+  if (!rawEnd || rawEnd.length < 4) {
+    alertas.push({
+      codigo: 'SEM_ENDERECO',
+      titulo: 'Sem Endereço',
+      detalhe: 'Rua/Bairro não informados na ficha física.',
+      severidade: 'media',
+      campo: 'endereco',
+    });
+  }
+
+  if (/2027|diverg|revisar|ilee?g[íi]vel/i.test(obs)) {
+    alertas.push({
+      codigo: 'REVISAR_DADOS',
+      titulo: 'Revisar Dados',
+      detalhe: 'Anotação ou data manuscrita requer conferência.',
+      severidade: 'media',
+      campo: 'observacoes',
+    });
+  }
+
+  return {
+    tem_pendencia: alertas.length > 0,
+    alertas,
+    arquivos_origem: Array.from(new Set(fotos)),
+    codigo_ficha: codigoFicha,
+  };
+}
+
+function renderizarBadgesAlertasFichaHTML(fichaId, diag) {
+  if (!diag || !diag.alertas || diag.alertas.length === 0) {
+    return `<span class="badge-status valido" style="font-size: 0.75rem;">✅ Completo</span>`;
+  }
+
+  const iconMap = {
+    SEM_WHATSAPP: { icon: '📵', bg: '#FEE2E2', fg: '#B91C1C', border: '#FCA5A5' },
+    SEM_ENDERECO: { icon: '📍', bg: '#FEF3C7', fg: '#B45309', border: '#FDE68A' },
+    TELEFONE_COMPARTILHADO: { icon: '👥', bg: '#E0F2FE', fg: '#0369A1', border: '#BAE6FD' },
+    REVISAR_DADOS: { icon: '🔍', bg: '#FFEDD5', fg: '#C2410C', border: '#FED7AA' },
+  };
+
+  return `<div style="display: flex; flex-wrap: wrap; gap: 4px;">` +
+    diag.alertas
+      .map((al) => {
+        const st = iconMap[al.codigo] || iconMap.REVISAR_DADOS;
+        const campo = al.campo || 'whatsapp';
+        const safeDetalhe = String(al.detalhe || '').replace(/"/g, '&quot;');
+        return `<button type="button" onclick="event.stopPropagation(); abrirEdicaoRapidaFicha('${fichaId}', '${campo}')" title="${safeDetalhe} (Clique para preencher)" style="background:${st.bg}; color:${st.fg}; border:1px solid ${st.border}; border-radius:99px; padding:3px 9px; font-size:0.74rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; line-height:1.2;">${st.icon} ${al.titulo}</button>`;
+      })
+      .join('') +
+    `</div>`;
+}
+
 function atualizarKpisFichas() {
   let totalDevedor = 0;
   let somaParcelas = 0;
   let ativasCount = 0;
   let quitadasCount = 0;
+  let pendenciasCount = 0;
+  let semZapCount = 0;
 
   state.fichas.forEach((f) => {
     const saldo = Number(f.saldo_devedor_total) || 0;
@@ -464,23 +586,51 @@ function atualizarKpisFichas() {
     } else {
       quitadasCount++;
     }
+    const diag = obterDiagnosticoFichaUI(f);
+    if (diag.tem_pendencia) {
+      pendenciasCount++;
+      if (diag.alertas.some((a) => a.codigo === 'SEM_WHATSAPP')) semZapCount++;
+    }
   });
 
   const elTotal = document.getElementById('fichas-kpi-total-saldo');
   const elCount = document.getElementById('fichas-kpi-count');
   const elVenceMes = document.getElementById('fichas-kpi-vence-mes');
   const elQuitadas = document.getElementById('fichas-kpi-quitadas-count');
+  const elPendencias = document.getElementById('fichas-kpi-pendencias-count');
+  const elPendenciasSub = document.getElementById('fichas-kpi-pendencias-sub');
+  const elChipPend = document.getElementById('chip-pendencias-badge');
 
   if (elTotal) elTotal.textContent = formatarMoeda(totalDevedor);
-  if (elCount) elCount.textContent = `${ativasCount} fichas ativas`;
+  if (elCount) elCount.textContent = `${ativasCount} fichas ativas (${state.fichas.length} total)`;
   if (elVenceMes) elVenceMes.textContent = formatarMoeda(somaParcelas);
   if (elQuitadas) elQuitadas.textContent = quitadasCount;
+  if (elPendencias) elPendencias.textContent = pendenciasCount;
+  if (elPendenciasSub) {
+    elPendenciasSub.textContent = semZapCount > 0 ? `${semZapCount} sem WhatsApp • Clique p/ editar` : 'Clique p/ revisar alertas';
+  }
+  if (elChipPend) elChipPend.textContent = pendenciasCount;
 }
 
 function filtrarFichasPorCiclo(ciclo, btn) {
   state.filtroCicloFichaAtual = ciclo;
+  const inputDia = document.getElementById('filtro-dia-fichas-input');
+  if (inputDia && isNaN(parseInt(ciclo, 10))) inputDia.value = '';
   document.querySelectorAll('#tab-fichas .filter-chips .chip').forEach((c) => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  renderizarFichas();
+}
+
+function filtrarFichasPorDiaEspecifico(valorDia) {
+  const diaNum = parseInt(valorDia, 10);
+  document.querySelectorAll('#tab-fichas .filter-chips .chip').forEach((c) => c.classList.remove('active'));
+  if (!isNaN(diaNum) && diaNum >= 1 && diaNum <= 31) {
+    state.filtroCicloFichaAtual = String(diaNum);
+  } else {
+    state.filtroCicloFichaAtual = 'TODOS';
+    const firstChip = document.querySelector('#tab-fichas .filter-chips .chip');
+    if (firstChip) firstChip.classList.add('active');
+  }
   renderizarFichas();
 }
 
@@ -490,15 +640,22 @@ function obterFichasFiltradas() {
 
   return state.fichas.filter((ficha) => {
     const saldo = Number(ficha.saldo_devedor_total) || 0;
-    const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
+    const diaVenc = Number(ficha.dia_vencimento_padrao) || 10;
 
     if (state.filtroCicloFichaAtual === 'TODOS') return true;
+    if (state.filtroCicloFichaAtual === 'PENDENCIAS') {
+      return obterDiagnosticoFichaUI(ficha).tem_pendencia;
+    }
     if (state.filtroCicloFichaAtual === 'HOJE') return diaVenc === diaHoje;
-    if (String(state.filtroCicloFichaAtual) === '5') return diaVenc === 5;
-    if (String(state.filtroCicloFichaAtual) === '20') return diaVenc === 20;
+    if (state.filtroCicloFichaAtual === 'PROXIMOS5') return saldo > 0 && venceNosProximosDias(diaVenc, diaHoje, 5);
     if (state.filtroCicloFichaAtual === 'QUITADOS' || state.filtroCicloFichaAtual === 'QUITADAS') return saldo <= 0;
     if (state.filtroCicloFichaAtual === 'ATRASADOS') {
       return saldo > 0 && diaVenc < diaHoje;
+    }
+
+    const diaFiltroNum = parseInt(state.filtroCicloFichaAtual, 10);
+    if (!isNaN(diaFiltroNum) && diaFiltroNum >= 1 && diaFiltroNum <= 31) {
+      return diaVenc === diaFiltroNum;
     }
     return true;
   });
@@ -532,30 +689,41 @@ function renderizarFichas() {
           const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
           const nome = cli.nome || ficha.cliente_nome || 'Cliente';
           const apelido = cli.apelido ? ` <span style="font-size:0.8rem; color:var(--wine-primary); font-weight:normal;">(${cli.apelido})</span>` : '';
-          const cpf = cli.cpf ? `<br><small style="color: var(--text-muted); font-size: 0.76rem;">CPF: ${cli.cpf}</small>` : '';
+          const cpf = (cli.cpf || ficha.cliente_cpf) ? `<br><small style="color: var(--text-muted); font-size: 0.76rem;">CPF: ${cli.cpf || ficha.cliente_cpf}</small>` : '';
           const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
-          const foneFmt = fone ? `<a href="javascript:void(0)" onclick="abrirLinkWhatsApp('${fone}', 'Olá, ${nome}! Tudo bem?')" style="color: var(--success); font-weight: 600; text-decoration: none;">📱 ${fone}</a>` : '<span style="color: var(--text-muted);">Sem contato</span>';
-          const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
-          const isVale = diaVenc === 20;
+          const endereco = cli.endereco || ficha.cliente_endereco || '';
+          const diag = obterDiagnosticoFichaUI(ficha);
+          const codBadge = diag.codigo_ficha ? `<span style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; border-radius:6px; padding:1px 6px; font-size:0.72rem; font-weight:700; margin-left:6px;" title="Número da ficha física">📄 ${diag.codigo_ficha}</span>` : '';
+          const foneFmt = fone
+            ? `<a href="javascript:void(0)" onclick="event.stopPropagation(); abrirLinkWhatsApp('${fone}', 'Olá, ${nome}! Tudo bem?')" style="color: var(--success); font-weight: 600; text-decoration: none;">📱 ${fone}</a>`
+            : `<a href="javascript:void(0)" onclick="event.stopPropagation(); abrirEdicaoRapidaFicha('${ficha.id}', 'whatsapp')" style="color: #B91C1C; font-weight: 700; text-decoration: underline;">📵 Sem WhatsApp (Preencher)</a>`;
+          const endFmt = endereco
+            ? `<br><small style="color: var(--text-muted); font-size: 0.76rem;">📍 ${endereco.substring(0, 42)}${endereco.length > 42 ? '...' : ''}</small>`
+            : '';
+          const diaVenc = Number(ficha.dia_vencimento_padrao) || 10;
+          const diaFmt = formatarDiaDoisDigitos(diaVenc);
+          const isVenceHoje = diaVenc === new Date().getDate();
           const saldo = Number(ficha.saldo_devedor_total) || 0;
           const parcela = Number(ficha.valor_parcela_padrao) || 50;
           const obs = ficha.observacoes || cli.observacoes || '';
+          const obsLimpa = obs.replace(/Ficha Física:[^|]+\|\s*/i, '').replace(/Fotos:[^|]+\|\s*/i, '');
 
           return `
-            <tr>
+            <tr style="${diag.tem_pendencia ? 'background: rgba(254, 243, 199, 0.22);' : ''}">
               <td>
                 <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="abrirDetalhesFicha('${ficha.id}')" title="Clique para abrir o Prontuário 360°">
                   ${obterAvatarHTML(nome)}
                   <div>
-                    <strong style="color: var(--text-dark); font-size: 0.95rem;">${nome}</strong>${apelido}
+                    <strong style="color: var(--text-dark); font-size: 0.95rem;">${nome}</strong>${apelido}${codBadge}
                     ${cpf}
                     <br><small style="color: var(--text-muted); font-size: 0.8rem;">${foneFmt}</small>
+                    ${endFmt}
                   </div>
                 </div>
               </td>
               <td>
-                <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
-                  ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${diaVenc}`}
+                <span class="badge-tag ${isVenceHoje ? 'vale' : 'pagamento'}">
+                  ${isVenceHoje ? `🎯 Hoje (Dia ${diaFmt})` : `📅 Todo Dia ${diaFmt}`}
                 </span>
               </td>
               <td>
@@ -566,24 +734,24 @@ function renderizarFichas() {
               <td>
                 <strong>${formatarMoeda(parcela)}</strong> <small style="color:var(--text-muted);">/ mês</small>
               </td>
-              <td style="max-width: 180px; font-size: 0.82rem; color: var(--text-muted);">
-                ${obs ? obs.substring(0, 45) + (obs.length > 45 ? '...' : '') : '<span style="color:var(--border-color);">Sem notas</span>'}
+              <td style="max-width: 210px; font-size: 0.8rem; color: var(--text-muted);">
+                ${obsLimpa ? obsLimpa.substring(0, 58) + (obsLimpa.length > 58 ? '...' : '') : '<span style="color:var(--border-color);">Sem notas</span>'}
               </td>
               <td>
-                ${saldo <= 0 ? '<span class="badge-status valido">Quitada</span>' : '<span class="badge-status aviso">Em Aberto</span>'}
+                ${renderizarBadgesAlertasFichaHTML(ficha.id, diag)}
               </td>
               <td>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <button class="btn btn-sm" style="${diag.tem_pendencia ? 'background:#FFFBEB; color:#B45309; border:1px solid #F59E0B; font-weight:700;' : 'background:#F8FAFC; color:#334155; border:1px solid #CBD5E1;'}" onclick="abrirEdicaoRapidaFicha('${ficha.id}')" title="Editar/Completar informações e ver foto da ficha de papel">
+                    ✏️ ${diag.tem_pendencia ? 'Completar' : 'Editar'}
+                  </button>
                   <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${ficha.id}')" title="Abrir Prontuário Completo com 5 Abas">
                     📑 Prontuário
                   </button>
                   ${fone ? `
-                  <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${parcela}, ${saldo})" title="Cobrar no WhatsApp">
+                  <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome.replace(/'/g, "\\'")}', '${fone}', ${parcela}, ${saldo}, ${diaVenc})" title="Cobrar no WhatsApp">
                     💬 Zap
                   </button>` : ''}
-                  <button class="btn btn-primary btn-sm" onclick="iniciarVendaRapidaCliente('${ficha.cliente_id || cli.id}')" title="Nova Venda / Compra a Prazo">
-                    🛒 Vender
-                  </button>
                 </div>
               </td>
             </tr>
@@ -600,7 +768,7 @@ function renderizarFichas() {
         <div class="empty-state">
           <span style="font-size: 2.5rem;">📑</span>
           <h3>Nenhuma ficha encontrada</h3>
-          <p>Nenhuma cliente corresponde ao filtro de ciclo selecionado.</p>
+          <p>Nenhuma cliente corresponde ao filtro selecionado.</p>
         </div>
       `;
       return;
@@ -612,24 +780,31 @@ function renderizarFichas() {
         const nome = cli.nome || ficha.cliente_nome || 'Cliente';
         const apelido = cli.apelido ? ` (${cli.apelido})` : '';
         const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
-        const diaVenc = Number(ficha.dia_vencimento_padrao) || 5;
-        const isVale = diaVenc === 20;
+        const diag = obterDiagnosticoFichaUI(ficha);
+        const codBadge = diag.codigo_ficha ? `<span style="background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; border-radius:6px; padding:1px 6px; font-size:0.72rem; font-weight:700; margin-left:6px;">📄 ${diag.codigo_ficha}</span>` : '';
+        const diaVenc = Number(ficha.dia_vencimento_padrao) || 10;
+        const diaFmt = formatarDiaDoisDigitos(diaVenc);
+        const isVenceHoje = diaVenc === new Date().getDate();
         const saldo = Number(ficha.saldo_devedor_total) || 0;
         const parcela = Number(ficha.valor_parcela_padrao) || 50;
 
         return `
-        <div class="client-card">
+        <div class="client-card" style="${diag.tem_pendencia ? 'border-left: 4px solid #F59E0B;' : ''}">
           <div class="client-card-header">
             <div class="client-header-info" onclick="abrirDetalhesFicha('${ficha.id}')" style="cursor: pointer;">
               ${obterAvatarHTML(nome)}
               <div>
-                <h4>${nome}${apelido}</h4>
-                <span>📱 ${fone || 'Sem contato'}</span>
+                <h4>${nome}${apelido}${codBadge}</h4>
+                <span>${fone ? `📱 ${fone}` : '<strong style="color:#B91C1C;">📵 Sem WhatsApp</strong>'}</span>
               </div>
             </div>
-            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
-              ${isVale ? '🎟️ Dia 20' : `💵 Dia 0${diaVenc}`}
+            <span class="badge-tag ${isVenceHoje ? 'vale' : 'pagamento'}">
+              ${isVenceHoje ? `🎯 Hoje (Dia ${diaFmt})` : `📅 Dia ${diaFmt}`}
             </span>
+          </div>
+
+          <div style="margin: 6px 0;">
+            ${renderizarBadgesAlertasFichaHTML(ficha.id, diag)}
           </div>
 
           <div class="client-card-body">
@@ -646,6 +821,9 @@ function renderizarFichas() {
           </div>
 
           <div class="client-card-actions">
+            <button class="btn btn-sm" style="${diag.tem_pendencia ? 'background:#FFFBEB; color:#B45309; border:1px solid #F59E0B; font-weight:700;' : 'background:#F8FAFC; color:#334155; border:1px solid #CBD5E1;'}" onclick="abrirEdicaoRapidaFicha('${ficha.id}')">
+              ✏️ ${diag.tem_pendencia ? 'Completar' : 'Editar'}
+            </button>
             <button class="btn btn-outline btn-sm" onclick="abrirDetalhesFicha('${ficha.id}')">
               📑 Prontuário
             </button>
@@ -654,7 +832,7 @@ function renderizarFichas() {
               💵 Receber
             </button>` : ''}
             ${fone ? `
-            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome}', '${fone}', ${parcela}, ${saldo})" title="Cobrar WhatsApp">
+            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${ficha.id}', '${nome.replace(/'/g, "\\'")}', '${fone}', ${parcela}, ${saldo}, ${diaVenc})" title="Cobrar WhatsApp">
               💬 Zap
             </button>` : ''}
           </div>
@@ -679,6 +857,218 @@ function buscarFichas(texto) {
     const text = card.textContent.toLowerCase();
     card.style.display = text.includes(q) ? 'flex' : 'none';
   });
+}
+
+// -----------------------------------------------------------------------------
+// MODAL DE EDIÇÃO RÁPIDA & CONFERÊNCIA VISUAL DA FICHA FÍSICA (1 CLIQUE)
+// -----------------------------------------------------------------------------
+function abrirEdicaoRapidaFicha(fichaId, campoFoco = null) {
+  const ficha = state.fichas.find((f) => f.id === fichaId || f.cliente_id === fichaId);
+  if (!ficha) return;
+
+  const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
+  const diag = obterDiagnosticoFichaUI(ficha);
+
+  const elId = document.getElementById('rapido-ficha-id');
+  const elNome = document.getElementById('rapido-nome');
+  const elZap = document.getElementById('rapido-whatsapp');
+  const elCpf = document.getElementById('rapido-cpf');
+  const elEnd = document.getElementById('rapido-endereco');
+  const elRef = document.getElementById('rapido-referencia');
+  const elDia = document.getElementById('rapido-dia-vencimento');
+  const elParc = document.getElementById('rapido-valor-parcela');
+  const elSaldo = document.getElementById('rapido-saldo-atual');
+  const elObs = document.getElementById('rapido-observacoes');
+  const elBadgeCod = document.getElementById('rapido-codigo-badge');
+  const elAlertasBanner = document.getElementById('rapido-alertas-banner');
+  const elFotosContainer = document.getElementById('rapido-fotos-container');
+
+  if (elId) elId.value = ficha.id;
+  if (elNome) elNome.value = cli.nome || ficha.cliente_nome || '';
+  if (elZap) elZap.value = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
+  if (elCpf) elCpf.value = cli.cpf || ficha.cliente_cpf || '';
+  if (elEnd) elEnd.value = cli.endereco || ficha.cliente_endereco || '';
+  if (elRef) elRef.value = cli.ponto_referencia || ficha.cliente_ponto_referencia || '';
+  if (elDia) elDia.value = Number(ficha.dia_vencimento_padrao) || 10;
+  if (elParc) elParc.value = (Number(ficha.valor_parcela_padrao) || 100).toFixed(2);
+  if (elSaldo) elSaldo.value = (Number(ficha.saldo_devedor_total) || 0).toFixed(2);
+  if (elObs) elObs.value = ficha.observacoes || cli.observacoes || '';
+
+  if (elBadgeCod) {
+    if (diag.codigo_ficha) {
+      elBadgeCod.textContent = `📄 Ficha nº ${diag.codigo_ficha}`;
+      elBadgeCod.style.display = 'inline-block';
+    } else {
+      elBadgeCod.style.display = 'none';
+    }
+  }
+
+  // Destaca visualmente os campos incompletos
+  const grpZap = document.getElementById('group-rapido-whatsapp');
+  const grpEnd = document.getElementById('group-rapido-endereco');
+  const grpObs = document.getElementById('group-rapido-observacoes');
+  [grpZap, grpEnd, grpObs].forEach((g) => {
+    if (g) {
+      g.style.background = 'transparent';
+      g.style.padding = '0';
+      g.style.borderRadius = '8px';
+      g.style.border = 'none';
+    }
+  });
+
+  if (diag.alertas.some((a) => a.campo === 'whatsapp') && grpZap) {
+    grpZap.style.background = '#FEF2F2';
+    grpZap.style.padding = '8px 10px';
+    grpZap.style.border = '1px solid #FCA5A5';
+  }
+  if (diag.alertas.some((a) => a.campo === 'endereco') && grpEnd) {
+    grpEnd.style.background = '#FFFBEB';
+    grpEnd.style.padding = '8px 10px';
+    grpEnd.style.border = '1px solid #FDE68A';
+  }
+  if (diag.alertas.some((a) => a.campo === 'observacoes') && grpObs) {
+    grpObs.style.background = '#FFFBEB';
+    grpObs.style.padding = '8px 10px';
+    grpObs.style.border = '1px solid #FDE68A';
+  }
+
+  if (elAlertasBanner) {
+    if (diag.alertas.length > 0) {
+      elAlertasBanner.style.display = 'block';
+      elAlertasBanner.innerHTML =
+        `<strong>⚠️ Atenção — Informações para completar ou revisar nesta ficha:</strong>` +
+        `<ul style="margin: 6px 0 0 18px; padding: 0;">` +
+        diag.alertas.map((a) => `<li><strong>${a.titulo}:</strong> ${a.detalhe}</li>`).join('') +
+        `</ul>`;
+    } else {
+      elAlertasBanner.style.display = 'none';
+    }
+  }
+
+  // Renderiza as fotos originais Frente / Verso se existirem
+  if (elFotosContainer) {
+    const baseImgUrl = isLocalDevStatic ? 'http://localhost:3000/fotos-fichas' : '/fotos-fichas';
+    if (diag.arquivos_origem && diag.arquivos_origem.length > 0) {
+      elFotosContainer.innerHTML = diag.arquivos_origem
+        .map((imgName, idx) => {
+          const ladoLabel = diag.arquivos_origem.length > 1 ? (idx === 0 ? '📄 Frente da Ficha' : '🔄 Verso da Ficha') : '📄 Ficha Física Original';
+          const imgUrl = `${baseImgUrl}/${encodeURIComponent(imgName)}`;
+          return `
+            <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:0.78rem; font-weight:700; color:#475569;">
+                <span>${ladoLabel}</span>
+                <code>${imgName}</code>
+              </div>
+              <img src="${imgUrl}" alt="${imgName}" style="width:100%; border-radius:6px; cursor:zoom-in; max-height:340px; object-fit:contain; background:#0F172A;" onclick="visualizarFotoAmpliada('${imgUrl}', '${(cli.nome || ficha.cliente_nome || '').replace(/'/g, "\\'")} - ${imgName}')" onerror="this.outerHTML='<div style=\\'padding:16px;text-align:center;color:#64748B;font-size:0.82rem;\\'>Arquivo de imagem: <strong>${imgName}</strong></div>'">
+            </div>
+          `;
+        })
+        .join('');
+    } else {
+      elFotosContainer.innerHTML = `
+        <div style="padding: 28px 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
+          📑 Esta ficha foi criada diretamente no sistema digital (sem foto de papel vinculada).
+        </div>
+      `;
+    }
+  }
+
+  abrirModal('modal-edicao-rapida-ficha');
+
+  setTimeout(() => {
+    const focoAutomatico =
+      campoFoco ||
+      (diag.alertas.find((a) => a.campo)?.campo) ||
+      'nome';
+    const mapCampoInput = {
+      whatsapp: 'rapido-whatsapp',
+      endereco: 'rapido-endereco',
+      observacoes: 'rapido-observacoes',
+      nome: 'rapido-nome',
+    };
+    const inputAlvo = document.getElementById(mapCampoInput[focoAutomatico] || 'rapido-whatsapp');
+    if (inputAlvo) {
+      inputAlvo.focus();
+      if (inputAlvo.select) inputAlvo.select();
+    }
+  }, 120);
+}
+
+async function salvarEdicaoRapidaFicha(e) {
+  e.preventDefault();
+  const fichaId = document.getElementById('rapido-ficha-id').value;
+  const irProxima = document.getElementById('rapido-ir-proxima').value === 'true';
+  const nome = document.getElementById('rapido-nome').value.trim();
+  const whatsapp = document.getElementById('rapido-whatsapp').value.trim();
+  const cpf = document.getElementById('rapido-cpf').value.trim();
+  const endereco = document.getElementById('rapido-endereco').value.trim();
+  const ponto_referencia = document.getElementById('rapido-referencia').value.trim();
+  const dia_vencimento_padrao = parseInt(document.getElementById('rapido-dia-vencimento').value, 10) || 10;
+  const valor_parcela_padrao = parseFloat(document.getElementById('rapido-valor-parcela').value) || 100;
+  const saldo_devedor_total = parseFloat(document.getElementById('rapido-saldo-atual').value) || 0;
+  const observacoes = document.getElementById('rapido-observacoes').value.trim();
+
+  if (!nome || nome.length < 2) {
+    mostrarToast('Informe o nome da cliente.', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/fichas/${fichaId}/cadastro-rapido`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome,
+        whatsapp,
+        cpf,
+        endereco,
+        ponto_referencia,
+        dia_vencimento_padrao,
+        valor_parcela_padrao,
+        saldo_devedor_total,
+        observacoes,
+      }),
+    });
+
+    if (res.ok) {
+      const fichaAtualizada = await res.json();
+      const idx = state.fichas.findIndex((f) => f.id === fichaId);
+      if (idx >= 0) {
+        state.fichas[idx] = { ...state.fichas[idx], ...fichaAtualizada };
+      }
+      const cli = state.clientes.find((c) => c.id === fichaAtualizada.cliente_id);
+      if (cli) {
+        cli.nome = fichaAtualizada.cliente_nome || nome;
+        cli.whatsapp = fichaAtualizada.cliente_whatsapp || whatsapp;
+        cli.telefone = fichaAtualizada.cliente_whatsapp || whatsapp;
+        cli.cpf = cpf;
+        cli.endereco = endereco;
+        cli.ponto_referencia = ponto_referencia;
+        cli.observacoes = observacoes;
+      }
+    }
+  } catch (err) {
+    console.warn('Fallback local salvarEdicaoRapidaFicha:', err);
+  }
+
+  atualizarKpisFichas();
+  renderizarFichas();
+  atualizarDashboardCobrancas();
+
+  if (irProxima) {
+    const pendentes = state.fichas.filter((f) => f.id !== fichaId && obterDiagnosticoFichaUI(f).tem_pendencia);
+    if (pendentes.length > 0) {
+      mostrarToast(`✅ Ficha de ${nome} salva! Abrindo próxima pendente (${pendentes.length} restantes)...`, 'success');
+      abrirEdicaoRapidaFicha(pendentes[0].id);
+      return;
+    } else {
+      mostrarToast(`🎉 Parabéns! Todas as fichas pendentes foram revisadas!`, 'success');
+    }
+  } else {
+    mostrarToast(`✅ Dados da ficha de ${nome} salvos com sucesso!`, 'success');
+  }
+
+  fecharModal('modal-edicao-rapida-ficha');
 }
 
 // -----------------------------------------------------------------------------
@@ -749,8 +1139,9 @@ async function abrirDetalhesFicha(fichaId) {
   const cpf = cli.cpf || '';
   const saldoTotal = Number(fichaObj.saldo_devedor_total) || 0;
   const valorParcela = Number(fichaObj.valor_parcela_padrao) || 50;
-  const diaVenc = Number(fichaObj.dia_vencimento_padrao) || 5;
-  const isVale = diaVenc === 20;
+  const diaVenc = Number(fichaObj.dia_vencimento_padrao) || 10;
+  const diaFmt = formatarDiaDoisDigitos(diaVenc);
+  const isVenceHoje = diaVenc === new Date().getDate();
   const observacoes = fichaObj.observacoes || cli.observacoes || '';
 
   // 1. Preenche o Header do Modal
@@ -766,11 +1157,11 @@ async function abrirDetalhesFicha(fichaId) {
     if (saldoTotal <= 0) {
       elStatusBadge.textContent = '✨ Quitada';
       elStatusBadge.className = 'badge-status-pill green';
-    } else if (isVale) {
-      elStatusBadge.textContent = '🎟️ Vale Dia 20';
+    } else if (isVenceHoje) {
+      elStatusBadge.textContent = `🎯 Vence Hoje (Dia ${diaFmt})`;
       elStatusBadge.className = 'badge-status-pill yellow';
     } else {
-      elStatusBadge.textContent = `💵 Pagto Dia 0${diaVenc}`;
+      elStatusBadge.textContent = `📅 Todo Dia ${diaFmt}`;
       elStatusBadge.className = 'badge-status-pill blue';
     }
   }
@@ -800,7 +1191,7 @@ async function abrirDetalhesFicha(fichaId) {
     elSaldo.style.color = saldoTotal > 0 ? 'var(--wine-primary)' : 'var(--success)';
   }
   if (elParcela) elParcela.textContent = `${formatarMoeda(valorParcela)} / mês`;
-  if (elVenc) elVenc.textContent = `Todo Dia 0${diaVenc} (${isVale ? 'Vale' : 'Salário'})`;
+  if (elVenc) elVenc.textContent = `Vencimento todo Dia ${diaFmt} do mês`;
 
   let totalCompradoSoma = 0;
   vendas.forEach((v) => { totalCompradoSoma += Number(v.valor_total || v.total || 0); });
@@ -1055,7 +1446,7 @@ async function abrirDetalhesFicha(fichaId) {
         const valorDestaParcela = Math.min(valorParcela, saldoRestante);
         saldoRestante -= valorDestaParcela;
 
-        const dataVencParcela = new Date(hoje.getFullYear(), hoje.getMonth() + i, diaVenc);
+        const dataVencParcela = criarDataVencimentoMensalSegura(hoje.getFullYear(), hoje.getMonth() + i, diaVenc);
         const dataStr = dataVencParcela.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         htmlParcelas += `
@@ -1656,18 +2047,22 @@ function limparCarrinho() {
 function aoSelecionarCliente(clienteId) {
   const preview = document.getElementById('cliente-ficha-preview');
   const ficha = state.fichas.find((f) => f.cliente_id === clienteId || f.id === clienteId);
+  const inputDiaVenc = document.getElementById('venda-dia-vencimento');
 
   if (ficha && preview) {
+    const diaFmt = formatarDiaDoisDigitos(ficha.dia_vencimento_padrao || 10);
+    if (inputDiaVenc) inputDiaVenc.value = ficha.dia_vencimento_padrao || 10;
     preview.style.display = 'block';
     preview.innerHTML = `
-      <small style="color: var(--text-muted);">Ficha da Cliente:</small>
+      <small style="color: var(--text-muted);">Ficha da Cliente (Vencimento todo Dia ${diaFmt}):</small>
       <div style="display: flex; justify-content: space-between; margin-top: 4px;">
         <span>Saldo Atual: <strong>${formatarMoeda(ficha.saldo_devedor_total)}</strong></span>
         <span>Parcela Padrão: <strong>${formatarMoeda(ficha.valor_parcela_padrao)}</strong></span>
       </div>
     `;
-  } else if (preview) {
-    preview.style.display = 'none';
+  } else {
+    if (preview) preview.style.display = 'none';
+    if (inputDiaVenc && !inputDiaVenc.value) inputDiaVenc.value = 10;
   }
 
   atualizarSimuladorCrediario();
@@ -1752,8 +2147,9 @@ function calcularProjecaoPrazo(dividendo, valorParcela) {
   hoje.setMonth(hoje.getMonth() + numParcelas);
   const mesQuita = meses[hoje.getMonth()];
   const anoQuita = hoje.getFullYear();
+  const diaEscolhido = parseInt(document.getElementById('venda-dia-vencimento')?.value || '10', 10) || 10;
 
-  textoProjecao.textContent = `${numParcelas}x de ${formatarMoeda(valorParcela)} • Quita em ${mesQuita}/${anoQuita}`;
+  textoProjecao.textContent = `${numParcelas}x de ${formatarMoeda(valorParcela)} (Todo Dia ${formatarDiaDoisDigitos(diaEscolhido)}) • Quita em ${mesQuita}/${anoQuita}`;
 
   const clienteId = document.getElementById('venda-cliente-select')?.value;
   const ficha = state.fichas.find((f) => f.cliente_id === clienteId || f.id === clienteId);
@@ -1788,6 +2184,8 @@ async function finalizarVenda() {
   const formaPagamento = document.getElementById('venda-forma-pagamento').value;
   const tipoEntrega = document.querySelector('input[name="tipo-entrega"]:checked')?.value || 'PRONTA_ENTREGA';
   const novaParcela = document.getElementById('venda-parcela-valor').value;
+  const novoDiaVencInput = document.getElementById('venda-dia-vencimento')?.value;
+  const novoDiaVenc = novoDiaVencInput ? parseInt(novoDiaVencInput, 10) : undefined;
 
   const total = state.carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
 
@@ -1809,6 +2207,7 @@ async function finalizarVenda() {
     valor_total: total,
     itens: itensPayload,
     novo_valor_parcela_negociado: novaParcela && Number(novaParcela) > 0 ? Number(novaParcela) : undefined,
+    novo_dia_vencimento: novoDiaVenc && novoDiaVenc >= 1 && novoDiaVenc <= 31 ? novoDiaVenc : undefined,
   };
 
   const cli = state.clientes.find((c) => c.id === clienteId) || {};
@@ -2481,7 +2880,7 @@ async function carregarClientes() {
   const select = document.getElementById('venda-cliente-select');
   if (select) {
     select.innerHTML = '<option value="">Selecione ou busque a cliente...</option>' +
-      state.clientes.map((c) => `<option value="${c.id}">${c.nome} (Dia ${c.dia_vencimento_padrao || 5})</option>`).join('');
+      state.clientes.map((c) => `<option value="${c.id}">${c.nome} (Todo Dia ${formatarDiaDoisDigitos(c.dia_vencimento_padrao || 10)})</option>`).join('');
   }
 
   renderizarTabelaClientes();
@@ -2499,7 +2898,9 @@ function renderizarTabelaClientes(lista = state.clientes) {
         .map(
           (c) => {
             const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
-            const isVale = Number(c.dia_vencimento_padrao) === 20;
+            const diaVenc = Number(c.dia_vencimento_padrao) || 10;
+            const diaFmt = formatarDiaDoisDigitos(diaVenc);
+            const isVenceHoje = diaVenc === new Date().getDate();
             const fone = c.whatsapp || c.telefone || '';
             const foneFmt = fone ? `📱 ${fone}` : '<span style="color: var(--text-muted);">Sem WhatsApp</span>';
             const end = c.endereco ? `📍 ${c.endereco}${c.ponto_referencia ? ` (${c.ponto_referencia})` : ''}` : '<span style="color: var(--text-muted);">Não informado</span>';
@@ -2520,8 +2921,8 @@ function renderizarTabelaClientes(lista = state.clientes) {
           </td>
           <td style="max-width: 250px; font-size: 0.88rem;">${end}</td>
           <td>
-            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
-              ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${c.dia_vencimento_padrao || 5}`}
+            <span class="badge-tag ${isVenceHoje ? 'vale' : 'pagamento'}">
+              ${isVenceHoje ? `🎯 Hoje (Dia ${diaFmt})` : `📅 Todo Dia ${diaFmt}`}
             </span>
           </td>
           <td>
@@ -2535,7 +2936,7 @@ function renderizarTabelaClientes(lista = state.clientes) {
                 📑 Ficha
               </button>
               ${fone ? `
-              <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo})" title="Cobrar / Enviar mensagem">
+              <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo}, ${diaVenc})" title="Cobrar / Enviar mensagem">
                 💬 Zap
               </button>` : ''}
             </div>
@@ -2562,7 +2963,9 @@ function renderizarTabelaClientes(lista = state.clientes) {
         .map(
           (c) => {
             const saldo = Number(c.saldo_devedor_total ?? c.saldo_devedor ?? 0);
-            const isVale = Number(c.dia_vencimento_padrao) === 20;
+            const diaVenc = Number(c.dia_vencimento_padrao) || 10;
+            const diaFmt = formatarDiaDoisDigitos(diaVenc);
+            const isVenceHoje = diaVenc === new Date().getDate();
             const fone = c.whatsapp || c.telefone || '';
 
             return `
@@ -2575,8 +2978,8 @@ function renderizarTabelaClientes(lista = state.clientes) {
                 <span>📱 ${fone || 'Sem contato'}</span>
               </div>
             </div>
-            <span class="badge-tag ${isVale ? 'vale' : 'pagamento'}">
-              ${isVale ? '🎟️ Vale Dia 20' : `💵 Pagto Dia 0${c.dia_vencimento_padrao || 5}`}
+            <span class="badge-tag ${isVenceHoje ? 'vale' : 'pagamento'}">
+              ${isVenceHoje ? `🎯 Hoje (Dia ${diaFmt})` : `📅 Dia ${diaFmt}`}
             </span>
           </div>
           <div class="client-card-body">
@@ -2596,7 +2999,7 @@ function renderizarTabelaClientes(lista = state.clientes) {
               📑 Ver Ficha
             </button>
             ${fone ? `
-            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo})">
+            <button class="btn btn-success btn-sm" onclick="enviarLembreteWhatsApp('${c.id}', '${c.nome}', '${fone}', ${c.valor_parcela_padrao || 100}, ${saldo}, ${diaVenc})">
               💬 Zap
             </button>` : ''}
           </div>
@@ -3250,8 +3653,11 @@ function calcularMargemLucroFormulario() {
 // =============================================================================
 // WHATSAPP GATEWAY & LEMBRETES
 // =============================================================================
-function enviarLembreteWhatsApp(fichaId, nome, telefone, valorParcela, saldoTotal) {
-  const msg = `Olá, ${nome}! Tudo bem com você? Esperamos que sim! 😊\nAqui é do Ateliê Enxovais Gabriel!\n\nPassando para lembrar que hoje é o dia combinado do seu pagamento/vale da sua ficha.\n\n💰 Valor da Parcela: ${formatarMoeda(valorParcela)}\n📑 Saldo Restante: ${formatarMoeda(saldoTotal)}\n\nPara sua comodidade, você pode pagar direto pelo Pix:\nChave Pix: 12345678900 (Enxovais Gabriel)\n\nAssim que realizar o pagamento, nos envie o comprovante por aqui. Muito obrigado pela confiança! 🏠✨`;
+function enviarLembreteWhatsApp(fichaId, nome, telefone, valorParcela, saldoTotal, diaVencimento) {
+  const fichaRef = state.fichas.find((f) => f.id === fichaId || f.cliente_id === fichaId);
+  const diaReal = diaVencimento || fichaRef?.dia_vencimento_padrao || 10;
+  const diaFmt = formatarDiaDoisDigitos(diaReal);
+  const msg = `Olá, ${nome}! Tudo bem com você? Esperamos que sim! 😊\nAqui é do Ateliê Enxovais Gabriel!\n\nPassando para lembrar do vencimento combinado para todo *dia ${diaFmt}* da sua ficha de crediário.\n\n💰 Valor da Parcela: ${formatarMoeda(valorParcela)}\n📑 Saldo Restante: ${formatarMoeda(saldoTotal)}\n\nPara sua comodidade, você pode pagar direto pelo Pix:\nChave Pix: 12345678900 (Enxovais Gabriel)\n\nAssim que realizar o pagamento, nos envie o comprovante por aqui. Muito obrigado pela confiança! 🏠✨`;
   abrirLinkWhatsApp(telefone, msg);
 }
 
@@ -3266,7 +3672,7 @@ function enviarLembreteWhatsAppFichaAtual() {
   const cli = state.clientes.find((c) => c.id === ficha.cliente_id) || {};
   const nome = cli.nome || ficha.cliente_nome || 'Cliente';
   const fone = cli.whatsapp || cli.telefone || ficha.cliente_whatsapp || '';
-  enviarLembreteWhatsApp(ficha.id, nome, fone, ficha.valor_parcela_padrao, ficha.saldo_devedor_total);
+  enviarLembreteWhatsApp(ficha.id, nome, fone, ficha.valor_parcela_padrao, ficha.saldo_devedor_total, ficha.dia_vencimento_padrao);
 }
 
 function abrirLinkWhatsApp(telefone, mensagem) {
@@ -3768,17 +4174,8 @@ function limparSimuladorDemo() {
 }
 
 function definirDiaDemo(dia) {
-  demoState.diaVencimento = Number(dia);
-  const lbl20 = document.getElementById('lbl-demo-dia-20');
-  const lbl05 = document.getElementById('lbl-demo-dia-05');
-
-  if (dia === 20) {
-    if (lbl20) lbl20.classList.add('active');
-    if (lbl05) lbl05.classList.remove('active');
-  } else {
-    if (lbl05) lbl05.classList.add('active');
-    if (lbl20) lbl20.classList.remove('active');
-  }
+  const diaNum = Math.max(1, Math.min(31, parseInt(dia, 10) || 10));
+  demoState.diaVencimento = diaNum;
   renderizarSimuladorDemo();
 }
 
@@ -3805,7 +4202,7 @@ function renderizarSimuladorDemo() {
   elSaldo.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   elParcela.textContent = parcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   elMeses.textContent = meses > 0 ? `${meses} parcelas (${meses} meses)` : 'Quitado / R$ 0';
-  elVencimento.textContent = `Todo Dia ${demoState.diaVencimento.toString().padStart(2, '0')} (${demoState.diaVencimento === 20 ? 'Vale' : 'Salário'})`;
+  elVencimento.textContent = `Todo Dia ${formatarDiaDoisDigitos(demoState.diaVencimento)} do mês`;
 
   // Renderizar carnê simulado
   if (total === 0) {
@@ -3821,7 +4218,7 @@ function renderizarSimuladorDemo() {
     const valorDestaParcela = Math.min(parcela, saldoRestante);
     saldoRestante -= valorDestaParcela;
 
-    const dataVenc = new Date(hoje.getFullYear(), hoje.getMonth() + (i - 1), demoState.diaVencimento);
+    const dataVenc = criarDataVencimentoMensalSegura(hoje.getFullYear(), hoje.getMonth() + (i - 1), demoState.diaVencimento);
     const dataStr = dataVenc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
     htmlParcelas += `

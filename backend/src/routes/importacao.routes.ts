@@ -11,8 +11,10 @@ const validarCsvSchema = z.object({
 const executarImportacaoSchema = z.object({
   itens: z.array(
     z.object({
+      arquivos_origem: z.string().optional().nullable(),
+      codigo_ficha: z.string().optional().nullable(),
       nome: z.string().min(2, 'Nome é obrigatório'),
-      whatsapp: z.string().min(10, 'WhatsApp inválido'),
+      whatsapp: z.string().optional().default(''),
       cpf: z.string().optional().nullable(),
       endereco: z.string().optional().nullable(),
       ponto_referencia: z.string().optional().nullable(),
@@ -93,4 +95,3 @@ router.post('/historico/executar', async (req, res, next) => {
 });
 
 export default router;
-

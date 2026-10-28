@@ -50,7 +50,7 @@
         <button class="sidebar-v2-btn" data-tab="cobrancas" onclick="navegarAbaV2('cobrancas')">
           <span class="btn-icon">📅</span>
           <span>Cobranças do Dia</span>
-          <span class="badge-pill" id="sidebar-badge-cobrancas">Dia 05 / 20</span>
+          <span class="badge-pill" id="sidebar-badge-cobrancas">Dia 01 a 31</span>
         </button>
         <button class="sidebar-v2-btn" data-tab="fichas" onclick="navegarAbaV2('fichas')">
           <span class="btn-icon">📑</span>
@@ -191,7 +191,7 @@
               <div class="panel-header-v2">
                 <div class="panel-title-box">
                   <h3><span>🔔</span> Cobranças Prioritárias do Dia</h3>
-                  <span>Clientes com vencimento hoje nos dias combinados (05 ou 20)</span>
+                  <span>Clientes com vencimento hoje ou nos próximos dias combinados (Dia 01 a 31)</span>
                 </div>
                 <span class="see-all-link" onclick="navegarAbaV2('cobrancas')">Ver Todas →</span>
               </div>
@@ -224,10 +224,14 @@
                 </div>
 
                 <div class="sim-field-group">
-                  <label>Dia Combinado do Vencimento:</label>
-                  <div class="sim-btn-group" id="sim-dias-group">
-                    <button type="button" class="sim-chip-btn active" onclick="setDiaSimulador(20, this)">🎟️ Dia 20 (Vale)</button>
-                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(5, this)">💵 Dia 05 (Salário)</button>
+                  <label>Dia Combinado do Vencimento (1 a 31):</label>
+                  <div class="sim-btn-group" id="sim-dias-group" style="align-items: center;">
+                    <input type="number" id="sim-dia-livre-v2" min="1" max="31" value="10" oninput="setDiaSimulador(this.value, null)" style="width: 74px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--border-strong); font-weight: 800; text-align: center;">
+                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(5, this)">Dia 05</button>
+                    <button type="button" class="sim-chip-btn active" onclick="setDiaSimulador(10, this)">Dia 10</button>
+                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(15, this)">Dia 15</button>
+                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(20, this)">Dia 20</button>
+                    <button type="button" class="sim-chip-btn" onclick="setDiaSimulador(25, this)">Dia 25</button>
                   </div>
                 </div>
 

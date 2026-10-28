@@ -180,9 +180,9 @@
             </div>
 
             <div class="blog-card-body">
-              <h3 class="blog-post-title">Como Funciona o Crediário Contínuo & Casamento de Vencimentos</h3>
+              <h3 class="blog-post-title">Como Funciona o Crediário Contínuo & Dia de Vencimento Livre</h3>
               <p class="blog-post-desc">
-                No <strong>Enxovais Gabriel</strong>, quando uma cliente já tem um dividendo e compra um novo produto, nós <em>não abrimos um crediário separado</em>. O novo valor soma-se ao saldo anterior e ajustamos o número de parcelas mantendo o valor que cabe no bolso dela, vencendo sempre no <strong>dia do pagamento (05)</strong> ou no <strong>dia do vale (20)</strong>.
+                No <strong>Enxovais Gabriel</strong>, quando uma cliente já tem um dividendo e compra um novo produto, nós <em>não abrimos um crediário separado</em>. O novo valor soma-se ao saldo anterior e ajustamos o número de parcelas mantendo o valor que cabe no bolso dela, vencendo sempre no <strong>dia do mês escolhido pela cliente (de 01 a 31)</strong>.
               </p>
 
               <!-- Widget Interativo: Simulador de Ficha Viva -->
@@ -212,16 +212,16 @@
                 <!-- Configurações da Simulação (Dia do Vencimento & Valor da Parcela) -->
                 <div class="demo-controls-grid">
                   <div class="demo-control-group">
-                    <label>Dia Combinado do Vencimento:</label>
-                    <div class="demo-radio-buttons">
-                      <label class="demo-radio-btn active" id="lbl-demo-dia-20" onclick="definirDiaDemo(20)">
-                        <input type="radio" name="demo-dia" value="20" checked>
-                        <span>🎟️ Dia 20 (Vale)</span>
-                      </label>
-                      <label class="demo-radio-btn" id="lbl-demo-dia-05" onclick="definirDiaDemo(5)">
-                        <input type="radio" name="demo-dia" value="5">
-                        <span>💵 Dia 05 (Salário)</span>
-                      </label>
+                    <label>Dia do Mês Escolhido pela Cliente (1 a 31):</label>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                      <input type="number" id="input-demo-dia-livre" class="form-control" min="1" max="31" value="10" style="max-width: 90px; font-weight: 700; text-align: center;" oninput="definirDiaDemo(this.value)">
+                      <div class="demo-parcela-chips" style="flex: 1;">
+                        <button type="button" class="demo-chip-val" onclick="document.getElementById('input-demo-dia-livre').value=5; definirDiaDemo(5)">Dia 05</button>
+                        <button type="button" class="demo-chip-val active" onclick="document.getElementById('input-demo-dia-livre').value=10; definirDiaDemo(10)">Dia 10</button>
+                        <button type="button" class="demo-chip-val" onclick="document.getElementById('input-demo-dia-livre').value=15; definirDiaDemo(15)">Dia 15</button>
+                        <button type="button" class="demo-chip-val" onclick="document.getElementById('input-demo-dia-livre').value=20; definirDiaDemo(20)">Dia 20</button>
+                        <button type="button" class="demo-chip-val" onclick="document.getElementById('input-demo-dia-livre').value=28; definirDiaDemo(28)">Dia 28</button>
+                      </div>
                     </div>
                   </div>
 
@@ -546,14 +546,17 @@
           </div>
         </div>
 
-        <!-- Filtros Rápidos de Dia do Vencimento / Vale -->
+        <!-- Filtros Rápidos de Dia do Vencimento Livre (1 a 31) -->
         <div class="filter-bar">
           <div class="filter-chips">
-            <button class="chip active" onclick="filtrarCobrancas('todos', this)">Todos</button>
+            <button class="chip active" onclick="filtrarCobrancas('todos', this)">🌟 Todas em Aberto</button>
             <button class="chip" onclick="filtrarCobrancas('hoje', this)">📅 Vence Hoje</button>
-            <button class="chip" onclick="filtrarCobrancas(5, this)">💵 Dia 05 (Pagamento)</button>
-            <button class="chip" onclick="filtrarCobrancas(20, this)">🎟️ Dia 20 (Vale)</button>
-            <button class="chip" onclick="filtrarCobrancas(10, this)">Dia 10</button>
+            <button class="chip" onclick="filtrarCobrancas('proximos5', this)">📆 Próximos 5 Dias</button>
+            <button class="chip" onclick="filtrarCobrancas('atrasadas', this)">⚠️ Vencidas no Mês</button>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 99px; padding: 2px 10px;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">🔢 Dia:</span>
+              <input type="number" id="filtro-dia-cobrancas-input" min="1" max="31" placeholder="1-31" style="width: 58px; border: none; background: transparent; font-weight: 700; color: var(--wine-primary); text-align: center; outline: none;" oninput="filtrarCobrancasPorDiaEspecifico(this.value)" title="Digite qualquer dia de 1 a 31 para filtrar">
+            </div>
           </div>
           <div class="filter-search">
             <input type="text" id="search-cobrancas" placeholder="Filtrar por nome ou WhatsApp..." oninput="filtrarListaCobrancasInput(this.value)">
@@ -600,17 +603,31 @@
               <small>Oportunidades de recompra</small>
             </div>
           </div>
+          <div class="kpi-card highlight-gold" style="cursor: pointer; border-left: 4px solid #D97706; background: #FFFBEB;" onclick="filtrarFichasPorCiclo('PENDENCIAS', document.getElementById('chip-fichas-pendencias'))" title="Clique para filtrar fichas com informações incompletas ou inconsistentes">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-details">
+              <span style="color: #B45309; font-weight: 700;">Incompletas / Revisar</span>
+              <h3 id="fichas-kpi-pendencias-count" style="color: #B45309;">0</h3>
+              <small id="fichas-kpi-pendencias-sub" style="color: #92400E;">Clique p/ completar dados</small>
+            </div>
+          </div>
         </div>
 
-        <!-- Filtros Rápidos por Vencimento / Ciclo -->
+        <!-- Filtros Rápidos por Vencimento Livre (1 a 31) -->
         <div class="filter-bar">
           <div class="filter-chips">
             <button class="chip active" onclick="filtrarFichasPorCiclo('TODOS', this)">🌟 Todas as Fichas</button>
+            <button class="chip" id="chip-fichas-pendencias" style="border-color: #F59E0B; background: #FFFBEB; color: #B45309; font-weight: 700;" onclick="filtrarFichasPorCiclo('PENDENCIAS', this)">
+              ⚠️ Incompletas / Revisar (<span id="chip-pendencias-badge">0</span>)
+            </button>
             <button class="chip" onclick="filtrarFichasPorCiclo('HOJE', this)">📅 Vence Hoje</button>
-            <button class="chip" onclick="filtrarFichasPorCiclo('5', this)">💵 Dia 05 (Salário)</button>
-            <button class="chip" onclick="filtrarFichasPorCiclo('20', this)">🎟️ Dia 20 (Vale)</button>
+            <button class="chip" onclick="filtrarFichasPorCiclo('PROXIMOS5', this)">📆 Próximos 5 Dias</button>
             <button class="chip" onclick="filtrarFichasPorCiclo('ATRASADOS', this)">⚠️ Em Atraso</button>
             <button class="chip" onclick="filtrarFichasPorCiclo('QUITADOS', this)">✨ Quitadas (Saldo R$ 0)</button>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 99px; padding: 2px 10px;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">🔢 Dia:</span>
+              <input type="number" id="filtro-dia-fichas-input" min="1" max="31" placeholder="1-31" style="width: 58px; border: none; background: transparent; font-weight: 700; color: var(--wine-primary); text-align: center; outline: none;" oninput="filtrarFichasPorDiaEspecifico(this.value)" title="Digite qualquer dia de 1 a 31 para filtrar">
+            </div>
           </div>
           <div class="filter-search">
             <input type="text" id="search-fichas" placeholder="Buscar por nome, WhatsApp, endereço ou bairro..." oninput="buscarFichas(this.value)">
@@ -635,9 +652,9 @@
                 <th>Vencimento</th>
                 <th>Saldo Devedor</th>
                 <th>Parcela Fixa</th>
-                <th>Histórico Recente</th>
-                <th>Status</th>
-                <th>Ações</th>
+                <th>Produtos / Notas</th>
+                <th>Alertas & Situação</th>
+                <th>Ações Rápidas</th>
               </tr>
             </thead>
             <tbody id="fichas-table-body">
@@ -765,14 +782,20 @@
                     </div>
                   </div>
 
-                  <div class="form-group" style="margin-top: 12px;">
-                    <label>Valor da Parcela Fixa Combinada (R$):</label>
-                    <div class="input-with-hint">
-                      <input type="number" id="venda-parcela-valor" class="form-control" placeholder="Manter atual ou novo valor" step="1.00" oninput="aoAtualizarParcelaSimulador(this.value)">
+                  <div class="form-row" style="margin-top: 12px; gap: 10px;">
+                    <div class="form-group" style="flex: 1.3;">
+                      <label>Valor da Parcela Fixa Combinada (R$):</label>
+                      <div class="input-with-hint">
+                        <input type="number" id="venda-parcela-valor" class="form-control" placeholder="Manter atual ou novo valor" step="1.00" oninput="aoAtualizarParcelaSimulador(this.value)">
+                      </div>
                     </div>
-                    <div class="quick-parcela-chips" id="quick-parcela-chips">
-                      <!-- Chips de sugestões: + R$ 20, + R$ 50, etc -->
+                    <div class="form-group" style="flex: 1;">
+                      <label>Dia de Pagamento (1 a 31):</label>
+                      <input type="number" id="venda-dia-vencimento" class="form-control" min="1" max="31" inputmode="numeric" placeholder="Ex: 10, 15, 28..." oninput="atualizarSimuladorCrediario()">
                     </div>
+                  </div>
+                  <div class="quick-parcela-chips" id="quick-parcela-chips" style="margin-bottom: 10px;">
+                    <!-- Chips de sugestões: + R$ 20, + R$ 50, etc -->
                   </div>
 
                   <!-- Comparativo de Prazos -->
@@ -1326,15 +1349,9 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
 
             <div class="form-row">
               <div class="form-group">
-                <label>Dia Combinado de Vencimento:</label>
-                <select id="edit-pront-dia-vencimento" class="form-control">
-                  <option value="5">Dia 05 (Salário / Pagamento)</option>
-                  <option value="20">Dia 20 (Vale / Adiantamento)</option>
-                  <option value="10">Dia 10</option>
-                  <option value="15">Dia 15</option>
-                  <option value="1">Dia 01</option>
-                  <option value="25">Dia 25</option>
-                </select>
+                <label>Dia de Vencimento no Mês (1 a 31):</label>
+                <input type="number" id="edit-pront-dia-vencimento" class="form-control" min="1" max="31" step="1" inputmode="numeric" placeholder="Qualquer dia de 1 a 31" required>
+                <small class="text-muted">A cliente pode escolher qualquer dia do mês (1 a 31).</small>
               </div>
               <div class="form-group">
                 <label>Valor da Parcela Fixa (R$):</label>
@@ -1447,14 +1464,8 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
               <input type="number" step="0.01" min="1" id="ajuste-nova-parcela" class="form-control" placeholder="100.00" />
             </div>
             <div class="form-group" style="flex: 1;">
-              <label for="ajuste-novo-vencimento">Dia Vencimento:</label>
-              <select id="ajuste-novo-vencimento" class="form-control">
-                <option value="5">Dia 05</option>
-                <option value="10">Dia 10</option>
-                <option value="15">Dia 15</option>
-                <option value="20">Dia 20 (Vale)</option>
-                <option value="25">Dia 25</option>
-              </select>
+              <label for="ajuste-novo-vencimento">Dia Vencimento (1 a 31):</label>
+              <input type="number" id="ajuste-novo-vencimento" class="form-control" min="1" max="31" step="1" inputmode="numeric" placeholder="1 a 31" />
             </div>
           </div>
         </div>
@@ -1754,15 +1765,9 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
 
         <div class="form-row">
           <div class="form-group">
-            <label>Dia Combinado de Vencimento:</label>
-            <select id="cli-dia-vencimento" class="form-control">
-              <option value="5">Dia 05 (Pagamento / Salário)</option>
-              <option value="20">Dia 20 (Vale / Adiantamento)</option>
-              <option value="10">Dia 10</option>
-              <option value="15">Dia 15</option>
-              <option value="1">Dia 01</option>
-              <option value="25">Dia 25</option>
-            </select>
+            <label>Dia de Vencimento Escolhido (1 a 31):</label>
+            <input type="number" id="cli-dia-vencimento" class="form-control input-lg" min="1" max="31" step="1" value="10" inputmode="numeric" placeholder="Ex: 5, 12, 18, 25..." required>
+            <small class="text-muted">Qualquer dia do mês escolhido pela cliente (1 a 31).</small>
           </div>
           <div class="form-group">
             <label>Valor da Parcela Fixa (R$):</label>
@@ -2086,6 +2091,103 @@ Muito obrigado pela preferência! 🏠❤️</textarea>
           💾 Salvar Produto no Carnê
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDIÇÃO RÁPIDA & CONFERÊNCIA VISUAL DA FICHA FÍSICA (1 CLIQUE) -->
+  <!-- ========================================================================= -->
+  <div class="modal-backdrop" id="modal-edicao-rapida-ficha">
+    <div class="modal-sheet modal-lg" style="max-width: 960px;">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>✏️ Completar & Conferir Ficha</span>
+            <span id="rapido-codigo-badge" class="badge-status" style="background: #EFF6FF; color: #1E40AF; font-size: 0.78rem; padding: 3px 10px;"></span>
+          </h3>
+          <small style="color: var(--text-muted);">Preencha os campos destacados em amarelo olhando a foto original da ficha ao lado</small>
+        </div>
+        <button class="btn-close" onclick="fecharModal('modal-edicao-rapida-ficha')">✕</button>
+      </div>
+
+      <!-- Alertas Ativos desta Ficha -->
+      <div id="rapido-alertas-banner" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: 0.86rem;">
+      </div>
+
+      <div class="quick-edit-split-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; margin-top: 14px; align-items: start;">
+        <!-- Coluna 1: Formulário Limpo de Preenchimento Rápido -->
+        <form id="form-edicao-rapida-ficha" onsubmit="salvarEdicaoRapidaFicha(event)">
+          <input type="hidden" id="rapido-ficha-id">
+          <input type="hidden" id="rapido-ir-proxima" value="false">
+
+          <div class="form-group">
+            <label>Nome Completo da Cliente: *</label>
+            <input type="text" id="rapido-nome" class="form-control" required placeholder="Nome da cliente">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="group-rapido-whatsapp" style="flex: 1.3;">
+              <label>📱 WhatsApp (com DDD):</label>
+              <input type="tel" id="rapido-whatsapp" class="form-control" placeholder="Ex: (16) 99123-4567" inputmode="tel" oninput="mascararTelefoneInput(this)">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>CPF (Opcional):</label>
+              <input type="text" id="rapido-cpf" class="form-control" placeholder="000.000.000-00">
+            </div>
+          </div>
+
+          <div class="form-group" id="group-rapido-endereco">
+            <label>📍 Endereço Completo (Rua, Nº e Bairro):</label>
+            <input type="text" id="rapido-endereco" class="form-control" placeholder="Ex: Rua das Flores, 120 - Centro">
+          </div>
+
+          <div class="form-group">
+            <label>Ponto de Referência / Bairro:</label>
+            <input type="text" id="rapido-referencia" class="form-control" placeholder="Ex: Perto do supermercado">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Dia Vencimento (1-31):</label>
+              <input type="number" id="rapido-dia-vencimento" class="form-control" min="1" max="31" required>
+            </div>
+            <div class="form-group">
+              <label>Parcela Fixa (R$):</label>
+              <input type="number" id="rapido-valor-parcela" class="form-control" step="0.50" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>Saldo Atual (R$):</label>
+              <input type="number" id="rapido-saldo-atual" class="form-control" step="0.50" min="0" required>
+            </div>
+          </div>
+
+          <div class="form-group" id="group-rapido-observacoes">
+            <label>📝 Produtos, Histórico & Observações da Ficha:</label>
+            <textarea id="rapido-observacoes" class="form-control" rows="3" placeholder="Produtos comprados, datas pagas, anotações do verso..."></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;" onclick="document.getElementById('rapido-ir-proxima').value='false'">
+              💾 Salvar Alterações
+            </button>
+            <button type="submit" class="btn btn-outline" style="flex: 1.2; border-color: #D97706; color: #B45309; background: #FFFBEB; font-weight: 700;" onclick="document.getElementById('rapido-ir-proxima').value='true'" title="Salva esta ficha e abre imediatamente a próxima ficha incompleta da fila">
+              ⏭️ Salvar & Ir p/ Próxima Pendente
+            </button>
+          </div>
+        </form>
+
+        <!-- Coluna 2: Visualizador das Fotos Originais da Ficha Física (Frente e Verso) -->
+        <div id="rapido-fotos-panel" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 12px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 0.9rem; color: #1E293B;">📸 Foto Original da Ficha Física</strong>
+            <small style="color: #64748B;">Clique na foto para ampliar</small>
+          </div>
+          <div id="rapido-fotos-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 460px; overflow-y: auto;">
+            <!-- Imagens Frente / Verso inseridas via JS -->
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

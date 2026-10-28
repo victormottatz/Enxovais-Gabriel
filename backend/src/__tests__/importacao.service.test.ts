@@ -98,5 +98,30 @@ Francisca Souza,11999998888,10,650.50,150.00`;
     expect(resultado.itens[0].dados.saldo_devedor_atual).toBe(650.5);
     expect(resultado.itens[0].dados.valor_parcela).toBe(150.0);
   });
-});
 
+  it('deve aceitar qualquer dia livre do mês (1 a 31) na coluna dia_vencimento ou tipo_ciclo', () => {
+    const csvDiasLivres = `nome;whatsapp;dia_vencimento;tipo_ciclo;saldo_devedor_atual;valor_parcela
+Lucia Helena;16991112233;Todo dia 14;MENSAL_PAGAMENTO;400,00;100,00
+Sandra Regina;16992223344;;Dia 28;600,00;150,00
+Vera Lucia;16993334455;31;MENSAL;300,00;100,00`;
+
+    const resultado = ImportacaoService.processarCSV(csvDiasLivres);
+    expect(resultado.validos).toBe(3);
+    expect(resultado.itens[0].dados.dia_vencimento).toBe(14);
+    expect(resultado.itens[1].dados.dia_vencimento).toBe(28);
+    expect(resultado.itens[2].dados.dia_vencimento).toBe(31);
+  });
+
+  it('deve aceitar fichas digitalizadas sem WhatsApp na ficha física gerando alerta de cadastro incompleto', () => {
+    const csvSemWhats = `arquivos_origem;codigo_ficha;nome;whatsapp;endereco;dia_vencimento;saldo_devedor_atual;valor_parcela;produtos
+IMG_6332.jpg;503 LU;ALINE ROCHA;;Rua Antonio Martineli, 255 - Cristo;30;120.00;127.00;1 Tapete e 1 Toalha Mesa`;
+
+    const resultado = ImportacaoService.processarCSV(csvSemWhats);
+    expect(resultado.total).toBe(1);
+    expect(resultado.validos).toBe(1);
+    expect(resultado.itens[0].valido).toBe(true);
+    expect(resultado.itens[0].avisos?.some((a) => a.includes('WhatsApp'))).toBe(true);
+    expect(resultado.itens[0].dados.arquivos_origem).toBe('IMG_6332.jpg');
+    expect(resultado.itens[0].dados.codigo_ficha).toBe('503 LU');
+  });
+});

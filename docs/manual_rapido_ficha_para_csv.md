@@ -60,8 +60,8 @@ Abra o arquivo [`template_fichas_crediario.csv`](file:///x:/enxovais%20gabriel/f
 | **`valor total da compra`** | `1020` | Valor total original da compra |
 | **`ponto_referencia`** | `Bairro P. Ava.` | Bairro ou referência |
 | **`limite_credito`** | `1500` | Se deixar em branco, o sistema usa `1000` |
-| **`dia_vencimento`** | `10` | Apenas o número do dia (de `1` a `31`) |
-| **`tipo_ciclo`** | `MENSAL_PAGAMENTO` | Use `MENSAL_PAGAMENTO` ou `QUINZENAL_VALE` |
+| **`dia_vencimento`** | `10` | **Qualquer dia do mês escolhido pela cliente (de `1` a `31`)** — não precisa ser apenas dia 05 ou 20 |
+| **`tipo_ciclo`** | `MENSAL_PAGAMENTO` | Opcional — o sistema aceita qualquer dia (`1` a `31`) automaticamente |
 | **`saldo_devedor_atual`** | `510` | **Quanto falta ela pagar hoje** |
 | **`valor_parcela`** | `170` | Valor de cada parcela mensal |
 | **`observacoes`** | `Ficha 548LU - 6 parcelas de 170` | Qualquer anotação extra da ficha |

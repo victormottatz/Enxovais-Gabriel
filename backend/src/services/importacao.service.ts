@@ -1,8 +1,11 @@
 import { pool } from '../config/database.js';
 import { WhatsAppService } from './whatsapp.service.js';
+import { FichaCrediarioService } from './ficha-crediario.service.js';
 import { AppError } from '../middlewares/error.middleware.js';
 
 export interface LinhaFichaImportacao {
+  arquivos_origem?: string;
+  codigo_ficha?: string;
   nome: string;
   whatsapp: string;
   cpf?: string;
@@ -26,6 +29,7 @@ export interface ItemValidado {
   valido: boolean;
   dados: LinhaFichaImportacao;
   erros: string[];
+  avisos?: string[];
 }
 
 export interface ResultadoValidacao {
@@ -107,7 +111,8 @@ export class ImportacaoService {
    * Processa o texto CSV (separado por ponto e vírgula ou vírgula) e valida cada linha.
    */
   public static processarCSV(csvText: string): ResultadoValidacao {
-    const linhas = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    const linhas = cleanText.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (linhas.length <= 1) {
       throw new AppError('O arquivo CSV está vazio ou contém apenas o cabeçalho', 400);
     }
@@ -127,12 +132,14 @@ export class ImportacaoService {
       return -1;
     };
 
+    const idxArquivosOrigem = findCol('arquivos_origem', 'arquivo_origem', 'arquivosorigem', 'fotos', 'foto', 'imagem');
+    const idxCodigoFicha = findCol('codigo_ficha', 'codigoficha', 'codigo', 'numero_ficha');
     const idxNome = findCol('nome', 'cliente');
     const idxWhatsapp = findCol('whatsapp', 'telefone', 'celular', 'tel');
     const idxCpf = findCol('cpf');
     const idxEndereco = findCol('endereco', 'endereço');
     const idxPontoRef = findCol('ponto_referencia', 'ponto de referencia', 'pontoreferencia', 'referencia');
-    const idxValorTotalCompra = findCol('valor total da compra', 'valor_total_da_compra', 'valortotaldacompra', 'valor_compra', 'total_compra');
+    const idxValorTotalCompra = findCol('valor total da compra', 'valor_total_da_compra', 'valortotaldacompra', 'valor_compra', 'total_compra', 'valor_total_compra');
     const idxLimite = findCol('limite_credito', 'limite', 'limitecredito');
     const idxVencimento = findCol('dia_vencimento', 'vencimento', 'dia');
     const idxCiclo = findCol('tipo_ciclo', 'ciclo');
@@ -158,7 +165,6 @@ export class ImportacaoService {
         return parseFloat(limpo.replace(/\./g, '').replace(',', '.'));
       }
       if (limpo.includes('.') && !limpo.includes(',')) {
-        // Ex: "2.000" como milhar ou decimal
         const partes = limpo.split('.');
         if (partes.length === 2 && partes[1].length === 3) {
           return parseFloat(partes[0] + partes[1]);
@@ -179,7 +185,10 @@ export class ImportacaoService {
       if (!temConteudo) continue;
 
       const erros: string[] = [];
+      const avisos: string[] = [];
 
+      const arquivos_origem = idxArquivosOrigem !== -1 && campos[idxArquivosOrigem] ? campos[idxArquivosOrigem].trim() : undefined;
+      const codigo_ficha = idxCodigoFicha !== -1 && campos[idxCodigoFicha] ? campos[idxCodigoFicha].trim() : undefined;
       const nome = idxNome !== -1 && campos[idxNome] ? campos[idxNome].trim() : '';
       const rawWhatsapp = idxWhatsapp !== -1 && campos[idxWhatsapp] ? campos[idxWhatsapp].trim() : '';
       const cpf = idxCpf !== -1 && campos[idxCpf] ? campos[idxCpf].trim() : undefined;
@@ -187,13 +196,14 @@ export class ImportacaoService {
       const ponto_referencia = idxPontoRef !== -1 && campos[idxPontoRef] ? campos[idxPontoRef].trim() : undefined;
       const valor_total_compra = idxValorTotalCompra !== -1 && campos[idxValorTotalCompra] ? campos[idxValorTotalCompra].trim() : undefined;
       const limite_credito = idxLimite !== -1 && campos[idxLimite] ? parseValor(campos[idxLimite]) : 1000.0;
-      
-      let rawVencimento = idxVencimento !== -1 && campos[idxVencimento] ? parseInt(campos[idxVencimento], 10) : NaN;
+
+      const rawVencStr = idxVencimento !== -1 && campos[idxVencimento] ? campos[idxVencimento].trim() : '';
+      let rawVencimento = rawVencStr ? parseInt(rawVencStr.replace(/\D/g, ''), 10) : NaN;
       const rawCiclo = idxCiclo !== -1 && campos[idxCiclo] ? campos[idxCiclo].trim() : '';
-      
+
       // Tolerância: Se dia_vencimento estiver em branco mas tipo_ciclo contiver "dia 10", extrai o dia
       if (isNaN(rawVencimento) && rawCiclo) {
-        const matchDia = rawCiclo.match(/dia\s*(\d{1,2})/i);
+        const matchDia = rawCiclo.match(/(?:dia|todo\s*dia)\s*(\d{1,2})/i) || rawCiclo.match(/\b(\d{1,2})\b/);
         if (matchDia && matchDia[1]) {
           rawVencimento = parseInt(matchDia[1], 10);
         }
@@ -214,7 +224,7 @@ export class ImportacaoService {
 
       let whatsappFormatado = '';
       if (!rawWhatsapp) {
-        erros.push('WhatsApp é obrigatório');
+        avisos.push('Sem WhatsApp informado na ficha física (completar cadastro)');
       } else {
         try {
           whatsappFormatado = WhatsAppService.sanitizePhone(rawWhatsapp);
@@ -224,6 +234,10 @@ export class ImportacaoService {
         } catch {
           erros.push('Formato de WhatsApp inválido');
         }
+      }
+
+      if (!endereco || endereco.length < 4) {
+        avisos.push('Sem endereço informado na ficha física');
       }
 
       const diaVencimento = isNaN(rawVencimento) || rawVencimento < 1 || rawVencimento > 31 ? 5 : rawVencimento;
@@ -237,7 +251,10 @@ export class ImportacaoService {
         linha: i + 1,
         valido: erros.length === 0,
         erros,
+        avisos,
         dados: {
+          arquivos_origem,
+          codigo_ficha,
           nome,
           whatsapp: whatsappFormatado || rawWhatsapp,
           cpf,
@@ -286,10 +303,12 @@ export class ImportacaoService {
       await client.query('BEGIN');
 
       for (const item of itens) {
-        const whatsappLimpo = WhatsAppService.sanitizePhone(item.whatsapp);
+        const whatsappLimpo = item.whatsapp ? WhatsAppService.sanitizePhone(item.whatsapp) : '';
 
-        // Concatena anotações ricas preservando histórico da mãe
+        // Concatena anotações ricas preservando histórico e fotos de origem
         const notasComplementares: string[] = [];
+        if (item.codigo_ficha) notasComplementares.push(`Ficha Física: ${item.codigo_ficha}`);
+        if (item.arquivos_origem) notasComplementares.push(`Fotos: ${item.arquivos_origem}`);
         if (item.observacoes) notasComplementares.push(item.observacoes);
         if (item.produtos) notasComplementares.push(`Produtos: ${item.produtos}`);
         if (item.valor_total_compra) notasComplementares.push(`Total Compra: ${item.valor_total_compra}`);
@@ -298,14 +317,41 @@ export class ImportacaoService {
 
         const observacoesConsolidadas = notasComplementares.join(' | ') || null;
 
-        // 1. Cria ou atualiza cliente pelo WhatsApp de forma resiliente
-        let clienteId: string;
+        let clienteId: string | null = null;
         let clienteNome = item.nome.trim();
 
-        const cliExist = await client.query('SELECT id, nome FROM clientes WHERE whatsapp = $1 LIMIT 1', [whatsappLimpo]);
-        if (cliExist.rows && cliExist.rows.length > 0) {
-          clienteId = cliExist.rows[0].id;
-          clienteNome = cliExist.rows[0].nome || item.nome.trim();
+        // Se a ficha não tiver código físico nem arquivo de origem exclusivo, busca por nome + whatsapp
+        // Se tiver código/foto de ficha física, verifica se essa mesma foto/ficha já foi importada
+        if (item.arquivos_origem) {
+          const jaImportada = await client.query(
+            `SELECT id, nome FROM clientes WHERE observacoes LIKE $1 LIMIT 1`,
+            [`%${item.arquivos_origem}%`]
+          );
+          if (jaImportada.rows && jaImportada.rows.length > 0) {
+            clienteId = jaImportada.rows[0].id;
+            clienteNome = jaImportada.rows[0].nome || clienteNome;
+          } else {
+            // Verifica se já existe outra ficha física para o mesmo nome; se sim, identifica com o número da ficha
+            const mesmoNome = await client.query(
+              `SELECT id, nome FROM clientes WHERE LOWER(nome) = LOWER($1) LIMIT 1`,
+              [clienteNome]
+            );
+            if (mesmoNome.rows && mesmoNome.rows.length > 0 && item.codigo_ficha) {
+              clienteNome = `${clienteNome} (Ficha ${item.codigo_ficha})`;
+            }
+          }
+        } else if (whatsappLimpo.length >= 10) {
+          const cliExist = await client.query(
+            'SELECT id, nome FROM clientes WHERE whatsapp = $1 AND LOWER(nome) = LOWER($2) LIMIT 1',
+            [whatsappLimpo, clienteNome]
+          );
+          if (cliExist.rows && cliExist.rows.length > 0) {
+            clienteId = cliExist.rows[0].id;
+            clienteNome = cliExist.rows[0].nome || clienteNome;
+          }
+        }
+
+        if (clienteId) {
           await client.query(
             `UPDATE clientes
              SET nome = $1,
@@ -317,7 +363,7 @@ export class ImportacaoService {
                  updated_at = NOW()
              WHERE id = $7`,
             [
-              item.nome.trim(),
+              clienteNome,
               item.cpf?.trim() || null,
               item.endereco?.trim() || null,
               item.ponto_referencia?.trim() || null,
@@ -332,7 +378,7 @@ export class ImportacaoService {
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING id, nome`,
             [
-              item.nome.trim(),
+              clienteNome,
               whatsappLimpo,
               item.cpf?.trim() || null,
               item.endereco?.trim() || null,
@@ -391,11 +437,38 @@ export class ImportacaoService {
           fichaId = fichaInsert.rows[0].id;
         }
 
-        // 3. Se houver saldo devedor inicial, cria a movimentação de histórico detalhada
+        // 3. Registra venda/item se tiver produto descrito e saldo devedor inicial
         if (item.saldo_devedor_atual > 0) {
+          const valorTotalNum = item.valor_total_compra
+            ? Math.max(item.saldo_devedor_atual, parseFloat(String(item.valor_total_compra).replace(/[^\d.,]/g, '').replace(',', '.')) || item.saldo_devedor_atual)
+            : item.saldo_devedor_atual;
+          const valorJaPagoNum = Math.max(0, Number((valorTotalNum - item.saldo_devedor_atual).toFixed(2)));
+          const descItem = item.produtos || `Compra na Ficha Física${item.codigo_ficha ? ' nº ' + item.codigo_ficha : ''}`;
+
+          const vendaRes = await client.query(
+            `INSERT INTO vendas (
+               cliente_id, tipo_venda, forma_pagamento, valor_total,
+               valor_entrada, valor_financiado_ficha, status_venda, observacoes
+             )
+             VALUES ($1, 'PRONTA_ENTREGA', 'CREDIARIO', $2, $3, $4, 'CONCLUIDA', $5)
+             RETURNING id`,
+            [clienteId, valorTotalNum, valorJaPagoNum, item.saldo_devedor_atual, observacoesConsolidadas]
+          );
+          const vendaId = vendaRes.rows?.[0]?.id || null;
+
+          if (vendaId) {
+            await client.query(
+              `INSERT INTO itens_venda (
+                 venda_id, descricao_item, quantidade, preco_unitario, tipo_item
+               )
+               VALUES ($1, $2, 1, $3, 'ESTOQUE_LOCAL')`,
+              [vendaId, descItem.slice(0, 195), valorTotalNum]
+            );
+          }
+
           const descProdutos = item.produtos ? ` - Itens: ${item.produtos}` : '';
           const descData = item.data_venda ? ` (Venda em ${item.data_venda})` : '';
-          const descricaoMovimentacao = `Saldo Inicial de Migração${descProdutos}${descData}`;
+          const descricaoMovimentacao = `Saldo Inicial de Migração${descProdutos}${descData}`.slice(0, 250);
 
           await client.query(
             `INSERT INTO movimentacoes_ficha (
@@ -418,8 +491,11 @@ export class ImportacaoService {
             }
           }
 
-          const dataVenc = new Date(anoVencimento, mesVencimento, item.dia_vencimento);
-          const dataVencStr = dataVenc.toISOString().split('T')[0];
+          const dataVencStr = FichaCrediarioService.calcularDataVencimentoMensal(
+            anoVencimento,
+            mesVencimento,
+            item.dia_vencimento
+          );
 
           await client.query(
             `INSERT INTO parcelas_crediario (
@@ -431,7 +507,7 @@ export class ImportacaoService {
         }
 
         resultados.push({
-          cliente_id: clienteId,
+          cliente_id: clienteId!,
           nome: clienteNome,
           saldo: item.saldo_devedor_atual,
         });
@@ -454,7 +530,8 @@ export class ImportacaoService {
    * Processa o texto CSV de histórico de pagamentos e amortizações anteriores.
    */
   public static processarCSVHistorico(csvText: string): ResultadoValidacaoHistorico {
-    const linhas = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    const linhas = cleanText.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (linhas.length <= 1) {
       throw new AppError('O arquivo CSV está vazio ou contém apenas o cabeçalho', 400);
     }
@@ -681,7 +758,6 @@ export class ImportacaoService {
           novoSaldo = saldoAtual + item.valor;
           const descricaoFinal = item.descricao || 'Compra a Prazo Histórica';
 
-          // Registra a venda e o item na base para aparecer na aba de Itens Comprados / Carnê
           const vendaRes = await client.query(
             `INSERT INTO vendas (
                cliente_id, tipo_venda, forma_pagamento, valor_total,
@@ -738,7 +814,6 @@ export class ImportacaoService {
             [novoSaldo, fichaId]
           );
 
-          // Gera parcelas se necessário
           await client.query(
             `DELETE FROM parcelas_crediario
              WHERE ficha_id = $1 AND status = 'PENDENTE' AND valor_pago = 0`,
@@ -846,4 +921,3 @@ export class ImportacaoService {
     }
   }
 }
-

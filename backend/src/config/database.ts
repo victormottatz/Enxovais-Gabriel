@@ -1,4 +1,6 @@
 import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './env.js';
 
@@ -360,8 +362,8 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     const novoCliente = {
       id,
       nome: params[0] || 'Cliente',
-      whatsapp: params[1] || '',
-      telefone: params[1] || '',
+      whatsapp: params[1] ?? '',
+      telefone: params[1] ?? '',
       cpf: params[2] || null,
       endereco: params[3] || null,
       ponto_referencia: params[4] || null,
@@ -375,10 +377,66 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     return { rows: [novoCliente] };
   }
 
+  if (qUpper.includes('UPDATE CLIENTES')) {
+    const id = params[params.length - 1];
+    const cli = memoryStore.clientes.find((c) => c.id === id);
+    if (cli) {
+      if (params.length === 8) {
+        // atualizarCadastroRapidoFicha
+        cli.nome = params[0] ?? cli.nome;
+        cli.whatsapp = params[1] ?? cli.whatsapp;
+        cli.telefone = params[1] ?? cli.telefone;
+        cli.cpf = params[2] !== undefined ? params[2] : cli.cpf;
+        cli.endereco = params[3] !== undefined ? params[3] : cli.endereco;
+        cli.ponto_referencia = params[4] !== undefined ? params[4] : cli.ponto_referencia;
+        cli.limite_credito = params[5] !== undefined ? Number(params[5]) : cli.limite_credito;
+        cli.observacoes = params[6] !== undefined ? params[6] : cli.observacoes;
+      } else if (params.length === 7) {
+        // executarImportacao
+        cli.nome = params[0] || cli.nome;
+        cli.cpf = params[1] || cli.cpf;
+        cli.endereco = params[2] || cli.endereco;
+        cli.ponto_referencia = params[3] || cli.ponto_referencia;
+        cli.observacoes = params[4] || cli.observacoes;
+        cli.limite_credito = Number(params[5]) || cli.limite_credito;
+      }
+      cli.updated_at = new Date().toISOString();
+      return { rows: [cli] };
+    }
+    return { rows: [] };
+  }
+
   if (qUpper.includes('SELECT') && qUpper.includes('FROM CLIENTES')) {
     if (qUpper.includes('WHERE ID =') || qUpper.includes('WHERE C.ID =') || qUpper.includes('WHERE CLIENTES.ID =')) {
       const id = params[0];
       const cli = memoryStore.clientes.find((c) => c.id === id);
+      return { rows: cli ? [cli] : [] };
+    }
+
+    if (qUpper.includes('WHERE OBSERVACOES LIKE')) {
+      const pattern = String(params[0] || '').replace(/%/g, '').toLowerCase();
+      const cli = memoryStore.clientes.find((c) => String(c.observacoes || '').toLowerCase().includes(pattern));
+      return { rows: cli ? [cli] : [] };
+    }
+
+    if (qUpper.includes('WHERE LOWER(NOME) = LOWER')) {
+      const targetName = String(params[0] || '').toLowerCase();
+      const cli = memoryStore.clientes.find((c) => String(c.nome || '').toLowerCase() === targetName);
+      return { rows: cli ? [cli] : [] };
+    }
+
+    if (qUpper.includes('WHERE WHATSAPP = $1 AND LOWER(NOME) = LOWER($2)')) {
+      const targetZap = String(params[0] || '');
+      const targetName = String(params[1] || '').toLowerCase();
+      const cli = memoryStore.clientes.find(
+        (c) => String(c.whatsapp || '') === targetZap && String(c.nome || '').toLowerCase() === targetName
+      );
+      return { rows: cli ? [cli] : [] };
+    }
+
+    if (qUpper.includes('WHERE WHATSAPP = $1')) {
+      const targetZap = String(params[0] || '');
+      const cli = memoryStore.clientes.find((c) => String(c.whatsapp || '') === targetZap);
       return { rows: cli ? [cli] : [] };
     }
 
@@ -411,12 +469,16 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     const saldo = Number(params[1]) || 0.00;
     const parcela = Number(params[2]) || 50.00;
     const diaVenc = Number(params[3]) || 5;
+    const tipoCiclo = params[4] || (diaVenc === 20 ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO');
+    const diaValeSec = params[5] || null;
+    const obsFicha = params[6] || null;
 
     let ficha = memoryStore.fichas_crediario.find((f) => f.cliente_id === clienteId);
     if (ficha) {
       ficha.valor_parcela_padrao = parcela;
       ficha.dia_vencimento_padrao = diaVenc;
       ficha.saldo_devedor_total = saldo;
+      if (obsFicha) ficha.observacoes = obsFicha;
     } else {
       ficha = {
         id: uuidv4(),
@@ -424,8 +486,10 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
         saldo_devedor_total: saldo,
         valor_parcela_padrao: parcela,
         dia_vencimento_padrao: diaVenc,
-        tipo_ciclo: diaVenc === 20 ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO',
+        tipo_ciclo: tipoCiclo,
+        dia_vale_secundario: diaValeSec,
         status_ficha: 'ATIVO',
+        observacoes: obsFicha,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -435,27 +499,63 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
   }
 
   if (qUpper.includes('SELECT') && qUpper.includes('FROM FICHAS_CREDIARIO')) {
+    const enrichFichaRow = (f: any) => {
+      const cli = memoryStore.clientes.find((c) => c.id === f.cliente_id) || {};
+      return {
+        ...f,
+        observacoes: f.observacoes || cli.observacoes || null,
+        cliente_nome: cli.nome || 'Cliente',
+        cliente_whatsapp: cli.whatsapp ?? cli.telefone ?? '',
+        cliente_telefone: cli.telefone ?? cli.whatsapp ?? '',
+        cliente_cpf: cli.cpf || null,
+        cliente_endereco: cli.endereco || '',
+        cliente_ponto_referencia: cli.ponto_referencia || null,
+        cliente_limite_credito: cli.limite_credito ?? 1000,
+        cliente_observacoes: cli.observacoes || null,
+      };
+    };
+
+    if (qUpper.includes('WHERE F.ID = $1 OR F.CLIENTE_ID = $1') || qUpper.includes('WHERE ID = $1 OR CLIENTE_ID = $1')) {
+      const id = params[0];
+      const ficha = memoryStore.fichas_crediario.find((f) => f.id === id || f.cliente_id === id);
+      return { rows: ficha ? [enrichFichaRow(ficha)] : [] };
+    }
     if (qUpper.includes('WHERE CLIENTE_ID =') || qUpper.includes('WHERE F.CLIENTE_ID =')) {
       const cliId = params[0];
       const ficha = memoryStore.fichas_crediario.find((f) => f.cliente_id === cliId);
-      return { rows: ficha ? [ficha] : [] };
+      return { rows: ficha ? [enrichFichaRow(ficha)] : [] };
     }
     if (qUpper.includes('WHERE ID =') || qUpper.includes('WHERE F.ID =')) {
       const id = params[0];
       const ficha = memoryStore.fichas_crediario.find((f) => f.id === id);
-      return { rows: ficha ? [ficha] : [] };
+      return { rows: ficha ? [enrichFichaRow(ficha)] : [] };
     }
 
-    const rows = memoryStore.fichas_crediario.map((f) => {
-      const cli = memoryStore.clientes.find((c) => c.id === f.cliente_id) || {};
-      return {
-        ...f,
-        cliente_nome: cli.nome || 'Cliente',
-        cliente_whatsapp: cli.whatsapp || cli.telefone || '',
-        cliente_telefone: cli.telefone || cli.whatsapp || '',
-        cliente_endereco: cli.endereco || '',
-      };
-    });
+    let rows = memoryStore.fichas_crediario.map(enrichFichaRow);
+
+    // Filtros opcionais da query de listFichas
+    let pIdx = 0;
+    if (qUpper.includes('F.DIA_VENCIMENTO_PADRAO =')) {
+      const dia = Number(params[pIdx++]);
+      rows = rows.filter((r) => Number(r.dia_vencimento_padrao) === dia || Number(r.dia_vale_secundario) === dia);
+    }
+    if (qUpper.includes('F.STATUS_FICHA =')) {
+      const st = String(params[pIdx++]);
+      rows = rows.filter((r) => r.status_ficha === st);
+    }
+    if (qUpper.includes('C.NOME ILIKE')) {
+      const term = String(params[pIdx++] || '').replace(/%/g, '').toLowerCase();
+      if (term) {
+        rows = rows.filter(
+          (r) =>
+            String(r.cliente_nome || '').toLowerCase().includes(term) ||
+            String(r.cliente_whatsapp || '').toLowerCase().includes(term) ||
+            String(r.observacoes || '').toLowerCase().includes(term)
+        );
+      }
+    }
+
+    rows.sort((a, b) => (Number(b.saldo_devedor_total) - Number(a.saldo_devedor_total)) || String(a.cliente_nome).localeCompare(String(b.cliente_nome)));
     return { rows };
   }
 
@@ -463,8 +563,32 @@ function executeMemoryQuery(queryText: string, params: any[] = []): { rows: any[
     const id = params[params.length - 1];
     let ficha = memoryStore.fichas_crediario.find((f) => f.id === id || f.cliente_id === id);
     if (ficha) {
-      if (params.length >= 1 && typeof params[0] === 'number') {
+      if (params.length === 6) {
+        // atualizarCadastroRapidoFicha: [novoSaldo, novaParcela, novoDiaVenc, novoStatus, novasObs, atual.id]
+        ficha.saldo_devedor_total = Number(params[0]);
+        ficha.valor_parcela_padrao = Number(params[1]);
+        ficha.dia_vencimento_padrao = Number(params[2]);
+        ficha.status_ficha = params[3] || ficha.status_ficha;
+        ficha.observacoes = params[4] !== undefined ? params[4] : ficha.observacoes;
+      } else if (params.length === 7) {
+        // executarImportacao
+        ficha.saldo_devedor_total = Number(params[0]);
+        ficha.valor_parcela_padrao = Number(params[1]);
+        ficha.dia_vencimento_padrao = Number(params[2]);
+        ficha.tipo_ciclo = params[3] || ficha.tipo_ciclo;
+        ficha.dia_vale_secundario = params[4] || null;
+        ficha.observacoes = params[5] || ficha.observacoes;
+      } else if (params.length === 5) {
+        // ajustarSaldoManual: [novoSaldo, valorParcela, diaVencimento, statusFicha, params.fichaId]
+        ficha.saldo_devedor_total = Number(params[0]);
+        ficha.valor_parcela_padrao = Number(params[1]);
+        ficha.dia_vencimento_padrao = Number(params[2]);
+        ficha.status_ficha = params[3] || ficha.status_ficha;
+      } else if (params.length >= 1 && typeof params[0] === 'number') {
         ficha.saldo_devedor_total = params[0];
+        if (params.length === 3 && typeof params[1] === 'string') {
+          ficha.status_ficha = params[1];
+        }
       }
       ficha.updated_at = new Date().toISOString();
       return { rows: [ficha] };
@@ -1068,6 +1192,11 @@ export async function initDatabase(): Promise<void> {
         SELECT 'Cortina Corta Luz Blackout 2,80 x 1,80', 'DECORACAO', 90.00, 160.00, 180.00, 9, 2, true
         WHERE NOT EXISTS (SELECT 1 FROM produtos WHERE nome = 'Cortina Corta Luz Blackout 2,80 x 1,80');
 
+        -- Garante que clientes sem WhatsApp ou familiares com o mesmo telefone possam ser salvos sem bloqueio de constraint
+        ALTER TABLE clientes ALTER COLUMN whatsapp SET DEFAULT '';
+        ALTER TABLE clientes DROP CONSTRAINT IF EXISTS clientes_whatsapp_key;
+        DROP INDEX IF EXISTS idx_clientes_whatsapp_unique;
+
         -- Inserção de configuração padrão somente se a tabela estiver vazia
         INSERT INTO configuracoes (
           chave_pix,
@@ -1089,6 +1218,8 @@ export async function initDatabase(): Promise<void> {
         WHERE NOT EXISTS (SELECT 1 FROM configuracoes);
       `);
 
+      await seedFichasDigitalizadasPostgres(client);
+
       console.log('✅ [PostgreSQL] Schema verificado e pronto para operações.');
     } finally {
       client.release();
@@ -1098,3 +1229,334 @@ export async function initDatabase(): Promise<void> {
     console.log('ℹ️ [Database] Operando com Memory Store Resiliente (PostgreSQL offline no momento).');
   }
 }
+
+function parseCsvLineSimple(line: string, sep = ';'): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === sep && !inQuotes) {
+      result.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result.map((c) => c.replace(/^["']|["']$/g, '').trim());
+}
+
+function resolveCsvDigitalizadasPath(): string | undefined {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'fichas_digitalizadas_completas.csv'),
+    path.resolve(process.cwd(), '../fichas_digitalizadas_completas.csv'),
+    path.resolve(process.cwd(), 'fotos fichas/fichas_digitalizadas_completas.csv'),
+    path.resolve(process.cwd(), '../fotos fichas/fichas_digitalizadas_completas.csv'),
+  ];
+  return possiblePaths.find((p) => fs.existsSync(p));
+}
+
+async function seedFichasDigitalizadasPostgres(client: any): Promise<void> {
+  try {
+    const csvPath = resolveCsvDigitalizadasPath();
+    if (!csvPath) return;
+
+    const rawContent = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '');
+    const lines = rawContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length <= 1) return;
+
+    const existingRes = await client.query('SELECT observacoes FROM fichas_crediario');
+    const existingObsList: string[] = (existingRes.rows || []).map((r: any) => String(r.observacoes || ''));
+
+    const seenNames = new Map<string, number>();
+    let inseridas = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLineSimple(lines[i], ';');
+      if (cols.length < 10) continue;
+
+      const [
+        arquivos_origem,
+        codigo_ficha,
+        rawNome,
+        rawWhatsapp,
+        cpf,
+        endereco,
+        valor_total_compra,
+        ponto_referencia,
+        limite_credito,
+        dia_vencimento,
+        tipo_ciclo,
+        saldo_devedor_atual,
+        valor_parcela,
+        observacoes,
+        produtos,
+        data_venda,
+        pagamento_parcelas,
+      ] = cols;
+
+      if (!rawNome) continue;
+
+      const nameKey = rawNome.toLowerCase().trim();
+      const countName = (seenNames.get(nameKey) || 0) + 1;
+      seenNames.set(nameKey, countName);
+      const nomeFinal = countName > 1 && codigo_ficha ? `${rawNome.trim()} (Ficha ${codigo_ficha})` : rawNome.trim();
+
+      // Verifica se já foi importada anteriormente pelo marcador da foto de origem
+      const firstPhoto = (arquivos_origem || '').split('+')[0]?.trim();
+      if (firstPhoto && existingObsList.some((obs) => obs.includes(firstPhoto))) {
+        continue;
+      }
+
+      const digitsZap = (rawWhatsapp || '').replace(/\D/g, '');
+      const zapFormatado =
+        digitsZap.length >= 10 && digitsZap.length <= 11 && !digitsZap.startsWith('55')
+          ? `55${digitsZap}`
+          : digitsZap;
+
+      const notas: string[] = [];
+      if (codigo_ficha) notas.push(`Ficha Física: ${codigo_ficha}`);
+      if (arquivos_origem) notas.push(`Fotos: ${arquivos_origem}`);
+      if (observacoes) notas.push(observacoes);
+      if (produtos) notas.push(`Produtos: ${produtos}`);
+      if (valor_total_compra) notas.push(`Total Compra: ${valor_total_compra}`);
+      if (data_venda) notas.push(`Data Compra: ${data_venda}`);
+      if (pagamento_parcelas) notas.push(`Histórico Pgto: ${pagamento_parcelas}`);
+      const obsUnificada = notas.join(' | ');
+
+      const saldoNum = parseFloat((saldo_devedor_atual || '0').replace(',', '.')) || 0;
+      const parcelaNum = parseFloat((valor_parcela || '100').replace(',', '.')) || 100;
+      const limiteNum = parseFloat((limite_credito || '1000').replace(',', '.')) || 1000;
+      const diaVencNum = Math.max(1, Math.min(31, parseInt(dia_vencimento || '10', 10) || 10));
+      const cicloFinal = (tipo_ciclo || '').toUpperCase().includes('QUINZENAL') ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO';
+      const statusFicha = saldoNum === 0 ? 'QUITADO' : 'ATIVO';
+
+      const cliRes = await client.query(
+        `INSERT INTO clientes (nome, whatsapp, cpf, endereco, ponto_referencia, limite_credito, observacoes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [nomeFinal, zapFormatado || '', cpf || null, endereco || '', ponto_referencia || null, limiteNum, obsUnificada]
+      );
+      const clienteId = cliRes.rows[0].id;
+
+      const fichaRes = await client.query(
+        `INSERT INTO fichas_crediario (cliente_id, saldo_devedor_total, valor_parcela_padrao, dia_vencimento_padrao, tipo_ciclo, status_ficha, observacoes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [clienteId, saldoNum, parcelaNum, diaVencNum, cicloFinal, statusFicha, obsUnificada]
+      );
+      const fichaId = fichaRes.rows[0].id;
+
+      const valorCompraNum = Math.max(
+        saldoNum,
+        parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || saldoNum
+      );
+
+      if (valorCompraNum > 0 || produtos) {
+        const jaPago = Math.max(0, Number((valorCompraNum - saldoNum).toFixed(2)));
+        const vendaRes = await client.query(
+          `INSERT INTO vendas (cliente_id, tipo_venda, forma_pagamento, valor_total, valor_entrada, valor_financiado_ficha, status_venda, observacoes)
+           VALUES ($1, 'PRONTA_ENTREGA', 'CREDIARIO', $2, $3, $4, 'CONCLUIDA', $5)
+           RETURNING id`,
+          [clienteId, valorCompraNum, jaPago, saldoNum, obsUnificada]
+        );
+        const vendaId = vendaRes.rows[0]?.id || null;
+
+        if (vendaId) {
+          await client.query(
+            `INSERT INTO itens_venda (venda_id, descricao_item, quantidade, preco_unitario, tipo_item)
+             VALUES ($1, $2, 1, $3, 'ESTOQUE_LOCAL')`,
+            [vendaId, (produtos || `Compra na Ficha Física ${codigo_ficha || ''}`).slice(0, 195), valorCompraNum]
+          );
+        }
+
+        await client.query(
+          `INSERT INTO movimentacoes_ficha (ficha_id, cliente_id, venda_id, tipo_movimentacao, valor, saldo_anterior, saldo_posterior, descricao, forma_pagamento, observacoes)
+           VALUES ($1, $2, $3, 'DEBITO_COMPRA', $4, 0, $5, $6, 'CREDIARIO', $7)`,
+          [
+            fichaId,
+            clienteId,
+            vendaId,
+            valorCompraNum,
+            saldoNum,
+            `Ficha Física ${codigo_ficha || ''}: ${produtos || 'Compra migrada'}`.slice(0, 240),
+            obsUnificada,
+          ]
+        );
+      }
+
+      existingObsList.push(obsUnificada);
+      inseridas++;
+    }
+
+    if (inseridas > 0) {
+      console.log(`✅ [PostgreSQL] ${inseridas} fichas digitalizadas importadas automaticamente para o banco.`);
+    }
+  } catch (err) {
+    console.warn('⚠️ [PostgreSQL] Aviso ao importar seed de fichas digitalizadas:', err);
+  }
+}
+
+function seedFichasDigitalizadasMemory(): void {
+  try {
+    const csvPath = resolveCsvDigitalizadasPath();
+    if (!csvPath) return;
+
+    const rawContent = fs.readFileSync(csvPath, 'utf8').replace(/^\uFEFF/, '');
+    const lines = rawContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length <= 1) return;
+
+    const seenNames = new Map<string, number>();
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLineSimple(lines[i], ';');
+      if (cols.length < 10) continue;
+
+      const [
+        arquivos_origem,
+        codigo_ficha,
+        rawNome,
+        rawWhatsapp,
+        cpf,
+        endereco,
+        valor_total_compra,
+        ponto_referencia,
+        limite_credito,
+        dia_vencimento,
+        tipo_ciclo,
+        saldo_devedor_atual,
+        valor_parcela,
+        observacoes,
+        produtos,
+        data_venda,
+        pagamento_parcelas,
+      ] = cols;
+
+      if (!rawNome) continue;
+
+      // Evita duplicar se já tiver sido carregado
+      if (arquivos_origem && memoryStore.fichas_crediario.some((f) => String(f.observacoes || '').includes(arquivos_origem))) {
+        continue;
+      }
+
+      const nameKey = rawNome.toLowerCase().trim();
+      const countName = (seenNames.get(nameKey) || 0) + 1;
+      seenNames.set(nameKey, countName);
+      const nomeFinal = countName > 1 && codigo_ficha ? `${rawNome.trim()} (Ficha ${codigo_ficha})` : rawNome.trim();
+
+      const digitsZap = (rawWhatsapp || '').replace(/\D/g, '');
+      const zapFormatado =
+        digitsZap.length >= 10 && digitsZap.length <= 11 && !digitsZap.startsWith('55')
+          ? `55${digitsZap}`
+          : digitsZap;
+
+      const notas: string[] = [];
+      if (codigo_ficha) notas.push(`Ficha Física: ${codigo_ficha}`);
+      if (arquivos_origem) notas.push(`Fotos: ${arquivos_origem}`);
+      if (observacoes) notas.push(observacoes);
+      if (produtos) notas.push(`Produtos: ${produtos}`);
+      if (valor_total_compra) notas.push(`Total Compra: ${valor_total_compra}`);
+      if (data_venda) notas.push(`Data Compra: ${data_venda}`);
+      if (pagamento_parcelas) notas.push(`Histórico Pgto: ${pagamento_parcelas}`);
+      const obsUnificada = notas.join(' | ');
+
+      const clienteId = `cli-dig-${String(i).padStart(3, '0')}`;
+      const fichaId = `ficha-dig-${String(i).padStart(3, '0')}`;
+      const saldoNum = parseFloat((saldo_devedor_atual || '0').replace(',', '.')) || 0;
+      const parcelaNum = parseFloat((valor_parcela || '100').replace(',', '.')) || 100;
+      const limiteNum = parseFloat((limite_credito || '1000').replace(',', '.')) || 1000;
+      const diaVencNum = Math.max(1, Math.min(31, parseInt(dia_vencimento || '10', 10) || 10));
+
+      memoryStore.clientes.push({
+        id: clienteId,
+        nome: nomeFinal,
+        whatsapp: zapFormatado,
+        telefone: digitsZap,
+        cpf: cpf || null,
+        endereco: endereco || '',
+        ponto_referencia: ponto_referencia || null,
+        limite_credito: limiteNum,
+        observacoes: obsUnificada,
+        ativo: true,
+        created_at: '2026-10-28T12:00:00Z',
+        updated_at: '2026-10-28T12:00:00Z',
+      });
+
+      memoryStore.fichas_crediario.push({
+        id: fichaId,
+        cliente_id: clienteId,
+        saldo_devedor_total: saldoNum,
+        valor_parcela_padrao: parcelaNum,
+        dia_vencimento_padrao: diaVencNum,
+        tipo_ciclo: (tipo_ciclo || '').toUpperCase().includes('QUINZENAL') ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO',
+        status_ficha: saldoNum === 0 ? 'QUITADO' : 'ATIVO',
+        observacoes: obsUnificada,
+        created_at: '2026-10-28T12:00:00Z',
+        updated_at: '2026-10-28T12:00:00Z',
+      });
+
+      const valorCompraNum = Math.max(
+        saldoNum,
+        parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || saldoNum
+      );
+
+      if (valorCompraNum > 0 || produtos) {
+        const vendaId = `venda-dig-${String(i).padStart(3, '0')}`;
+        const itemId = `item-dig-${String(i).padStart(3, '0')}`;
+        const jaPago = Math.max(0, Number((valorCompraNum - saldoNum).toFixed(2)));
+
+        memoryStore.vendas.push({
+          id: vendaId,
+          cliente_id: clienteId,
+          tipo_venda: 'PRONTA_ENTREGA',
+          forma_pagamento: 'CREDIARIO',
+          valor_total: valorCompraNum,
+          valor_entrada: jaPago,
+          valor_financiado_ficha: saldoNum,
+          status_venda: 'CONCLUIDA',
+          observacoes: obsUnificada,
+          created_at: '2026-10-28T12:00:00Z',
+        });
+
+        memoryStore.itens_venda.push({
+          id: itemId,
+          venda_id: vendaId,
+          descricao_item: produtos || `Compra na Ficha Física ${codigo_ficha || ''}`.trim(),
+          quantidade: 1,
+          preco_unitario: valorCompraNum,
+          subtotal: valorCompraNum,
+          tipo_item: 'ESTOQUE_LOCAL',
+          created_at: '2026-10-28T12:00:00Z',
+        });
+
+        memoryStore.movimentacoes_ficha.push({
+          id: `mov-dig-${String(i).padStart(3, '0')}`,
+          ficha_id: fichaId,
+          cliente_id: clienteId,
+          venda_id: vendaId,
+          tipo_movimentacao: 'DEBITO_COMPRA',
+          valor: valorCompraNum,
+          saldo_anterior: 0,
+          saldo_posterior: saldoNum,
+          descricao: `Ficha Física ${codigo_ficha || ''}: ${produtos || 'Compra migrada'}${pagamento_parcelas ? ' (' + pagamento_parcelas + ')' : ''}`.trim(),
+          data_movimentacao: '2026-10-28',
+          forma_pagamento: 'CREDIARIO',
+          observacoes: obsUnificada,
+          created_at: '2026-10-28T12:00:00Z',
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ [Database] Falha ao carregar seed das fichas digitalizadas:', err);
+  }
+}
+
+seedFichasDigitalizadasMemory();

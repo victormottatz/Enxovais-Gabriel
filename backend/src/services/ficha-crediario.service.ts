@@ -1,11 +1,24 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../middlewares/error.middleware.js';
+import { WhatsAppService } from './whatsapp.service.js';
+
+export interface AlertaFichaDTO {
+  codigo: 'SEM_WHATSAPP' | 'SEM_ENDERECO' | 'TELEFONE_COMPARTILHADO' | 'REVISAR_DADOS';
+  titulo: string;
+  detalhe: string;
+  severidade: 'alta' | 'media' | 'baixa';
+  campo: 'whatsapp' | 'endereco' | 'valor_parcela' | 'saldo_devedor' | 'observacoes';
+}
 
 export interface FichaCrediarioDTO {
   id: string;
   cliente_id: string;
   cliente_nome?: string;
   cliente_whatsapp?: string;
+  cliente_cpf?: string | null;
+  cliente_endereco?: string | null;
+  cliente_ponto_referencia?: string | null;
+  cliente_limite_credito?: number;
   saldo_devedor_total: number;
   valor_parcela_padrao: number;
   dia_vencimento_padrao: number;
@@ -13,6 +26,10 @@ export interface FichaCrediarioDTO {
   dia_vale_secundario?: number | null;
   status_ficha: 'ATIVO' | 'BLOQUEADO' | 'QUITADO';
   observacoes?: string | null;
+  arquivos_origem?: string[];
+  codigo_ficha?: string | null;
+  tem_pendencia?: boolean;
+  alertas?: AlertaFichaDTO[];
   created_at: string;
   updated_at: string;
 }
@@ -99,6 +116,7 @@ export class FichaCrediarioService {
     vendaId: string;
     valorFinanciado: number;
     novoValorParcela?: number;
+    novoDiaVencimento?: number;
     descricao?: string;
     client?: any;
   }): Promise<{ ficha: FichaCrediarioDTO; parcelasGeradas: number }> {
@@ -123,17 +141,22 @@ export class FichaCrediarioService {
       const saldoAnterior = Number(fichaAtual.saldo_devedor_total);
       const novoSaldo = saldoAnterior + Number(params.valorFinanciado);
       const valorParcela = params.novoValorParcela ?? Number(fichaAtual.valor_parcela_padrao);
+      const diaVencimento =
+        params.novoDiaVencimento && params.novoDiaVencimento >= 1 && params.novoDiaVencimento <= 31
+          ? Math.trunc(params.novoDiaVencimento)
+          : Number(fichaAtual.dia_vencimento_padrao) || 5;
 
-      // 1. Atualiza o saldo total e o valor da parcela se renegociado
+      // 1. Atualiza o saldo total, o valor da parcela e o dia de vencimento se renegociado
       const updatedFichaRes = await client.query(
         `UPDATE fichas_crediario
          SET saldo_devedor_total = $1,
              valor_parcela_padrao = $2,
+             dia_vencimento_padrao = $3,
              status_ficha = 'ATIVO',
              updated_at = NOW()
-         WHERE id = $3
+         WHERE id = $4
          RETURNING *`,
-        [novoSaldo, valorParcela, params.fichaId]
+        [novoSaldo, valorParcela, diaVencimento, params.fichaId]
       );
 
       // 2. Registra a movimentação no extrato
@@ -156,13 +179,13 @@ export class FichaCrediarioService {
         ]
       );
 
-      // 3. Recalcula e sincroniza as parcelas pendentes com base no saldo e dia de vencimento
+      // 3. Recalcula e sincroniza as parcelas pendentes com base no saldo e dia de vencimento escolhido
       const parcelasGeradas = await this.sincronizarParcelas(
         client,
         params.fichaId,
         novoSaldo,
         valorParcela,
-        fichaAtual.dia_vencimento_padrao
+        diaVencimento
       );
 
       if (!isExternalClient) {
@@ -413,15 +436,260 @@ export class FichaCrediarioService {
   }
 
   /**
+   * Analisa os dados de uma ficha e da cliente para identificar informações
+   * incompletas ou inconsistentes (ex: sem WhatsApp, sem endereço, telefone compartilhado
+   * ou observações de renegociação/divergência) e extrair as fotos de origem.
+   */
+  public static diagnosticarAlertasFicha(
+    ficha: Partial<FichaCrediarioDTO> & {
+      cliente_endereco?: string | null;
+      cliente_ponto_referencia?: string | null;
+      telefone_compartilhado_com?: string[];
+    }
+  ): {
+    tem_pendencia: boolean;
+    alertas: AlertaFichaDTO[];
+    arquivos_origem: string[];
+    codigo_ficha: string | null;
+  } {
+    const alertas: AlertaFichaDTO[] = [];
+    const obs = String(ficha.observacoes || '');
+
+    // Extrai fotos de origem IMG_XXXX.jpg se estiverem nas observações ou no próprio objeto
+    const fotosSet = new Set<string>(Array.isArray(ficha.arquivos_origem) ? ficha.arquivos_origem : []);
+    const matchesImg = obs.match(/IMG_\d+(?:\(\d+\))?\.jpg/gi);
+    if (matchesImg) {
+      matchesImg.forEach((m) => fotosSet.add(m));
+    }
+
+    // Extrai código da ficha física (ex: "503 LU", "670 C")
+    let codigoFicha: string | null = ficha.codigo_ficha || null;
+    if (!codigoFicha) {
+      const matchCod = obs.match(/Ficha(?:\s*F[íi]sica)?:\s*([^|]+)/i) || obs.match(/C[óo]digo(?:\s*ficha)?:\s*([^.|]+)/i);
+      if (matchCod && matchCod[1]) {
+        codigoFicha = matchCod[1].trim();
+      }
+    }
+
+    // 1. Verifica WhatsApp
+    const rawZap = String(ficha.cliente_whatsapp || '').replace(/\D/g, '');
+    if (!rawZap || rawZap.length < 10 || rawZap.startsWith('0000')) {
+      alertas.push({
+        codigo: 'SEM_WHATSAPP',
+        titulo: 'Falta WhatsApp',
+        detalhe: 'O telefone/WhatsApp estava em branco na ficha de papel. Clique para preencher.',
+        severidade: 'alta',
+        campo: 'whatsapp',
+      });
+    }
+
+    // 2. Verifica Endereço
+    const rawEnd = String(ficha.cliente_endereco || '').trim();
+    if (!rawEnd || rawEnd.length < 4) {
+      alertas.push({
+        codigo: 'SEM_ENDERECO',
+        titulo: 'Sem Endereço',
+        detalhe: 'Rua/Bairro não informados na ficha física. Preencha para facilitar entregas e cobranças.',
+        severidade: 'media',
+        campo: 'endereco',
+      });
+    }
+
+    // 3. Verifica Telefone Compartilhado / Múltiplas Fichas
+    if (ficha.telefone_compartilhado_com && ficha.telefone_compartilhado_com.length > 0) {
+      alertas.push({
+        codigo: 'TELEFONE_COMPARTILHADO',
+        titulo: 'Fone em +1 Ficha',
+        detalhe: `Mesmo WhatsApp vinculado a: ${ficha.telefone_compartilhado_com.join(', ')}. Confira se é familiar ou segunda ficha da mesma cliente.`,
+        severidade: 'baixa',
+        campo: 'whatsapp',
+      });
+    }
+
+    // 4. Verifica inconsistências de parcela, datas futuras (2027) ou renegociação pendente
+    const saldo = Number(ficha.saldo_devedor_total) || 0;
+    const parcela = Number(ficha.valor_parcela_padrao) || 0;
+    if ((saldo > 0 && parcela <= 0) || /2027|diverg|revisar|ilee?g[íi]vel/i.test(obs)) {
+      alertas.push({
+        codigo: 'REVISAR_DADOS',
+        titulo: 'Revisar Dados',
+        detalhe: 'A ficha contém anotação ou data manuscrita que merece conferência visual.',
+        severidade: 'media',
+        campo: 'observacoes',
+      });
+    }
+
+    return {
+      tem_pendencia: alertas.length > 0,
+      alertas,
+      arquivos_origem: Array.from(fotosSet),
+      codigo_ficha: codigoFicha,
+    };
+  }
+
+  /**
+   * Atualiza rapidamente os dados cadastrais da cliente e os parâmetros da ficha
+   * (ideal para completar informações pendentes da digitalização em 1 clique).
+   */
+  public static async atualizarCadastroRapidoFicha(params: {
+    fichaId: string;
+    nome?: string;
+    whatsapp?: string;
+    cpf?: string;
+    endereco?: string;
+    ponto_referencia?: string;
+    limite_credito?: number;
+    dia_vencimento_padrao?: number;
+    valor_parcela_padrao?: number;
+    saldo_devedor_total?: number;
+    observacoes?: string;
+  }): Promise<FichaCrediarioDTO> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const fichaRes = await client.query<any>(
+        `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp,
+                c.cpf as cliente_cpf, c.endereco as cliente_endereco,
+                c.ponto_referencia as cliente_ponto_referencia,
+                c.limite_credito as cliente_limite_credito,
+                c.observacoes as cliente_observacoes
+         FROM fichas_crediario f
+         JOIN clientes c ON c.id = f.cliente_id
+         WHERE f.id = $1 OR f.cliente_id = $1
+         LIMIT 1`,
+        [params.fichaId]
+      );
+
+      if (fichaRes.rows.length === 0) {
+        throw new AppError('Ficha de crediário não encontrada.', 404, 'FICHA_NOT_FOUND');
+      }
+
+      const atual = fichaRes.rows[0];
+
+      const novoNome = params.nome !== undefined && params.nome.trim() ? params.nome.trim() : atual.cliente_nome;
+      let novoWhatsapp = atual.cliente_whatsapp || '';
+      if (params.whatsapp !== undefined) {
+        const limpo = params.whatsapp.replace(/\D/g, '');
+        if (!limpo) {
+          novoWhatsapp = '';
+        } else if (limpo.length >= 10 && limpo.length <= 11 && !limpo.startsWith('55')) {
+          novoWhatsapp = `55${limpo}`;
+        } else {
+          novoWhatsapp = limpo;
+        }
+      }
+
+      const novoCpf = params.cpf !== undefined ? (params.cpf.trim() || null) : (atual.cliente_cpf || null);
+      const novoEndereco = params.endereco !== undefined ? (params.endereco.trim() || null) : (atual.cliente_endereco || null);
+      const novoPontoRef = params.ponto_referencia !== undefined ? (params.ponto_referencia.trim() || null) : (atual.cliente_ponto_referencia || null);
+      const novoLimite = params.limite_credito !== undefined ? Number(params.limite_credito) : Number(atual.cliente_limite_credito || 1000);
+      const novasObs = params.observacoes !== undefined ? (params.observacoes.trim() || null) : (atual.observacoes || atual.cliente_observacoes || null);
+
+      await client.query(
+        `UPDATE clientes
+         SET nome = $1,
+             whatsapp = $2,
+             cpf = $3,
+             endereco = $4,
+             ponto_referencia = $5,
+             limite_credito = $6,
+             observacoes = $7,
+             updated_at = NOW()
+         WHERE id = $8`,
+        [
+          novoNome,
+          novoWhatsapp,
+          novoCpf,
+          novoEndereco,
+          novoPontoRef,
+          novoLimite,
+          novasObs,
+          atual.cliente_id,
+        ]
+      );
+
+      const novoDiaVenc = params.dia_vencimento_padrao !== undefined
+        ? Math.max(1, Math.min(31, Number(params.dia_vencimento_padrao)))
+        : Number(atual.dia_vencimento_padrao || 5);
+      const novaParcela = params.valor_parcela_padrao !== undefined
+        ? Math.max(1, Number(params.valor_parcela_padrao))
+        : Number(atual.valor_parcela_padrao || 100);
+      const novoSaldo = params.saldo_devedor_total !== undefined
+        ? Math.max(0, Number(params.saldo_devedor_total))
+        : Number(atual.saldo_devedor_total || 0);
+      const novoStatus = novoSaldo === 0 ? 'QUITADO' : 'ATIVO';
+
+      await client.query(
+        `UPDATE fichas_crediario
+         SET saldo_devedor_total = $1,
+             valor_parcela_padrao = $2,
+             dia_vencimento_padrao = $3,
+             status_ficha = $4,
+             observacoes = $5,
+             updated_at = NOW()
+         WHERE id = $6`,
+        [novoSaldo, novaParcela, novoDiaVenc, novoStatus, novasObs, atual.id]
+      );
+
+      await client.query('COMMIT');
+
+      const diag = FichaCrediarioService.diagnosticarAlertasFicha({
+        ...atual,
+        cliente_nome: novoNome,
+        cliente_whatsapp: novoWhatsapp,
+        cliente_cpf: novoCpf,
+        cliente_endereco: novoEndereco,
+        cliente_ponto_referencia: novoPontoRef,
+        cliente_limite_credito: novoLimite,
+        saldo_devedor_total: novoSaldo,
+        valor_parcela_padrao: novaParcela,
+        dia_vencimento_padrao: novoDiaVenc,
+        status_ficha: novoStatus,
+        observacoes: novasObs,
+      });
+
+      return {
+        ...atual,
+        cliente_nome: novoNome,
+        cliente_whatsapp: novoWhatsapp,
+        cliente_cpf: novoCpf,
+        cliente_endereco: novoEndereco,
+        cliente_ponto_referencia: novoPontoRef,
+        cliente_limite_credito: novoLimite,
+        saldo_devedor_total: novoSaldo,
+        valor_parcela_padrao: novaParcela,
+        dia_vencimento_padrao: novoDiaVenc,
+        status_ficha: novoStatus,
+        observacoes: novasObs,
+        tem_pendencia: diag.tem_pendencia,
+        alertas: diag.alertas,
+        arquivos_origem: diag.arquivos_origem,
+        codigo_ficha: diag.codigo_ficha,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Lista fichas de clientes filtrando por vencimento (dia do pagamento ou dia do vale).
    */
   public static async listFichas(filters?: {
     diaVencimento?: number;
     statusFicha?: string;
     search?: string;
+    apenasPendencias?: boolean;
   }): Promise<FichaCrediarioDTO[]> {
     let query = `
-      SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp
+      SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp,
+             c.cpf as cliente_cpf, c.endereco as cliente_endereco,
+             c.ponto_referencia as cliente_ponto_referencia,
+             c.limite_credito as cliente_limite_credito,
+             c.observacoes as cliente_observacoes
       FROM fichas_crediario f
       JOIN clientes c ON c.id = f.cliente_id
       WHERE 1=1
@@ -445,13 +713,49 @@ export class FichaCrediarioService {
 
     query += ' ORDER BY f.saldo_devedor_total DESC, c.nome ASC';
 
-    const result = await pool.query<FichaCrediarioDTO>(query, params);
-    return result.rows;
+    const result = await pool.query<any>(query, params);
+    const rows = result.rows || [];
+
+    // Mapa de telefones para detectar compartilhamento entre fichas
+    const phoneMap = new Map<string, string[]>();
+    for (const r of rows) {
+      const zap = String(r.cliente_whatsapp || '').replace(/\D/g, '');
+      if (zap.length >= 10 && !zap.startsWith('0000')) {
+        const list = phoneMap.get(zap) || [];
+        list.push(r.cliente_nome || 'Cliente');
+        phoneMap.set(zap, list);
+      }
+    }
+
+    const enriched: FichaCrediarioDTO[] = rows.map((r) => {
+      const zap = String(r.cliente_whatsapp || '').replace(/\D/g, '');
+      const samePhoneNames = (zap.length >= 10 ? phoneMap.get(zap) || [] : []).filter(
+        (n) => n !== (r.cliente_nome || 'Cliente')
+      );
+      const obsUnificada = r.observacoes || r.cliente_observacoes || null;
+      const diag = FichaCrediarioService.diagnosticarAlertasFicha({
+        ...r,
+        observacoes: obsUnificada,
+        telefone_compartilhado_com: samePhoneNames.length > 0 ? samePhoneNames : undefined,
+      });
+
+      return {
+        ...r,
+        observacoes: obsUnificada,
+        tem_pendencia: diag.tem_pendencia,
+        alertas: diag.alertas,
+        arquivos_origem: diag.arquivos_origem,
+        codigo_ficha: diag.codigo_ficha,
+      };
+    });
+
+    if (filters?.apenasPendencias) {
+      return enriched.filter((f) => f.tem_pendencia);
+    }
+
+    return enriched;
   }
 
-  /**
-   * Obtém detalhes completos da ficha: dados, parcelas e extrato de movimentações.
-   */
   /**
    * Obtém detalhes completos da ficha: dados, parcelas, extrato e itens comprados.
    */
@@ -472,8 +776,12 @@ export class FichaCrediarioService {
       saldo_restante: number;
     }>;
   }> {
-    const fichaRes = await pool.query<FichaCrediarioDTO>(
-      `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp, c.cpf as cliente_cpf
+    const fichaRes = await pool.query<any>(
+      `SELECT f.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp,
+              c.cpf as cliente_cpf, c.endereco as cliente_endereco,
+              c.ponto_referencia as cliente_ponto_referencia,
+              c.limite_credito as cliente_limite_credito,
+              c.observacoes as cliente_observacoes
        FROM fichas_crediario f
        JOIN clientes c ON c.id = f.cliente_id
        WHERE f.id = $1 OR f.cliente_id = $1
@@ -485,7 +793,20 @@ export class FichaCrediarioService {
       throw new AppError('Ficha de crediário não encontrada.', 404, 'FICHA_NOT_FOUND');
     }
 
-    const ficha = fichaRes.rows[0];
+    const rawFicha = fichaRes.rows[0];
+    const obsUnificada = rawFicha.observacoes || rawFicha.cliente_observacoes || null;
+    const diag = FichaCrediarioService.diagnosticarAlertasFicha({
+      ...rawFicha,
+      observacoes: obsUnificada,
+    });
+    const ficha: FichaCrediarioDTO = {
+      ...rawFicha,
+      observacoes: obsUnificada,
+      tem_pendencia: diag.tem_pendencia,
+      alertas: diag.alertas,
+      arquivos_origem: diag.arquivos_origem,
+      codigo_ficha: diag.codigo_ficha,
+    };
 
     const parcelasRes = await pool.query<ParcelaDTO>(
       `SELECT * FROM parcelas_crediario
@@ -782,6 +1103,24 @@ export class FichaCrediarioService {
   }
 
   /**
+   * Calcula a data de vencimento mensal no formato YYYY-MM-DD para qualquer dia escolhido (1 a 31),
+   * ajustando automaticamente para o último dia do mês em meses com 28, 29 ou 30 dias.
+   */
+  public static calcularDataVencimentoMensal(
+    ano: number,
+    mesZeroBased: number,
+    diaEscolhido: number
+  ): string {
+    const diaLimpo = Math.max(1, Math.min(31, Math.trunc(diaEscolhido || 5)));
+    const dataBaseMes = new Date(Date.UTC(ano, mesZeroBased, 1));
+    const anoReal = dataBaseMes.getUTCFullYear();
+    const mesReal = dataBaseMes.getUTCMonth();
+    const ultimoDiaMes = new Date(Date.UTC(anoReal, mesReal + 1, 0)).getUTCDate();
+    const diaReal = Math.min(diaLimpo, ultimoDiaMes);
+    return `${anoReal}-${String(mesReal + 1).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`;
+  }
+
+  /**
    * Helper interno para gerar ou ajustar o cronograma de parcelas com base no saldo devedor.
    */
   private static async sincronizarParcelas(
@@ -807,7 +1146,11 @@ export class FichaCrediarioService {
     let parcelasCriadas = 0;
 
     for (let i = 1; i <= qtdParcelas; i++) {
-      const dataVenc = new Date(hoje.getFullYear(), hoje.getMonth() + i, diaVencimentoPadrao);
+      const dataVencStr = this.calcularDataVencimentoMensal(
+        hoje.getFullYear(),
+        hoje.getMonth() + i,
+        diaVencimentoPadrao
+      );
       const valorDestaParcela =
         i === qtdParcelas
           ? saldoDevedorTotal - (qtdParcelas - 1) * valorParcelaPadrao
@@ -818,7 +1161,7 @@ export class FichaCrediarioService {
           ficha_id, numero_parcela, valor_parcela, data_vencimento, status
         )
         VALUES ($1, $2, $3, $4, 'PENDENTE')`,
-        [fichaId, i, valorDestaParcela, dataVenc.toISOString().split('T')[0]]
+        [fichaId, i, valorDestaParcela, dataVencStr]
       );
       parcelasCriadas++;
     }

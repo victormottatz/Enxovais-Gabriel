@@ -22,6 +22,7 @@ const createVendaSchema = z.object({
   valor_entrada: z.number().min(0).optional(),
   itens: z.array(itemVendaSchema).min(1, 'A venda deve ter ao menos um item'),
   novo_valor_parcela_negociado: z.number().positive().optional(),
+  novo_dia_vencimento: z.number().int().min(1).max(31).optional(),
   observacoes: z.string().optional(),
   autorizar_excecao_inadimplencia: z.boolean().optional(),
 });

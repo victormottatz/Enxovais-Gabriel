@@ -23,9 +23,10 @@ RUN npm install --omit=dev
 # Copia o código compilado
 COPY --from=builder /app/dist ./dist
 
-# Copia os arquivos estáticos do Frontend PWA
+# Copia os arquivos estáticos do Frontend PWA e a planilha de fichas digitalizadas
 COPY frontend/ ./frontend/
 COPY frontend/ /frontend/
+COPY fichas_digitalizadas_completas.csv ./fichas_digitalizadas_completas.csv
 
 # Cria pasta de uploads persistente
 RUN mkdir -p /app/uploads/produtos

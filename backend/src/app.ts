@@ -45,7 +45,25 @@ function resolveFrontendPath(): string {
   return possiblePaths[0] || '/frontend';
 }
 
+function resolveFotosFichasPath(): string {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'frontend/fotos-fichas'),
+    path.resolve(process.cwd(), '../frontend/fotos-fichas'),
+    path.resolve(__dirname, '../../frontend/fotos-fichas'),
+    path.resolve(process.cwd(), 'fotos fichas/01_Unicas'),
+    path.resolve(process.cwd(), '../fotos fichas/01_Unicas'),
+    path.resolve(__dirname, '../../fotos fichas/01_Unicas'),
+  ];
+  for (const candidate of possiblePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return possiblePaths[0];
+}
+
 const frontendPath = resolveFrontendPath();
+const fotosFichasPath = resolveFotosFichasPath();
 const uploadsPath = path.resolve(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
@@ -57,9 +75,10 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(requestIdMiddleware);
 
-// Servir arquivos estáticos do Frontend PWA e pasta de Uploads
+// Servir arquivos estáticos do Frontend PWA, Uploads e Fotos das Fichas Físicas
 app.use(express.static(frontendPath));
 app.use('/uploads', express.static(uploadsPath));
+app.use('/fotos-fichas', express.static(fotosFichasPath));
 
 // Painel Interativo de Inspeção de APIs (Swagger UI)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -114,7 +133,8 @@ app.get('*', (req, res, next) => {
     req.path.startsWith('/api') ||
     req.path.startsWith('/health') ||
     req.path.startsWith('/api-docs') ||
-    req.path.startsWith('/uploads')
+    req.path.startsWith('/uploads') ||
+    req.path.startsWith('/fotos-fichas')
   ) {
     return next();
   }

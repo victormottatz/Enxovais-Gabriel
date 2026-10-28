@@ -21,6 +21,7 @@ export interface VendaInput {
   valor_entrada?: number;
   itens: ItemVendaInput[];
   novo_valor_parcela_negociado?: number;
+  novo_dia_vencimento?: number;
   observacoes?: string;
   autorizar_excecao_inadimplencia?: boolean;
 }
@@ -176,6 +177,7 @@ export class VendaService {
           vendaId: venda.id,
           valorFinanciado,
           novoValorParcela: input.novo_valor_parcela_negociado,
+          novoDiaVencimento: input.novo_dia_vencimento,
           descricao: descricaoCompra,
           client,
         });

@@ -32,7 +32,12 @@ backend/coverage/
 playwright-report/
 test-results/
 
-# Uploads temporários
+# Uploads temporários e brutos pesados locais
 uploads/
 backend/uploads/
+fotos baixadas/
+fotos baixadas.zip
+fotos fichas/
+scratch_unique_images.csv
+
 
