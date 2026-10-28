@@ -1196,6 +1196,8 @@ export async function initDatabase(): Promise<void> {
         ALTER TABLE clientes ALTER COLUMN whatsapp SET DEFAULT '';
         ALTER TABLE clientes DROP CONSTRAINT IF EXISTS clientes_whatsapp_key;
         DROP INDEX IF EXISTS idx_clientes_whatsapp_unique;
+        ALTER TABLE vendas DROP CONSTRAINT IF EXISTS vendas_valor_total_check;
+        ALTER TABLE vendas ADD CONSTRAINT vendas_valor_total_check CHECK (valor_total >= 0);
 
         -- Inserção de configuração padrão somente se a tabela estiver vazia
         INSERT INTO configuracoes (
@@ -1280,121 +1282,123 @@ async function seedFichasDigitalizadasPostgres(client: any): Promise<void> {
     let inseridas = 0;
 
     for (let i = 1; i < lines.length; i++) {
-      const cols = parseCsvLineSimple(lines[i], ';');
-      if (cols.length < 10) continue;
+      try {
+        const cols = parseCsvLineSimple(lines[i], ';');
+        if (cols.length < 10) continue;
 
-      const [
-        arquivos_origem,
-        codigo_ficha,
-        rawNome,
-        rawWhatsapp,
-        cpf,
-        endereco,
-        valor_total_compra,
-        ponto_referencia,
-        limite_credito,
-        dia_vencimento,
-        tipo_ciclo,
-        saldo_devedor_atual,
-        valor_parcela,
-        observacoes,
-        produtos,
-        data_venda,
-        pagamento_parcelas,
-      ] = cols;
+        const [
+          arquivos_origem,
+          codigo_ficha,
+          rawNome,
+          rawWhatsapp,
+          cpf,
+          endereco,
+          valor_total_compra,
+          ponto_referencia,
+          limite_credito,
+          dia_vencimento,
+          tipo_ciclo,
+          saldo_devedor_atual,
+          valor_parcela,
+          observacoes,
+          produtos,
+          data_venda,
+          pagamento_parcelas,
+        ] = cols;
 
-      if (!rawNome) continue;
+        if (!rawNome) continue;
 
-      const nameKey = rawNome.toLowerCase().trim();
-      const countName = (seenNames.get(nameKey) || 0) + 1;
-      seenNames.set(nameKey, countName);
-      const nomeFinal = countName > 1 && codigo_ficha ? `${rawNome.trim()} (Ficha ${codigo_ficha})` : rawNome.trim();
+        const nameKey = rawNome.toLowerCase().trim();
+        const countName = (seenNames.get(nameKey) || 0) + 1;
+        seenNames.set(nameKey, countName);
+        const nomeFinal = countName > 1 && codigo_ficha ? `${rawNome.trim()} (Ficha ${codigo_ficha})` : rawNome.trim();
 
-      // Verifica se já foi importada anteriormente pelo marcador da foto de origem
-      const firstPhoto = (arquivos_origem || '').split('+')[0]?.trim();
-      if (firstPhoto && existingObsList.some((obs) => obs.includes(firstPhoto))) {
-        continue;
-      }
+        // Verifica se já foi importada anteriormente pelo marcador da foto de origem
+        const firstPhoto = (arquivos_origem || '').split('+')[0]?.trim();
+        if (firstPhoto && existingObsList.some((obs) => obs.includes(firstPhoto))) {
+          continue;
+        }
 
-      const digitsZap = (rawWhatsapp || '').replace(/\D/g, '');
-      const zapFormatado =
-        digitsZap.length >= 10 && digitsZap.length <= 11 && !digitsZap.startsWith('55')
-          ? `55${digitsZap}`
-          : digitsZap;
+        const digitsZap = (rawWhatsapp || '').replace(/\D/g, '');
+        const zapFormatado =
+          digitsZap.length >= 10 && digitsZap.length <= 11 && !digitsZap.startsWith('55')
+            ? `55${digitsZap}`
+            : digitsZap;
 
-      const notas: string[] = [];
-      if (codigo_ficha) notas.push(`Ficha Física: ${codigo_ficha}`);
-      if (arquivos_origem) notas.push(`Fotos: ${arquivos_origem}`);
-      if (observacoes) notas.push(observacoes);
-      if (produtos) notas.push(`Produtos: ${produtos}`);
-      if (valor_total_compra) notas.push(`Total Compra: ${valor_total_compra}`);
-      if (data_venda) notas.push(`Data Compra: ${data_venda}`);
-      if (pagamento_parcelas) notas.push(`Histórico Pgto: ${pagamento_parcelas}`);
-      const obsUnificada = notas.join(' | ');
+        const notas: string[] = [];
+        if (codigo_ficha) notas.push(`Ficha Física: ${codigo_ficha}`);
+        if (arquivos_origem) notas.push(`Fotos: ${arquivos_origem}`);
+        if (observacoes) notas.push(observacoes);
+        if (produtos) notas.push(`Produtos: ${produtos}`);
+        if (valor_total_compra) notas.push(`Total Compra: ${valor_total_compra}`);
+        if (data_venda) notas.push(`Data Compra: ${data_venda}`);
+        if (pagamento_parcelas) notas.push(`Histórico Pgto: ${pagamento_parcelas}`);
+        const obsUnificada = notas.join(' | ');
 
-      const saldoNum = parseFloat((saldo_devedor_atual || '0').replace(',', '.')) || 0;
-      const parcelaNum = parseFloat((valor_parcela || '100').replace(',', '.')) || 100;
-      const limiteNum = parseFloat((limite_credito || '1000').replace(',', '.')) || 1000;
-      const diaVencNum = Math.max(1, Math.min(31, parseInt(dia_vencimento || '10', 10) || 10));
-      const cicloFinal = (tipo_ciclo || '').toUpperCase().includes('QUINZENAL') ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO';
-      const statusFicha = saldoNum === 0 ? 'QUITADO' : 'ATIVO';
+        const saldoNum = parseFloat((saldo_devedor_atual || '0').replace(',', '.')) || 0;
+        const parcelaNum = parseFloat((valor_parcela || '100').replace(',', '.')) || 100;
+        const limiteNum = parseFloat((limite_credito || '1000').replace(',', '.')) || 1000;
+        const diaVencNum = Math.max(1, Math.min(31, parseInt(dia_vencimento || '10', 10) || 10));
+        const cicloFinal = (tipo_ciclo || '').toUpperCase().includes('QUINZENAL') ? 'QUINZENAL_VALE' : 'MENSAL_PAGAMENTO';
+        const statusFicha = saldoNum === 0 ? 'QUITADO' : 'ATIVO';
 
-      const cliRes = await client.query(
-        `INSERT INTO clientes (nome, whatsapp, cpf, endereco, ponto_referencia, limite_credito, observacoes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id`,
-        [nomeFinal, zapFormatado || '', cpf || null, endereco || '', ponto_referencia || null, limiteNum, obsUnificada]
-      );
-      const clienteId = cliRes.rows[0].id;
-
-      const fichaRes = await client.query(
-        `INSERT INTO fichas_crediario (cliente_id, saldo_devedor_total, valor_parcela_padrao, dia_vencimento_padrao, tipo_ciclo, status_ficha, observacoes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id`,
-        [clienteId, saldoNum, parcelaNum, diaVencNum, cicloFinal, statusFicha, obsUnificada]
-      );
-      const fichaId = fichaRes.rows[0].id;
-
-      const valorCompraNum = Math.max(
-        saldoNum,
-        parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || saldoNum
-      );
-
-      if (valorCompraNum > 0 || produtos) {
-        const jaPago = Math.max(0, Number((valorCompraNum - saldoNum).toFixed(2)));
-        const vendaRes = await client.query(
-          `INSERT INTO vendas (cliente_id, tipo_venda, forma_pagamento, valor_total, valor_entrada, valor_financiado_ficha, status_venda, observacoes)
-           VALUES ($1, 'PRONTA_ENTREGA', 'CREDIARIO', $2, $3, $4, 'CONCLUIDA', $5)
+        const cliRes = await client.query(
+          `INSERT INTO clientes (nome, whatsapp, cpf, endereco, ponto_referencia, limite_credito, observacoes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
-          [clienteId, valorCompraNum, jaPago, saldoNum, obsUnificada]
+          [nomeFinal, zapFormatado || '', cpf || null, endereco || '', ponto_referencia || null, limiteNum, obsUnificada]
         );
-        const vendaId = vendaRes.rows[0]?.id || null;
+        const clienteId = cliRes.rows[0].id;
 
-        if (vendaId) {
+        const fichaRes = await client.query(
+          `INSERT INTO fichas_crediario (cliente_id, saldo_devedor_total, valor_parcela_padrao, dia_vencimento_padrao, tipo_ciclo, status_ficha, observacoes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
+          [clienteId, saldoNum, parcelaNum, diaVencNum, cicloFinal, statusFicha, obsUnificada]
+        );
+        const fichaId = fichaRes.rows[0].id;
+
+        const parsedValor = parseFloat(String(valor_total_compra || '').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        const valorCompraNum = Math.max(saldoNum, parsedValor);
+
+        if (valorCompraNum > 0) {
+          const jaPago = Math.max(0, Number((valorCompraNum - saldoNum).toFixed(2)));
+          const vendaRes = await client.query(
+            `INSERT INTO vendas (cliente_id, tipo_venda, forma_pagamento, valor_total, valor_entrada, valor_financiado_ficha, status_venda, observacoes)
+             VALUES ($1, 'PRONTA_ENTREGA', 'CREDIARIO', $2, $3, $4, 'CONCLUIDA', $5)
+             RETURNING id`,
+            [clienteId, valorCompraNum, jaPago, saldoNum, obsUnificada]
+          );
+          const vendaId = vendaRes.rows[0]?.id || null;
+
+          if (vendaId) {
+            await client.query(
+              `INSERT INTO itens_venda (venda_id, descricao_item, quantidade, preco_unitario, tipo_item)
+               VALUES ($1, $2, 1, $3, 'ESTOQUE_LOCAL')`,
+              [vendaId, (produtos || `Compra na Ficha Física ${codigo_ficha || ''}`).slice(0, 195), valorCompraNum]
+            );
+          }
+
           await client.query(
-            `INSERT INTO itens_venda (venda_id, descricao_item, quantidade, preco_unitario, tipo_item)
-             VALUES ($1, $2, 1, $3, 'ESTOQUE_LOCAL')`,
-            [vendaId, (produtos || `Compra na Ficha Física ${codigo_ficha || ''}`).slice(0, 195), valorCompraNum]
+            `INSERT INTO movimentacoes_ficha (ficha_id, cliente_id, venda_id, tipo_movimentacao, valor, saldo_anterior, saldo_posterior, descricao, forma_pagamento, observacoes)
+             VALUES ($1, $2, $3, 'DEBITO_COMPRA', $4, 0, $5, $6, 'CREDIARIO', $7)`,
+            [
+              fichaId,
+              clienteId,
+              vendaId,
+              valorCompraNum,
+              saldoNum,
+              `Ficha Física ${codigo_ficha || ''}: ${produtos || 'Compra migrada'}`.slice(0, 240),
+              obsUnificada,
+            ]
           );
         }
 
-        await client.query(
-          `INSERT INTO movimentacoes_ficha (ficha_id, cliente_id, venda_id, tipo_movimentacao, valor, saldo_anterior, saldo_posterior, descricao, forma_pagamento, observacoes)
-           VALUES ($1, $2, $3, 'DEBITO_COMPRA', $4, 0, $5, $6, 'CREDIARIO', $7)`,
-          [
-            fichaId,
-            clienteId,
-            vendaId,
-            valorCompraNum,
-            saldoNum,
-            `Ficha Física ${codigo_ficha || ''}: ${produtos || 'Compra migrada'}`.slice(0, 240),
-            obsUnificada,
-          ]
-        );
+        existingObsList.push(obsUnificada);
+        inseridas++;
+      } catch (itemErr) {
+        console.warn(`⚠️ [PostgreSQL] Erro ao importar ficha linha ${i}:`, itemErr);
       }
-
-      existingObsList.push(obsUnificada);
-      inseridas++;
     }
 
     if (inseridas > 0) {
