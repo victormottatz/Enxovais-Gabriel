@@ -148,6 +148,17 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarStatusWhatsApp();
   configurarDragAndDrop();
   renderizarSimuladorDemo();
+
+  // Fecha o dropdown flutuante de busca de clientes ao clicar fora do container
+  document.addEventListener('click', (event) => {
+    const container = document.getElementById('venda-cliente-container');
+    const dropdown = document.getElementById('venda-cliente-dropdown-results');
+    if (dropdown && dropdown.style.display !== 'none') {
+      if (container && !container.contains(event.target)) {
+        fecharDropdownClientesPDV();
+      }
+    }
+  });
 });
 
 // Listener para navegação via botões Voltar/Avançar do navegador e links com Hash
@@ -2044,23 +2055,293 @@ function limparCarrinho() {
   atualizarCarrinhoVisual();
 }
 
-function aoSelecionarCliente(clienteId) {
-  const preview = document.getElementById('cliente-ficha-preview');
-  const ficha = state.fichas.find((f) => f.cliente_id === clienteId || f.id === clienteId);
-  const inputDiaVenc = document.getElementById('venda-dia-vencimento');
+// -----------------------------------------------------------------------------
+// SELEÇÃO E BUSCA DINÂMICA DE CLIENTE NO PDV / NOVA VENDA
+// -----------------------------------------------------------------------------
+let clientePDVIndexDestacado = -1;
 
-  if (ficha && preview) {
-    const diaFmt = formatarDiaDoisDigitos(ficha.dia_vencimento_padrao || 10);
-    if (inputDiaVenc) inputDiaVenc.value = ficha.dia_vencimento_padrao || 10;
-    preview.style.display = 'block';
-    preview.innerHTML = `
-      <small style="color: var(--text-muted);">Ficha da Cliente (Vencimento todo Dia ${diaFmt}):</small>
-      <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-        <span>Saldo Atual: <strong>${formatarMoeda(ficha.saldo_devedor_total)}</strong></span>
-        <span>Parcela Padrão: <strong>${formatarMoeda(ficha.valor_parcela_padrao)}</strong></span>
+function normalizarTextoBusca(str) {
+  return (str || '')
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function buscarClientePDV(termo) {
+  const dropdown = document.getElementById('venda-cliente-dropdown-results');
+  const btnLimpar = document.getElementById('venda-cliente-busca-limpar-btn');
+  if (!dropdown) return;
+
+  const termoNormalizado = normalizarTextoBusca(termo);
+  if (btnLimpar) {
+    btnLimpar.style.display = termoNormalizado ? 'block' : 'none';
+  }
+
+  clientePDVIndexDestacado = -1;
+
+  let lista = Array.isArray(state.clientes) ? state.clientes : [];
+  if (termoNormalizado) {
+    const termoDigitos = (termo || '').replace(/\D/g, '');
+    lista = lista.filter((c) => {
+      const nome = normalizarTextoBusca(c.nome);
+      const apelido = normalizarTextoBusca(c.apelido);
+      const fone = (c.whatsapp || c.telefone || '').replace(/\D/g, '');
+      const cpf = (c.cpf || '').replace(/\D/g, '');
+      const end = normalizarTextoBusca(c.endereco);
+      const ref = normalizarTextoBusca(c.ponto_referencia);
+
+      return (
+        nome.includes(termoNormalizado) ||
+        apelido.includes(termoNormalizado) ||
+        end.includes(termoNormalizado) ||
+        ref.includes(termoNormalizado) ||
+        (termoDigitos && fone.includes(termoDigitos)) ||
+        (termoDigitos && cpf.includes(termoDigitos))
+      );
+    });
+
+    // Ordenação inteligente: quem começa com o termo aparece primeiro
+    lista.sort((a, b) => {
+      const aNome = normalizarTextoBusca(a.nome);
+      const bNome = normalizarTextoBusca(b.nome);
+      const aStarts = aNome.startsWith(termoNormalizado);
+      const bStarts = bNome.startsWith(termoNormalizado);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return aNome.localeCompare(bNome);
+    });
+  }
+
+  // Limita a exibição aos primeiros 15 clientes para máxima agilidade de resposta
+  const listaExibicao = lista.slice(0, 15);
+
+  if (listaExibicao.length === 0) {
+    const termoSafe = (termo || '').replace(/'/g, '');
+    dropdown.innerHTML = `
+      <div class="venda-cliente-nao-encontrado">
+        <p>🔍 Nenhuma cliente encontrada com "<strong>${escapeHtml(termo)}</strong>".</p>
+        <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalNovoClienteComBusca('${escapeHtml(termoSafe)}')">
+          ➕ Cadastrar Nova Cliente Agora
+        </button>
       </div>
     `;
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = listaExibicao
+    .map((c, idx) => {
+      const ficha = (state.fichas || []).find((f) => f.cliente_id === c.id || f.id === c.id);
+      const saldo = ficha ? Number(ficha.saldo_devedor_total) || 0 : (Number(c.saldo_devedor_total ?? c.saldo_devedor) || 0);
+      const diaVenc = c.dia_vencimento_padrao || (ficha ? ficha.dia_vencimento_padrao : 10) || 10;
+      const fone = c.whatsapp || c.telefone || '';
+      const foneFmt = fone ? `📱 ${fone}` : '';
+      const temDividendo = saldo > 0;
+
+      return `
+        <div 
+          class="venda-cliente-item" 
+          data-index="${idx}" 
+          data-id="${c.id}" 
+          onclick="selecionarClientePDV('${c.id}')"
+          onmouseenter="destacarItemClientePDV(${idx})"
+        >
+          <div class="venda-cliente-item-info">
+            <span class="venda-cliente-item-nome">${escapeHtml(c.nome)}</span>
+            <span class="venda-cliente-item-sub">${foneFmt ? foneFmt + ' • ' : ''}📅 Vence todo dia ${formatarDiaDoisDigitos(diaVenc)}${c.endereco ? ' • ' + escapeHtml(c.endereco) : ''}</span>
+          </div>
+          <div class="venda-cliente-item-badge">
+            <span class="saldo-tag ${temDividendo ? 'saldo-devedor' : ''}">
+              ${temDividendo ? 'Saldo: ' + formatarMoeda(saldo) : 'Ficha Zerada'}
+            </span>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  dropdown.style.display = 'block';
+}
+
+function aoFocarBuscaClientePDV() {
+  const input = document.getElementById('venda-cliente-busca-input');
+  buscarClientePDV(input ? input.value : '');
+}
+
+function aoTeclarBuscaClientePDV(event) {
+  const dropdown = document.getElementById('venda-cliente-dropdown-results');
+  if (!dropdown || dropdown.style.display === 'none') {
+    if (event.key === 'ArrowDown') {
+      buscarClientePDV(event.target.value);
+    }
+    return;
+  }
+
+  const items = dropdown.querySelectorAll('.venda-cliente-item');
+  if (!items || items.length === 0) {
+    if (event.key === 'Escape') fecharDropdownClientesPDV();
+    return;
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    clientePDVIndexDestacado = (clientePDVIndexDestacado + 1) % items.length;
+    atualizarDestaqueVisualDropdownPDV(items);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    clientePDVIndexDestacado = (clientePDVIndexDestacado - 1 + items.length) % items.length;
+    atualizarDestaqueVisualDropdownPDV(items);
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    if (clientePDVIndexDestacado >= 0 && clientePDVIndexDestacado < items.length) {
+      const id = items[clientePDVIndexDestacado].getAttribute('data-id');
+      if (id) selecionarClientePDV(id);
+    } else if (items.length === 1) {
+      const id = items[0].getAttribute('data-id');
+      if (id) selecionarClientePDV(id);
+    }
+  } else if (event.key === 'Escape') {
+    fecharDropdownClientesPDV();
+  }
+}
+
+function destacarItemClientePDV(idx) {
+  clientePDVIndexDestacado = idx;
+  const dropdown = document.getElementById('venda-cliente-dropdown-results');
+  if (!dropdown) return;
+  const items = dropdown.querySelectorAll('.venda-cliente-item');
+  atualizarDestaqueVisualDropdownPDV(items);
+}
+
+function atualizarDestaqueVisualDropdownPDV(items) {
+  items.forEach((item, i) => {
+    if (i === clientePDVIndexDestacado) {
+      item.classList.add('highlighted');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('highlighted');
+    }
+  });
+}
+
+function fecharDropdownClientesPDV() {
+  const dropdown = document.getElementById('venda-cliente-dropdown-results');
+  if (dropdown) dropdown.style.display = 'none';
+  clientePDVIndexDestacado = -1;
+}
+
+function limparTextoBuscaClientePDV() {
+  const input = document.getElementById('venda-cliente-busca-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  buscarClientePDV('');
+}
+
+function abrirModalNovoClienteComBusca(nomeSugerido) {
+  const inputBusca = document.getElementById('venda-cliente-busca-input');
+  const nome = (nomeSugerido || (inputBusca ? inputBusca.value : '')).trim();
+  fecharDropdownClientesPDV();
+  abrirModalNovoCliente();
+  if (nome) {
+    setTimeout(() => {
+      const inputNome = document.getElementById('cli-nome');
+      if (inputNome) {
+        inputNome.value = nome;
+        inputNome.focus();
+      }
+    }, 100);
+  }
+}
+
+function selecionarClientePDV(clienteId) {
+  const select = document.getElementById('venda-cliente-select');
+  if (select) {
+    select.value = clienteId;
+  }
+  aoSelecionarCliente(clienteId);
+  fecharDropdownClientesPDV();
+
+  // Foco suave na busca de produto para agilizar o atendimento
+  const inputBuscaProd = document.getElementById('pos-search-product');
+  if (inputBuscaProd) {
+    inputBuscaProd.focus();
+  }
+}
+
+function deselecionarClientePDV() {
+  const select = document.getElementById('venda-cliente-select');
+  if (select) {
+    select.value = '';
+  }
+  aoSelecionarCliente('');
+  fecharDropdownClientesPDV();
+
+  const inputBusca = document.getElementById('venda-cliente-busca-input');
+  if (inputBusca) {
+    inputBusca.value = '';
+    inputBusca.focus();
+  }
+  const btnLimpar = document.getElementById('venda-cliente-busca-limpar-btn');
+  if (btnLimpar) btnLimpar.style.display = 'none';
+}
+
+function aoSelecionarCliente(clienteId) {
+  const preview = document.getElementById('cliente-ficha-preview');
+  const ficha = (state.fichas || []).find((f) => f.cliente_id === clienteId || f.id === clienteId);
+  const cliente = (state.clientes || []).find((c) => c.id === clienteId);
+  const inputDiaVenc = document.getElementById('venda-dia-vencimento');
+
+  // Sincroniza o card de cliente selecionada e a caixa de busca
+  const cardSelecionada = document.getElementById('venda-cliente-selecionada-card');
+  const buscaBox = document.getElementById('venda-cliente-busca-box');
+  const nomeDestaque = document.getElementById('venda-cliente-nome-destaque');
+  const subDestaque = document.getElementById('venda-cliente-subtitulo-destaque');
+
+  if (clienteId && (cliente || ficha)) {
+    const nome = (cliente ? cliente.nome : '') || (ficha ? ficha.cliente_nome : '') || 'Cliente';
+    const fone = (cliente ? (cliente.whatsapp || cliente.telefone) : '') || '';
+    const diaVenc = (cliente ? cliente.dia_vencimento_padrao : null) || (ficha ? ficha.dia_vencimento_padrao : 10) || 10;
+    const diaFmt = formatarDiaDoisDigitos(diaVenc);
+
+    if (nomeDestaque) nomeDestaque.textContent = nome;
+    if (subDestaque) {
+      subDestaque.textContent = `${fone ? '📱 ' + fone + ' • ' : ''}📅 Vencimento todo dia ${diaFmt}`;
+    }
+
+    if (cardSelecionada) cardSelecionada.style.display = 'flex';
+    if (buscaBox) buscaBox.style.display = 'none';
+
+    if (inputDiaVenc) inputDiaVenc.value = diaVenc;
+
+    if (preview) {
+      const saldo = ficha ? Number(ficha.saldo_devedor_total) || 0 : (cliente ? Number(cliente.saldo_devedor_total ?? cliente.saldo_devedor) || 0 : 0);
+      const parcela = ficha ? Number(ficha.valor_parcela_padrao) || 100 : 100;
+      preview.style.display = 'block';
+      preview.innerHTML = `
+        <small style="color: var(--text-muted);">Ficha da Cliente (Vencimento todo Dia ${diaFmt}):</small>
+        <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+          <span>Saldo Atual: <strong>${formatarMoeda(saldo)}</strong></span>
+          <span>Parcela Padrão: <strong>${formatarMoeda(parcela)}</strong></span>
+        </div>
+      `;
+    }
   } else {
+    if (cardSelecionada) cardSelecionada.style.display = 'none';
+    if (buscaBox) buscaBox.style.display = 'block';
     if (preview) preview.style.display = 'none';
     if (inputDiaVenc && !inputDiaVenc.value) inputDiaVenc.value = 10;
   }
@@ -2237,6 +2518,7 @@ async function finalizarVenda() {
       });
 
       limparCarrinho();
+      deselecionarClientePDV();
       
       // Sincroniza imediatamente todos os estados
       await Promise.all([
@@ -2266,6 +2548,7 @@ async function finalizarVenda() {
     });
 
     limparCarrinho();
+    deselecionarClientePDV();
   }
 }
 
@@ -3252,6 +3535,10 @@ async function salvarNovoCliente(e) {
       await carregarClientes();
       await carregarFichas();
       atualizarDashboardCobrancas();
+
+      if (state.abaAtiva === 'vendas' && novoCli && novoCli.id) {
+        selecionarClientePDV(novoCli.id);
+      }
     } else {
       const err = await res.json().catch(() => ({}));
       mostrarToast(`Não foi possível cadastrar: ${err.message || 'Verifique os dados informados.'}`, 'error');

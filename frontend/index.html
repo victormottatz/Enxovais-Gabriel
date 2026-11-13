@@ -701,14 +701,67 @@
                 <button class="btn-clear" onclick="limparCarrinho()">Limpar</button>
               </div>
 
-              <!-- Seleção da Cliente -->
-              <div class="form-group">
-                <label>Cliente:</label>
-                <select id="venda-cliente-select" class="form-control" onchange="aoSelecionarCliente(this.value)" required>
+              <!-- Seleção e Busca de Cliente para a Venda -->
+              <div class="form-group venda-cliente-section" id="venda-cliente-container">
+                <div class="venda-cliente-header">
+                  <label for="venda-cliente-busca-input">👤 Cliente da Venda:</label>
+                  <button type="button" class="btn-cadastrar-nova-link" onclick="abrirModalNovoClienteComBusca()">
+                    + Nova Cliente
+                  </button>
+                </div>
+
+                <!-- Campo de Digitação e Busca Rápida -->
+                <div id="venda-cliente-busca-box" class="venda-cliente-busca-wrapper">
+                  <div class="input-with-search-icon">
+                    <span class="search-prefix-icon">🔍</span>
+                    <input 
+                      type="text" 
+                      id="venda-cliente-busca-input" 
+                      class="form-control venda-cliente-input" 
+                      placeholder="Digite o nome, apelido ou celular..." 
+                      autocomplete="off" 
+                      oninput="buscarClientePDV(this.value)" 
+                      onfocus="aoFocarBuscaClientePDV()"
+                      onkeydown="aoTeclarBuscaClientePDV(event)"
+                    >
+                    <button 
+                      type="button" 
+                      id="venda-cliente-busca-limpar-btn" 
+                      class="btn-limpar-busca-cliente" 
+                      onclick="limparTextoBuscaClientePDV()" 
+                      style="display: none;"
+                      title="Limpar pesquisa"
+                    >✕</button>
+                  </div>
+
+                  <!-- Dropdown flutuante de resultados com rolagem tátil -->
+                  <div id="venda-cliente-dropdown-results" class="venda-cliente-dropdown" style="display: none;">
+                    <!-- Preenchido dinamicamente via JS -->
+                  </div>
+                </div>
+
+                <!-- Card da Cliente Selecionada (Destaque Visual) -->
+                <div id="venda-cliente-selecionada-card" class="cliente-selecionado-badge" style="display: none;">
+                  <div class="cliente-selecionado-conteudo">
+                    <div class="cliente-avatar-circulo">👩</div>
+                    <div class="cliente-textos">
+                      <strong id="venda-cliente-nome-destaque">Nome da Cliente</strong>
+                      <small id="venda-cliente-subtitulo-destaque">📱 Celular • Dia Vencimento</small>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-trocar-cliente" onclick="deselecionarClientePDV()" title="Trocar ou desmarcar cliente">
+                    <span>Trocar</span> ✕
+                  </button>
+                </div>
+
+                <!-- Select nativo mantido oculto para compatibilidade total com formulários, testes e scripts existentes -->
+                <select id="venda-cliente-select" class="form-control" onchange="aoSelecionarCliente(this.value)" style="display: none;" required>
                   <option value="">Selecione ou busque a cliente...</option>
                 </select>
+
+                <!-- Preview com Saldo Devedor e Parcela Padrão -->
                 <div id="cliente-ficha-preview" class="ficha-preview-box" style="display: none;">
-                  <!-- Info de saldo e parcela padrão da cliente -->
+                  <!-- Info de saldo e parcela padrão da cliente inserida via JS -->
                 </div>
               </div>
 

@@ -3965,3 +3965,282 @@ html, body {
   }
 }
 
+/* =============================================================================
+   MÓDULO DE NOVA VENDA: BUSCA DINÂMICA DE CLIENTE (COMBOBOX TOUCH-FRIENDLY)
+   ============================================================================= */
+.venda-cliente-section {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.venda-cliente-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.venda-cliente-header label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-dark);
+  margin-bottom: 0;
+}
+
+.btn-cadastrar-nova-link {
+  background: transparent;
+  border: none;
+  color: var(--wine-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+}
+
+.btn-cadastrar-nova-link:hover {
+  color: var(--primary-hover);
+}
+
+.venda-cliente-busca-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-with-search-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-prefix-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.venda-cliente-input {
+  padding-left: 42px !important;
+  padding-right: 42px !important;
+  height: 48px;
+  font-size: 0.95rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.venda-cliente-input:focus {
+  border-color: var(--wine-primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  outline: none;
+}
+
+.btn-limpar-busca-cliente {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.btn-limpar-busca-cliente:hover {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+/* Dropdown flutuante de resultados */
+.venda-cliente-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1.5px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 150;
+  -webkit-overflow-scrolling: touch;
+  animation: fadeInDropdown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInDropdown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.venda-cliente-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.venda-cliente-item:last-child {
+  border-bottom: none;
+}
+
+.venda-cliente-item:hover,
+.venda-cliente-item.highlighted {
+  background: var(--primary-light);
+}
+
+.venda-cliente-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  margin-right: 8px;
+  text-align: left;
+}
+
+.venda-cliente-item-nome {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-dark);
+}
+
+.venda-cliente-item-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.venda-cliente-item-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.venda-cliente-item-badge .saldo-tag {
+  background: var(--bg-surface);
+  color: var(--text-dark);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.venda-cliente-item-badge .saldo-devedor {
+  background: var(--warning-light);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.venda-cliente-nao-encontrado {
+  padding: 18px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.venda-cliente-nao-encontrado p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+/* Card da cliente selecionada no carrinho */
+.cliente-selecionado-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, var(--primary-light), #FFFFFF);
+  border: 1.5px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  animation: fadeInDropdown 0.2s ease-out;
+}
+
+.cliente-selecionado-conteudo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.cliente-avatar-circulo {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--wine-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.cliente-textos {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  overflow: hidden;
+  text-align: left;
+}
+
+.cliente-textos strong {
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cliente-textos small {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-trocar-cliente {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-dark);
+  padding: 6px 12px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.btn-trocar-cliente:hover {
+  background: var(--danger-light);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+
